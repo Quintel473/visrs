@@ -508,6 +508,22 @@ $isCurrentOwner = empty($record["EndDate"]);
                     ← Back to Ownership History
                 </a>
 
+
+                <a
+                    href="delete.php?id=<?= $record["OwnershipID"] ?>"
+                    class="button"
+                    style="background: #991b1b;"
+                >
+                    Delete Ownership Record
+                </a>
+
+                <a
+                    href="edit.php?id=<?= $record["OwnershipID"] ?>"
+                    class="button"
+                >
+                    Edit Ownership Record
+                </a>
+
             </div>
 
         </section>

@@ -7,253 +7,581 @@ $basePath = "../";
 $activePage = "ownership_history";
 
 $error = "";
-$success = "";
-
-
-/*
-|--------------------------------------------------------------------------
-| Load Vehicles
-|--------------------------------------------------------------------------
-*/
-
-$stmt = $pdo->query("
-    SELECT
-        VehicleID,
-        PlateNumber,
-        VIN,
-        Make,
-        Model,
-        VehicleYear
-    FROM vehicles
-    ORDER BY PlateNumber ASC
-");
-
-$vehicles = $stmt->fetchAll();
-
-
-/*
-|--------------------------------------------------------------------------
-| Load Owners
-|--------------------------------------------------------------------------
-*/
-
-$stmt = $pdo->query("
-    SELECT
-        OwnerID,
-        FirstName,
-        LastName,
-        Email
-    FROM owners
-    ORDER BY LastName ASC, FirstName ASC
-");
-
-$owners = $stmt->fetchAll();
-
-
-/*
-|--------------------------------------------------------------------------
-| Handle Form Submission
-|--------------------------------------------------------------------------
-*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $vehicleID = $_POST["VehicleID"] ?? "";
-    $ownerID = $_POST["OwnerID"] ?? "";
-    $startDate = $_POST["StartDate"] ?? "";
-    $endDate = $_POST["EndDate"] ?? "";
-    $transferReason = trim(
-        $_POST["TransferReason"] ?? ""
-    );
-
+    $vehicleID = (int) ($_POST["VehicleID"] ?? 0);
+    $ownerID = (int) ($_POST["OwnerID"] ?? 0);
+    $startDate = trim($_POST["StartDate"] ?? "");
+    $endDate = trim($_POST["EndDate"] ?? "");
+    $transferReason = trim($_POST["TransferReason"] ?? "");
 
     /*
      * Basic validation
      */
 
-    if (
-        !is_numeric($vehicleID) ||
-        !is_numeric($ownerID) ||
-        $startDate === ""
-    ) {
+    if ($vehicleID <= 0 || $ownerID <= 0 || $startDate === "") {
 
-        $error =
-            "Vehicle, owner, and ownership start date are required.";
+        $error = "Vehicle, owner, and start date are required.";
 
-    }
+    } elseif ($endDate !== "" && $endDate < $startDate) {
 
+        $error = "End date cannot be earlier than the start date.";
 
-    /*
-     * Validate date order
-     */
+    } else {
 
-    elseif (
-        $endDate !== "" &&
-        $endDate < $startDate
-    ) {
+        /*
+         * Get selected vehicle.
+         */
 
-        $error =
-            "The ownership end date cannot be earlier than the start date.";
+        $vehicleStmt = $pdo->prepare("
+            SELECT *
+            FROM vehicles
+            WHERE VehicleID = ?
+        ");
 
-    }
+        $vehicleStmt->execute([$vehicleID]);
+
+        $vehicle = $vehicleStmt->fetch();
 
 
-    else {
+        /*
+         * Get selected owner.
+         */
 
-        try {
+        $ownerStmt = $pdo->prepare("
+            SELECT *
+            FROM owners
+            WHERE OwnerID = ?
+        ");
+
+        $ownerStmt->execute([$ownerID]);
+
+        $owner = $ownerStmt->fetch();
+
+
+        if (!$vehicle) {
+
+            $error = "The selected vehicle does not exist.";
+
+        } elseif (!$owner) {
+
+            $error = "The selected owner does not exist.";
+
+        } else {
+
+            /*
+             * Determine whether this is a current ownership
+             * record or a historical ownership record.
+             *
+             * Blank EndDate = current owner.
+             */
+
+            $isCurrent = ($endDate === "");
 
 
             /*
-             * Verify vehicle exists
+             * Find the vehicle's current ownership record.
              */
 
-            $stmt = $pdo->prepare("
+            $currentStmt = $pdo->prepare("
                 SELECT
-                    VehicleID,
-                    PlateNumber,
-                    Make,
-                    Model,
-                    VehicleYear
-                FROM vehicles
-                WHERE VehicleID = ?
+                    oh.OwnershipID,
+                    oh.OwnerID,
+                    oh.StartDate,
+                    oh.EndDate
+                FROM ownership_history oh
+                WHERE oh.VehicleID = ?
+                AND oh.EndDate IS NULL
+                ORDER BY oh.StartDate DESC, oh.OwnershipID DESC
                 LIMIT 1
             ");
 
-            $stmt->execute([
-                $vehicleID
-            ]);
+            $currentStmt->execute([$vehicleID]);
 
-            $vehicle = $stmt->fetch();
+            $currentRecord = $currentStmt->fetch();
 
 
-            if (!$vehicle) {
+            /*
+             * ----------------------------------------------------
+             * CURRENT OWNERSHIP / TRANSFER
+             * ----------------------------------------------------
+             */
 
-                $error =
-                    "The selected vehicle could not be found.";
-
-            }
-
-
-            else {
-
+            if ($isCurrent) {
 
                 /*
-                 * Verify owner exists
+                 * If there is already a current owner,
+                 * this is treated as an ownership transfer.
                  */
 
-                $stmt = $pdo->prepare("
+                if ($currentRecord) {
+
+                    /*
+                     * Do not allow the same person to become
+                     * the current owner again.
+                     */
+
+                    if ((int) $currentRecord["OwnerID"] === $ownerID) {
+
+                        $error = "This owner is already the current owner of this vehicle.";
+
+                    /*
+                     * New ownership must begin after the
+                     * previous owner's start date.
+                     */
+
+                    } elseif ($startDate <= $currentRecord["StartDate"]) {
+
+                        $error =
+                            "The new ownership start date must be after the previous owner's start date. " .
+                            "The previous owner became the owner on " .
+                            date("m/d/Y", strtotime($currentRecord["StartDate"])) .
+                            ".";
+
+                    } else {
+
+                        /*
+                         * This is a VALID OWNERSHIP TRANSFER.
+                         */
+
+                        try {
+
+                            $pdo->beginTransaction();
+
+
+                            /*
+                             * Close the previous owner's record.
+                             *
+                             * Example:
+                             *
+                             * Marcus:
+                             * 01/01/2024 -> 10/21/2025
+                             */
+
+                            $closePreviousStmt = $pdo->prepare("
+                                UPDATE ownership_history
+
+                                SET EndDate = ?
+
+                                WHERE OwnershipID = ?
+                            ");
+
+                            $closePreviousStmt->execute([
+                                $startDate,
+                                $currentRecord["OwnershipID"]
+                            ]);
+
+
+                            /*
+                             * Create the new owner's current record.
+                             *
+                             * Example:
+                             *
+                             * Nathaniel:
+                             * 10/21/2025 -> Current
+                             */
+
+                            $insertStmt = $pdo->prepare("
+                                INSERT INTO ownership_history
+                                (
+                                    VehicleID,
+                                    OwnerID,
+                                    StartDate,
+                                    EndDate,
+                                    TransferReason
+                                )
+                                VALUES (?, ?, ?, NULL, ?)
+                            ");
+
+                            $insertStmt->execute([
+                                $vehicleID,
+                                $ownerID,
+                                $startDate,
+                                $transferReason !== ""
+                                    ? $transferReason
+                                    : "Ownership transfer"
+                            ]);
+
+                            $ownershipID = $pdo->lastInsertId();
+
+
+                            /*
+                             * Update the vehicle's current owner.
+                             */
+
+                            $updateVehicleStmt = $pdo->prepare("
+                                UPDATE vehicles
+
+                                SET OwnerID = ?
+
+                                WHERE VehicleID = ?
+                            ");
+
+                            $updateVehicleStmt->execute([
+                                $ownerID,
+                                $vehicleID
+                            ]);
+
+
+                            /*
+                             * Audit log.
+                             */
+
+                            $auditStmt = $pdo->prepare("
+                                INSERT INTO audit_logs
+                                (
+                                    UserID,
+                                    Action,
+                                    TableAffected,
+                                    RecordID,
+                                    IPAddress
+                                )
+                                VALUES (?, ?, ?, ?, ?)
+                            ");
+
+                            $auditStmt->execute([
+                                $_SESSION["UserID"],
+                                "Transferred vehicle " .
+                                $vehicle["PlateNumber"] .
+                                " ownership from OwnerID " .
+                                $currentRecord["OwnerID"] .
+                                " to OwnerID " .
+                                $ownerID,
+                                "ownership_history",
+                                $ownershipID,
+                                $_SERVER["REMOTE_ADDR"] ?? null
+                            ]);
+
+
+                            $pdo->commit();
+
+
+                            /*
+                             * Send user to the new ownership record.
+                             */
+
+                            header(
+                                "Location: view.php?id=" .
+                                $ownershipID
+                            );
+
+                            exit;
+
+
+                        } catch (Exception $e) {
+
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+
+                            $error =
+                                "Unable to complete the ownership transfer.";
+                        }
+                    }
+
+                } else {
+
+                    /*
+                     * No current ownership record exists.
+                     *
+                     * Create a new current ownership record.
+                     */
+
+                    /*
+                     * Make sure the vehicle itself isn't already
+                     * assigned to this owner.
+                     */
+
+                    if ((int) $vehicle["OwnerID"] === $ownerID) {
+
+                        $error =
+                            "This owner is already listed as the vehicle's current owner.";
+
+                    } else {
+
+                        try {
+
+                            $pdo->beginTransaction();
+
+
+                            /*
+                             * Insert current ownership.
+                             */
+
+                            $insertStmt = $pdo->prepare("
+                                INSERT INTO ownership_history
+                                (
+                                    VehicleID,
+                                    OwnerID,
+                                    StartDate,
+                                    EndDate,
+                                    TransferReason
+                                )
+                                VALUES (?, ?, ?, NULL, ?)
+                            ");
+
+                            $insertStmt->execute([
+                                $vehicleID,
+                                $ownerID,
+                                $startDate,
+                                $transferReason !== ""
+                                    ? $transferReason
+                                    : "Initial ownership"
+                            ]);
+
+                            $ownershipID = $pdo->lastInsertId();
+
+
+                            /*
+                             * Update vehicle owner.
+                             */
+
+                            $updateVehicleStmt = $pdo->prepare("
+                                UPDATE vehicles
+
+                                SET OwnerID = ?
+
+                                WHERE VehicleID = ?
+                            ");
+
+                            $updateVehicleStmt->execute([
+                                $ownerID,
+                                $vehicleID
+                            ]);
+
+
+                            /*
+                             * Audit.
+                             */
+
+                            $auditStmt = $pdo->prepare("
+                                INSERT INTO audit_logs
+                                (
+                                    UserID,
+                                    Action,
+                                    TableAffected,
+                                    RecordID,
+                                    IPAddress
+                                )
+                                VALUES (?, ?, ?, ?, ?)
+                            ");
+
+                            $auditStmt->execute([
+                                $_SESSION["UserID"],
+                                "Added current ownership record for vehicle " .
+                                $vehicle["PlateNumber"],
+                                "ownership_history",
+                                $ownershipID,
+                                $_SERVER["REMOTE_ADDR"] ?? null
+                            ]);
+
+
+                            $pdo->commit();
+
+
+                            header(
+                                "Location: view.php?id=" .
+                                $ownershipID
+                            );
+
+                            exit;
+
+
+                        } catch (Exception $e) {
+
+                            if ($pdo->inTransaction()) {
+                                $pdo->rollBack();
+                            }
+
+                            $error =
+                                "Unable to save the ownership record.";
+                        }
+                    }
+                }
+
+
+            /*
+             * ----------------------------------------------------
+             * HISTORICAL OWNERSHIP RECORD
+             * ----------------------------------------------------
+             */
+
+            } else {
+
+                /*
+                 * Check for overlap with existing historical
+                 * ownership records.
+                 *
+                 * We exclude the current record because a new
+                 * historical record should not overlap another
+                 * historical period.
+                 */
+
+                $overlapStmt = $pdo->prepare("
                     SELECT
-                        OwnerID,
-                        FirstName,
-                        LastName
-                    FROM owners
-                    WHERE OwnerID = ?
+                        OwnershipID,
+                        StartDate,
+                        EndDate
+                    FROM ownership_history
+
+                    WHERE VehicleID = ?
+
+                    AND StartDate < ?
+
+                    AND (
+                        EndDate IS NULL
+                        OR EndDate > ?
+                    )
+
                     LIMIT 1
                 ");
 
-                $stmt->execute([
-                    $ownerID
+                $overlapStmt->execute([
+                    $vehicleID,
+                    $endDate,
+                    $startDate
                 ]);
 
-                $owner = $stmt->fetch();
+                $overlap = $overlapStmt->fetch();
 
 
-                if (!$owner) {
+                if ($overlap) {
 
                     $error =
-                        "The selected owner could not be found.";
+                        "The selected ownership dates overlap an existing ownership record for this vehicle.";
 
+                } else {
+
+                    try {
+
+                        $pdo->beginTransaction();
+
+
+                        /*
+                         * Insert historical record.
+                         */
+
+                        $insertStmt = $pdo->prepare("
+                            INSERT INTO ownership_history
+                            (
+                                VehicleID,
+                                OwnerID,
+                                StartDate,
+                                EndDate,
+                                TransferReason
+                            )
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+
+                        $insertStmt->execute([
+                            $vehicleID,
+                            $ownerID,
+                            $startDate,
+                            $endDate,
+                            $transferReason !== ""
+                                ? $transferReason
+                                : "Historical ownership"
+                        ]);
+
+                        $ownershipID = $pdo->lastInsertId();
+
+
+                        /*
+                         * Audit.
+                         */
+
+                        $auditStmt = $pdo->prepare("
+                            INSERT INTO audit_logs
+                            (
+                                UserID,
+                                Action,
+                                TableAffected,
+                                RecordID,
+                                IPAddress
+                            )
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+
+                        $auditStmt->execute([
+                            $_SESSION["UserID"],
+                            "Added historical ownership record for vehicle " .
+                            $vehicle["PlateNumber"],
+                            "ownership_history",
+                            $ownershipID,
+                            $_SERVER["REMOTE_ADDR"] ?? null
+                        ]);
+
+
+                        $pdo->commit();
+
+
+                        header(
+                            "Location: view.php?id=" .
+                            $ownershipID
+                        );
+
+                        exit;
+
+
+                    } catch (Exception $e) {
+
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+
+                        $error =
+                            "Unable to save the ownership record.";
+                    }
                 }
-
-
-                else {
-
-
-                    /*
-                     * Insert ownership history
-                     */
-
-                    $stmt = $pdo->prepare("
-                        INSERT INTO ownership_history
-                        (
-                            VehicleID,
-                            OwnerID,
-                            StartDate,
-                            EndDate,
-                            TransferReason
-                        )
-                        VALUES (?, ?, ?, ?, ?)
-                    ");
-
-                    $stmt->execute([
-                        $vehicleID,
-                        $ownerID,
-                        $startDate,
-                        $endDate !== ""
-                            ? $endDate
-                            : null,
-                        $transferReason !== ""
-                            ? $transferReason
-                            : null
-                    ]);
-
-
-                    $ownershipID =
-                        $pdo->lastInsertId();
-
-
-                    /*
-                     * Audit log
-                     */
-
-                    $audit = $pdo->prepare("
-                        INSERT INTO audit_logs
-                        (
-                            UserID,
-                            Action,
-                            TableAffected,
-                            RecordID,
-                            IPAddress
-                        )
-                        VALUES (?, ?, ?, ?, ?)
-                    ");
-
-                    $audit->execute([
-                        $_SESSION["UserID"],
-                        "Added ownership history",
-                        "ownership_history",
-                        $ownershipID,
-                        $_SERVER["REMOTE_ADDR"] ?? null
-                    ]);
-
-
-                    $success =
-                        "Ownership history record added successfully.";
-
-
-                    /*
-                     * Clear submitted values after successful
-                     * insertion.
-                     */
-
-                    $_POST = [];
-
-                }
-
             }
-
         }
-
-        catch (PDOException $e) {
-
-            $error =
-                "Unable to add the ownership history record.";
-
-        }
-
     }
-
 }
+
+
+/*
+ * Load vehicles.
+ */
+
+$vehiclesStmt = $pdo->query("
+    SELECT
+        v.VehicleID,
+        v.PlateNumber,
+        v.VIN,
+        v.Make,
+        v.Model,
+        v.VehicleYear,
+        o.FirstName,
+        o.LastName
+
+    FROM vehicles v
+
+    LEFT JOIN owners o
+        ON v.OwnerID = o.OwnerID
+
+    ORDER BY v.PlateNumber ASC
+");
+
+$vehicles = $vehiclesStmt->fetchAll();
+
+
+/*
+ * Load owners.
+ */
+
+$ownersStmt = $pdo->query("
+    SELECT
+        OwnerID,
+        FirstName,
+        LastName
+
+    FROM owners
+
+    ORDER BY LastName ASC, FirstName ASC
+");
+
+$owners = $ownersStmt->fetchAll();
 
 ?>
 
@@ -269,260 +597,43 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>
-        VISRS - Add Ownership History
-    </title>
+    <title>Add Ownership Record - VISRS</title>
 
     <link
         rel="stylesheet"
         href="../css/style.css"
     >
 
-
-    <style>
-
-        /*
-         * Keep sidebar navigation stable.
-         */
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-
-        .sidebar-nav a {
-            display: flex;
-            align-items: center;
-            min-height: 44px;
-            box-sizing: border-box;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-
-        /*
-         * Form controls
-         */
-
-        .ownership-form .form-group {
-            margin-bottom: 20px;
-        }
-
-
-        .ownership-form label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-
-        .ownership-form input,
-        .ownership-form select {
-
-            width: 100%;
-
-            min-height: 46px;
-
-            padding: 10px 12px;
-
-            box-sizing: border-box;
-
-            border: 1px solid #cbd5e1;
-
-            border-radius: 8px;
-
-            background: #ffffff;
-
-            color: #0f172a;
-
-            font-size: 15px;
-
-            font-family: inherit;
-
-        }
-
-
-        /*
-         * Proper dropdown styling
-         */
-
-        .ownership-form select {
-
-            cursor: pointer;
-
-            appearance: auto;
-
-            -webkit-appearance: auto;
-
-            -moz-appearance: auto;
-
-        }
-
-
-        .ownership-form select:focus,
-        .ownership-form input:focus {
-
-            outline: none;
-
-            border-color: #2563eb;
-
-            box-shadow:
-                0 0 0 3px
-                rgba(37, 99, 235, 0.12);
-
-        }
-
-
-        .ownership-form small {
-
-            display: block;
-
-            margin-top: 6px;
-
-            color: #64748b;
-
-        }
-
-
-        .field-help {
-
-            margin-top: 6px;
-
-            font-size: 13px;
-
-            color: #64748b;
-
-        }
-
-
-        .form-grid {
-
-            display: grid;
-
-            grid-template-columns:
-                repeat(
-                    2,
-                    minmax(0, 1fr)
-                );
-
-            gap: 20px;
-
-        }
-
-
-        .form-full {
-
-            grid-column: 1 / -1;
-
-        }
-
-
-        .message-success {
-
-            background: #dcfce7;
-
-            color: #166534;
-
-            padding: 15px;
-
-            border-radius: 8px;
-
-            margin-bottom: 20px;
-
-        }
-
-
-        .message-error {
-
-            background: #fee2e2;
-
-            color: #991b1b;
-
-            padding: 15px;
-
-            border-radius: 8px;
-
-            margin-bottom: 20px;
-
-        }
-
-
-        @media (max-width: 768px) {
-
-            .form-grid {
-
-                grid-template-columns: 1fr;
-
-            }
-
-            .form-full {
-
-                grid-column: auto;
-
-            }
-
-        }
-
-    </style>
-
 </head>
-
 
 <body>
 
 <div class="layout">
 
+    <?php require_once "../includes/sidebar.php"; ?>
 
-    <!-- ========================= -->
-    <!-- SIDEBAR -->
-    <!-- ========================= -->
+    <main class="main-content">
 
-    <aside class="sidebar">
+        <div class="topbar">
 
-        <?php require_once "../includes/sidebar.php"; ?>
+            <div>
 
-    </aside>
+                <h1>Add Ownership Record</h1>
 
+                <p>
+                    Record ownership information for a vehicle.
+                </p>
 
-    <!-- ========================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ========================= -->
-
-    <div class="main-content">
-
-
-        <!-- TOPBAR -->
-
-        <header class="topbar">
-
-
-            <div class="topbar-title">
-                Add Ownership History
             </div>
 
 
             <div class="user-info">
 
-                <span>
-
-                    <?= htmlspecialchars(
-                        $_SESSION["FirstName"]
-                    ) ?>
-
-                    <?= htmlspecialchars(
-                        $_SESSION["LastName"]
-                    ) ?>
-
-                </span>
-
-
                 <div class="user-avatar">
 
                     <?= strtoupper(
                         substr(
-                            $_SESSION["FirstName"],
+                            $_SESSION["FirstName"] ?? "U",
                             0,
                             1
                         )
@@ -530,384 +641,281 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 </div>
 
-            </div>
 
+                <div>
 
-        </header>
+                    <strong>
 
+                        <?= htmlspecialchars(
+                            $_SESSION["FirstName"] ?? ""
+                        ) ?>
 
-        <!-- ========================= -->
-        <!-- PAGE CONTENT -->
-        <!-- ========================= -->
+                        <?= htmlspecialchars(
+                            $_SESSION["LastName"] ?? ""
+                        ) ?>
 
-        <main class="content">
+                    </strong>
 
+                    <small>
 
-            <div class="page-title">
+                        <?= htmlspecialchars(
+                            $_SESSION["Role"] ?? ""
+                        ) ?>
 
-                <h1>
-                    Add Ownership History
-                </h1>
-
-                <p class="page-subtitle">
-                    Record a vehicle's ownership period
-                    and transfer information.
-                </p>
-
-            </div>
-
-
-            <!-- SUCCESS -->
-
-            <?php if ($success !== ""): ?>
-
-                <div class="message-success">
-
-                    <?= htmlspecialchars(
-                        $success
-                    ) ?>
+                    </small>
 
                 </div>
 
-            <?php endif; ?>
+            </div>
+
+        </div>
 
 
-            <!-- ERROR -->
+        <div class="content">
 
-            <?php if ($error !== ""): ?>
+            <div class="card">
 
-                <div class="message-error">
+                <?php if ($error !== ""): ?>
 
-                    <?= htmlspecialchars(
-                        $error
-                    ) ?>
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
 
-                </div>
+                        <?= htmlspecialchars($error) ?>
 
-            <?php endif; ?>
+                    </div>
 
-
-            <!-- FORM CARD -->
-
-            <section class="card">
-
-
-                <h2>
-                    Ownership Information
-                </h2>
+                <?php endif; ?>
 
 
-                <p
-                    style="
-                        color: #64748b;
-                        margin-top: 8px;
-                    "
-                >
-                    Select the vehicle and owner,
-                    then enter the period during which
-                    the owner possessed the vehicle.
-                </p>
+                <form method="POST">
 
+                    <div style="margin-bottom:20px;">
 
-                <form
-                    method="POST"
-                    action=""
-                    class="ownership-form"
-                    style="margin-top: 25px;"
-                >
+                        <label for="VehicleID">
 
+                            <strong>Vehicle</strong>
 
-                    <div class="form-grid">
+                        </label>
 
+                        <select
+                            name="VehicleID"
+                            id="VehicleID"
+                            required
+                            style="
+                                width:100%;
+                                min-height:46px;
+                                padding:10px;
+                                margin-top:8px;
+                                appearance:auto;
+                            "
+                        >
 
-                        <!-- ========================= -->
-                        <!-- VEHICLE DROPDOWN -->
-                        <!-- ========================= -->
+                            <option value="">
+                                -- Select Vehicle --
+                            </option>
 
-                        <div class="form-group">
+                            <?php foreach ($vehicles as $vehicle): ?>
 
-                            <label for="VehicleID">
-                                Vehicle *
-                            </label>
+                                <option
+                                    value="<?= $vehicle["VehicleID"] ?>"
+                                    <?= (
+                                        isset($_POST["VehicleID"]) &&
+                                        $_POST["VehicleID"] ==
+                                        $vehicle["VehicleID"]
+                                    )
+                                        ? "selected"
+                                        : ""
+                                    ?>
+                                >
 
+                                    <?= htmlspecialchars(
+                                        $vehicle["PlateNumber"]
+                                    ) ?>
 
-                            <select
-                                id="VehicleID"
-                                name="VehicleID"
-                                required
-                            >
+                                    -
 
-                                <option value="">
-                                    -- Select Vehicle --
+                                    <?= htmlspecialchars(
+                                        $vehicle["Make"]
+                                    ) ?>
+
+                                    <?= htmlspecialchars(
+                                        $vehicle["Model"]
+                                    ) ?>
+
+                                    (<?= htmlspecialchars(
+                                        $vehicle["VehicleYear"]
+                                    ) ?>)
+
                                 </option>
 
+                            <?php endforeach; ?>
 
-                                <?php if (
-                                    count($vehicles) === 0
-                                ): ?>
-
-                                    <option
-                                        value=""
-                                        disabled
-                                    >
-                                        No vehicles available
-                                    </option>
-
-                                <?php else: ?>
-
-                                    <?php foreach (
-                                        $vehicles
-                                        as $vehicle
-                                    ): ?>
-
-                                        <option
-                                            value="<?= htmlspecialchars(
-                                                $vehicle["VehicleID"]
-                                            ) ?>"
-                                            <?= (
-                                                ($_POST["VehicleID"] ?? "")
-                                                == $vehicle["VehicleID"]
-                                            )
-                                                ? "selected"
-                                                : "" ?>
-                                        >
-
-                                            <?= htmlspecialchars(
-                                                $vehicle["PlateNumber"]
-                                            ) ?>
-
-                                            -
-                                            <?= htmlspecialchars(
-                                                $vehicle["Make"]
-                                            ) ?>
-
-                                            <?= htmlspecialchars(
-                                                $vehicle["Model"]
-                                            ) ?>
-
-                                            -
-
-                                            <?= htmlspecialchars(
-                                                $vehicle["VehicleYear"]
-                                            ) ?>
-
-                                            -
-                                            VIN:
-                                            <?= htmlspecialchars(
-                                                $vehicle["VIN"]
-                                            ) ?>
-
-                                        </option>
-
-                                    <?php endforeach; ?>
-
-                                <?php endif; ?>
-
-                            </select>
-
-
-                            <div class="field-help">
-                                Select the vehicle whose ownership
-                                history you are recording.
-                            </div>
-
-                        </div>
-
-
-                        <!-- ========================= -->
-                        <!-- OWNER DROPDOWN -->
-                        <!-- ========================= -->
-
-                        <div class="form-group">
-
-                            <label for="OwnerID">
-                                Owner *
-                            </label>
-
-
-                            <select
-                                id="OwnerID"
-                                name="OwnerID"
-                                required
-                            >
-
-                                <option value="">
-                                    -- Select Owner --
-                                </option>
-
-
-                                <?php if (
-                                    count($owners) === 0
-                                ): ?>
-
-                                    <option
-                                        value=""
-                                        disabled
-                                    >
-                                        No owners available
-                                    </option>
-
-                                <?php else: ?>
-
-                                    <?php foreach (
-                                        $owners
-                                        as $owner
-                                    ): ?>
-
-                                        <option
-                                            value="<?= htmlspecialchars(
-                                                $owner["OwnerID"]
-                                            ) ?>"
-                                            <?= (
-                                                ($_POST["OwnerID"] ?? "")
-                                                == $owner["OwnerID"]
-                                            )
-                                                ? "selected"
-                                                : "" ?>
-                                        >
-
-                                            <?= htmlspecialchars(
-                                                $owner["FirstName"]
-                                            ) ?>
-
-                                            <?= htmlspecialchars(
-                                                $owner["LastName"]
-                                            ) ?>
-
-                                            <?php if (
-                                                !empty(
-                                                    $owner["Email"]
-                                                )
-                                            ): ?>
-
-                                                -
-                                                <?= htmlspecialchars(
-                                                    $owner["Email"]
-                                                ) ?>
-
-                                            <?php endif; ?>
-
-                                        </option>
-
-                                    <?php endforeach; ?>
-
-                                <?php endif; ?>
-
-                            </select>
-
-
-                            <div class="field-help">
-                                Select the owner associated with
-                                this ownership period.
-                            </div>
-
-                        </div>
-
-
-                        <!-- ========================= -->
-                        <!-- START DATE -->
-                        <!-- ========================= -->
-
-                        <div class="form-group">
-
-                            <label for="StartDate">
-                                Ownership Start Date *
-                            </label>
-
-
-                            <input
-                                type="date"
-                                id="StartDate"
-                                name="StartDate"
-                                value="<?= htmlspecialchars(
-                                    $_POST["StartDate"] ?? ""
-                                ) ?>"
-                                required
-                            >
-
-
-                            <div class="field-help">
-                                The date the owner acquired
-                                the vehicle.
-                            </div>
-
-                        </div>
-
-
-                        <!-- ========================= -->
-                        <!-- END DATE -->
-                        <!-- ========================= -->
-
-                        <div class="form-group">
-
-                            <label for="EndDate">
-                                Ownership End Date
-                            </label>
-
-
-                            <input
-                                type="date"
-                                id="EndDate"
-                                name="EndDate"
-                                value="<?= htmlspecialchars(
-                                    $_POST["EndDate"] ?? ""
-                                ) ?>"
-                            >
-
-
-                            <div class="field-help">
-                                Leave blank if this was the
-                                current owner's ongoing ownership.
-                            </div>
-
-                        </div>
-
-
-                        <!-- ========================= -->
-                        <!-- TRANSFER REASON -->
-                        <!-- ========================= -->
-
-                        <div class="form-group form-full">
-
-                            <label for="TransferReason">
-                                Transfer Reason
-                            </label>
-
-
-                            <input
-                                type="text"
-                                id="TransferReason"
-                                name="TransferReason"
-                                placeholder="Example: Purchased, Sold, Gift, Transfer"
-                                value="<?= htmlspecialchars(
-                                    $_POST["TransferReason"] ?? ""
-                                ) ?>"
-                            >
-
-
-                            <div class="field-help">
-                                Explain why ownership changed,
-                                if applicable.
-                            </div>
-
-                        </div>
-
+                        </select>
 
                     </div>
 
 
-                    <!-- ========================= -->
-                    <!-- BUTTONS -->
-                    <!-- ========================= -->
+                    <div style="margin-bottom:20px;">
+
+                        <label for="OwnerID">
+
+                            <strong>Owner</strong>
+
+                        </label>
+
+                        <select
+                            name="OwnerID"
+                            id="OwnerID"
+                            required
+                            style="
+                                width:100%;
+                                min-height:46px;
+                                padding:10px;
+                                margin-top:8px;
+                                appearance:auto;
+                            "
+                        >
+
+                            <option value="">
+                                -- Select Owner --
+                            </option>
+
+                            <?php foreach ($owners as $owner): ?>
+
+                                <option
+                                    value="<?= $owner["OwnerID"] ?>"
+                                    <?= (
+                                        isset($_POST["OwnerID"]) &&
+                                        $_POST["OwnerID"] ==
+                                        $owner["OwnerID"]
+                                    )
+                                        ? "selected"
+                                        : ""
+                                    ?>
+                                >
+
+                                    <?= htmlspecialchars(
+                                        $owner["FirstName"]
+                                    ) ?>
+
+                                    <?= htmlspecialchars(
+                                        $owner["LastName"]
+                                    ) ?>
+
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        </select>
+
+                    </div>
+
+
+                    <div style="margin-bottom:20px;">
+
+                        <label for="StartDate">
+
+                            <strong>Start Date</strong>
+
+                        </label>
+
+                        <input
+                            type="date"
+                            name="StartDate"
+                            id="StartDate"
+                            required
+                            value="<?= htmlspecialchars(
+                                $_POST["StartDate"] ?? ""
+                            ) ?>"
+                            style="
+                                width:100%;
+                                min-height:46px;
+                                padding:10px;
+                                margin-top:8px;
+                            "
+                        >
+
+                    </div>
+
+
+                    <div style="margin-bottom:20px;">
+
+                        <label for="EndDate">
+
+                            <strong>End Date</strong>
+
+                        </label>
+
+                        <input
+                            type="date"
+                            name="EndDate"
+                            id="EndDate"
+                            value="<?= htmlspecialchars(
+                                $_POST["EndDate"] ?? ""
+                            ) ?>"
+                            style="
+                                width:100%;
+                                min-height:46px;
+                                padding:10px;
+                                margin-top:8px;
+                            "
+                        >
+
+                        <small>
+                            Leave blank if this is the current owner.
+                        </small>
+
+                    </div>
+
+
+                    <div style="margin-bottom:20px;">
+
+                        <label for="TransferReason">
+
+                            <strong>Transfer Reason</strong>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            name="TransferReason"
+                            id="TransferReason"
+                            maxlength="255"
+                            value="<?= htmlspecialchars(
+                                $_POST["TransferReason"] ?? ""
+                            ) ?>"
+                            placeholder="Example: Sale of vehicle"
+                            style="
+                                width:100%;
+                                min-height:46px;
+                                padding:10px;
+                                margin-top:8px;
+                            "
+                        >
+
+                    </div>
+
 
                     <div
                         style="
-                            display: flex;
-                            gap: 10px;
-                            margin-top: 25px;
-                            flex-wrap: wrap;
+                            display:flex;
+                            gap:10px;
                         "
                     >
+
+                        <button
+                            type="submit"
+                            class="button"
+                        >
+                            Save Ownership Record
+                        </button>
 
 
                         <a
@@ -917,32 +925,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             Cancel
                         </a>
 
-
-                        <button
-                            type="submit"
-                            class="button"
-                        >
-                            Add Ownership Record
-                        </button>
-
-
                     </div>
-
 
                 </form>
 
+            </div>
 
-            </section>
+        </div>
 
-
-        </main>
-
-    </div>
+    </main>
 
 </div>
-
-
-<script src="../js/app.js"></script>
 
 </body>
 
