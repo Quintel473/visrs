@@ -1,0 +1,1 @@
+console.log("VISRS application loaded successfully.");
