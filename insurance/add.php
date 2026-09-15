@@ -3,6 +3,8 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "insurance";
 
@@ -69,7 +71,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (
         !in_array(
             $status,
-            ["Active", "Expired", "Cancelled"]
+            ["Active", "Expired", "Cancelled"],
+            true
         )
     ) {
 
@@ -268,6 +271,14 @@ $vehiclesStmt = $pdo->query("
 
 $vehicles = $vehiclesStmt->fetchAll();
 
+
+/*
+ * Page header information.
+ */
+
+$pageTitle = "Add Insurance";
+$pageSubtitle = "Add an insurance policy for a registered vehicle.";
+
 ?>
 
 <!DOCTYPE html>
@@ -282,7 +293,9 @@ $vehicles = $vehiclesStmt->fetchAll();
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Add Insurance - VISRS</title>
+    <title>
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
+    </title>
 
     <link
         rel="stylesheet"
@@ -300,63 +313,7 @@ $vehicles = $vehiclesStmt->fetchAll();
 
     <main class="main-content">
 
-        <!-- TOP BAR -->
-
-        <div class="topbar">
-
-            <div>
-
-                <h1>Add Insurance</h1>
-
-                <p>
-                    Add an insurance policy for a registered vehicle.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-                    <small>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["Role"] ?? ""
-                        ) ?>
-
-                    </small>
-
-                </div>
-
-            </div>
-
-        </div>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <!-- CONTENT -->
@@ -426,15 +383,12 @@ $vehicles = $vehiclesStmt->fetchAll();
                             ): ?>
 
                                 <option
-                                    value="<?= $vehicle["VehicleID"] ?>"
+                                    value="<?= htmlspecialchars($vehicle["VehicleID"]) ?>"
                                     <?= (
-                                        isset(
-                                            $_POST["VehicleID"]
-                                        )
+                                        isset($_POST["VehicleID"])
                                         &&
                                         $_POST["VehicleID"]
-                                        ==
-                                        $vehicle["VehicleID"]
+                                        == $vehicle["VehicleID"]
                                     )
                                         ? "selected"
                                         : ""

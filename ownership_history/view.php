@@ -156,29 +156,13 @@ $isCurrentOwner = empty($record["EndDate"]);
 
     <main class="main-content">
 
-        <header class="topbar">
+    <?php
 
-            <div>
-                <h1>Ownership History Record</h1>
-                <p>View detailed ownership information</p>
-            </div>
+        $pageTitle = "Ownership History";
 
-            <div class="user-info">
+        include __DIR__ . "/../includes/header.php";
 
-                <div class="user-avatar">
-                    <?= strtoupper(substr($_SESSION["FirstName"], 0, 1)) ?>
-                </div>
-
-                <div>
-                    <strong>
-                        <?= htmlspecialchars($_SESSION["FirstName"] . " " . $_SESSION["LastName"]) ?>
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </header>
+    ?>
 
         <section class="content">
 

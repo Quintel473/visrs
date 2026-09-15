@@ -96,31 +96,13 @@ if ($search !== "") {
 
         <!-- Topbar -->
 
-        <header class="topbar">
+    <?php
 
-            <div>
-                <h3>Vehicle Search</h3>
-            </div>
+        $pageTitle = "Vehicle Search";
 
-            <div class="user-info">
+        include __DIR__ . "/includes/header.php";
 
-                <div class="user-avatar">
-                    <?= strtoupper(substr($_SESSION["FirstName"], 0, 1)) ?>
-                </div>
-
-                <div>
-
-                    <strong>
-                        <?= htmlspecialchars($_SESSION["FirstName"]) ?>
-                        <?= htmlspecialchars($_SESSION["LastName"]) ?>
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </header>
-
+    ?>
 
         <!-- Page Content -->
 

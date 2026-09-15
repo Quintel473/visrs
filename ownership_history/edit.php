@@ -3,6 +3,8 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "ownership_history";
 
@@ -121,15 +123,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 FROM ownership_history
                 WHERE VehicleID = ?
                 AND OwnershipID <> ?
-
                 AND StartDate <= ?
-
                 AND (
                     EndDate IS NULL
                     OR ? = ''
                     OR EndDate >= ?
                 )
-
                 LIMIT 1
             ");
 
@@ -199,8 +198,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         $originalVehicleID = (int) $record["VehicleID"];
 
-                        $originalWasCurrent =
-                            empty($record["EndDate"]);
+                        $originalWasCurrent = empty($record["EndDate"]);
 
 
                         /*
@@ -209,14 +207,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         $updateStmt = $pdo->prepare("
                             UPDATE ownership_history
-
                             SET
                                 VehicleID = ?,
                                 OwnerID = ?,
                                 StartDate = ?,
                                 EndDate = ?,
                                 TransferReason = ?
-
                             WHERE OwnershipID = ?
                         ");
 
@@ -251,8 +247,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             /*
                              * If the record was moved from
-                             * another vehicle, make sure the
-                             * old vehicle gets a valid current owner.
+                             * another vehicle, restore the
+                             * previous current owner of the
+                             * original vehicle.
                              */
 
                             if ($originalVehicleID !== $vehicleID) {
@@ -333,16 +330,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     $replacement["OwnerID"],
                                     $vehicleID
                                 ]);
-
-                            } else {
-
-                                /*
-                                 * No replacement current owner exists.
-                                 *
-                                 * Keep the vehicle's existing
-                                 * OwnerID rather than assigning
-                                 * an invalid value.
-                                 */
 
                             }
 
@@ -460,35 +447,14 @@ $owners = $ownersStmt->fetchAll();
 
     <main class="main-content">
 
-        <div class="topbar">
+        <?php
 
-            <div>
-                <h1>Edit Ownership Record</h1>
-                <p>Update ownership information.</p>
-            </div>
+        $pageTitle = "Edit Ownership Record";
+        $pageSubtitle = "Update ownership information.";
 
-            <div class="user-info">
+        include __DIR__ . "/../includes/header.php";
 
-                <div class="user-avatar">
-                    <?= strtoupper(substr($_SESSION["FirstName"] ?? "U", 0, 1)) ?>
-                </div>
-
-                <div>
-
-                    <strong>
-                        <?= htmlspecialchars($_SESSION["FirstName"] ?? "") ?>
-                        <?= htmlspecialchars($_SESSION["LastName"] ?? "") ?>
-                    </strong>
-
-                    <small>
-                        <?= htmlspecialchars($_SESSION["Role"] ?? "") ?>
-                    </small>
-
-                </div>
-
-            </div>
-
-        </div>
+        ?>
 
 
         <div class="content">

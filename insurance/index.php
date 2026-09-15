@@ -40,6 +40,14 @@ $stmt = $pdo->query("
 
 $insuranceRecords = $stmt->fetchAll();
 
+
+/*
+ * Page header information.
+ */
+
+$pageTitle = "Insurance";
+$pageSubtitle = "Manage vehicle insurance records and policies.";
+
 ?>
 
 <!DOCTYPE html>
@@ -54,7 +62,9 @@ $insuranceRecords = $stmt->fetchAll();
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Insurance - VISRS</title>
+    <title>
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
+    </title>
 
     <link
         rel="stylesheet"
@@ -72,55 +82,7 @@ $insuranceRecords = $stmt->fetchAll();
 
     <main class="main-content">
 
-        <!-- TOP BAR -->
-
-        <div class="topbar">
-
-            <div>
-
-                <h1>Insurance</h1>
-
-                <p>
-                    Manage vehicle insurance records and policies.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </div>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <!-- PAGE CONTENT -->
@@ -155,12 +117,16 @@ $insuranceRecords = $stmt->fetchAll();
                 </div>
 
 
-                <a
-                    href="add.php"
-                    class="button"
-                >
-                    + Add Insurance
-                </a>
+                <?php if (canManageInsurance()): ?>
+
+                    <a
+                        href="add.php"
+                        class="button"
+                    >
+                        + Add Insurance
+                    </a>
+
+                <?php endif; ?>
 
             </div>
 
@@ -461,7 +427,7 @@ $insuranceRecords = $stmt->fetchAll();
                                         >
 
                                             <a
-                                                href="view.php?id=<?= $insurance["InsuranceID"] ?>"
+                                                href="view.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
                                                 class="button button-secondary"
                                                 style="
                                                     padding:8px 12px;
@@ -472,28 +438,32 @@ $insuranceRecords = $stmt->fetchAll();
                                             </a>
 
 
-                                            <a
-                                                href="edit.php?id=<?= $insurance["InsuranceID"] ?>"
-                                                class="button"
-                                                style="
-                                                    padding:8px 12px;
-                                                    margin-right:4px;
-                                                "
-                                            >
-                                                Edit
-                                            </a>
+                                            <?php if (canManageInsurance()): ?>
+
+                                                <a
+                                                    href="edit.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                                                    class="button"
+                                                    style="
+                                                        padding:8px 12px;
+                                                        margin-right:4px;
+                                                    "
+                                                >
+                                                    Edit
+                                                </a>
 
 
-                                            <a
-                                                href="delete.php?id=<?= $insurance["InsuranceID"] ?>"
-                                                class="button"
-                                                style="
-                                                    padding:8px 12px;
-                                                    background:#991b1b;
-                                                "
-                                            >
-                                                Delete
-                                            </a>
+                                                <a
+                                                    href="delete.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                                                    class="button"
+                                                    style="
+                                                        padding:8px 12px;
+                                                        background:#991b1b;
+                                                    "
+                                                >
+                                                    Delete
+                                                </a>
+
+                                            <?php endif; ?>
 
                                         </td>
 
@@ -544,12 +514,16 @@ $insuranceRecords = $stmt->fetchAll();
                         </p>
 
 
-                        <a
-                            href="add.php"
-                            class="button"
-                        >
-                            + Add First Insurance Record
-                        </a>
+                        <?php if (canManageInsurance()): ?>
+
+                            <a
+                                href="add.php"
+                                class="button"
+                            >
+                                + Add First Insurance Record
+                            </a>
+
+                        <?php endif; ?>
 
                     </div>
 

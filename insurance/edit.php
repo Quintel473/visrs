@@ -3,16 +3,24 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "insurance";
 
 $error = "";
 
-$insuranceID = (int) ($_GET["id"] ?? $_POST["InsuranceID"] ?? 0);
+$insuranceID = (int) (
+    $_GET["id"]
+    ?? $_POST["InsuranceID"]
+    ?? 0
+);
 
 if ($insuranceID <= 0) {
+
     header("Location: index.php");
     exit;
+
 }
 
 
@@ -42,8 +50,10 @@ $insurance = $insuranceStmt->fetch();
 
 
 if (!$insurance) {
+
     header("Location: index.php");
     exit;
+
 }
 
 
@@ -147,7 +157,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $startDateObject->format("Y-m-d") !== $startDate
         ) {
 
-            $error = "Please enter a valid policy start date.";
+            $error =
+                "Please enter a valid policy start date.";
 
         }
     }
@@ -182,7 +193,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $expiryDateObject->format("Y-m-d") !== $expiryDate
         ) {
 
-            $error = "Please enter a valid policy expiry date.";
+            $error =
+                "Please enter a valid policy expiry date.";
 
         } elseif ($expiryDateObject < $startDateObject) {
 
@@ -205,9 +217,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "Cancelled"
         ];
 
-        if (!in_array($status, $allowedStatuses, true)) {
+        if (!in_array(
+            $status,
+            $allowedStatuses,
+            true
+        )) {
 
-            $error = "Invalid insurance status.";
+            $error =
+                "Invalid insurance status.";
 
         }
     }
@@ -380,7 +397,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } catch (Exception $e) {
 
             if ($pdo->inTransaction()) {
+
                 $pdo->rollBack();
+
             }
 
             $error =
@@ -409,6 +428,14 @@ $vehiclesStmt = $pdo->query("
 
 $vehicles = $vehiclesStmt->fetchAll();
 
+
+/*
+ * Page header information.
+ */
+
+$pageTitle = "Edit Insurance";
+$pageSubtitle = "Update the insurance policy information.";
+
 ?>
 
 <!DOCTYPE html>
@@ -424,7 +451,7 @@ $vehicles = $vehiclesStmt->fetchAll();
     >
 
     <title>
-        Edit Insurance - VISRS
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
     </title>
 
     <link
@@ -443,59 +470,7 @@ $vehicles = $vehiclesStmt->fetchAll();
 
     <main class="main-content">
 
-        <!-- TOP BAR -->
-
-        <div class="topbar">
-
-            <div>
-
-                <h1>
-                    Edit Insurance
-                </h1>
-
-                <p>
-                    Update the insurance policy information.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-
-
-                </div>
-
-            </div>
-
-        </div>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <!-- CONTENT -->
@@ -516,9 +491,7 @@ $vehicles = $vehiclesStmt->fetchAll();
                         "
                     >
 
-                        <?= htmlspecialchars(
-                            $error
-                        ) ?>
+                        <?= htmlspecialchars($error) ?>
 
                     </div>
 
@@ -530,7 +503,7 @@ $vehicles = $vehiclesStmt->fetchAll();
                     <input
                         type="hidden"
                         name="InsuranceID"
-                        value="<?= $insurance["InsuranceID"] ?>"
+                        value="<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
                     >
 
 
@@ -571,7 +544,7 @@ $vehicles = $vehiclesStmt->fetchAll();
                             ): ?>
 
                                 <option
-                                    value="<?= $vehicleOption["VehicleID"] ?>"
+                                    value="<?= htmlspecialchars($vehicleOption["VehicleID"]) ?>"
                                     <?= (
                                         (int) $insurance["VehicleID"]
                                         ===
@@ -926,7 +899,7 @@ $vehicles = $vehiclesStmt->fetchAll();
 
 
                         <a
-                            href="view.php?id=<?= $insurance["InsuranceID"] ?>"
+                            href="view.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
                             class="button button-secondary"
                         >
                             Cancel

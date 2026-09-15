@@ -3,6 +3,8 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "owners";
 
@@ -139,33 +141,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <div class="main-content">
 
-        <header class="topbar">
+        <?php
 
-            <div class="topbar-title">
-                Delete Owner
-            </div>
+            $pageTitle = "Owners";
 
-            <div class="user-info">
+            include __DIR__ . "/../includes/header.php";
 
-                <span>
-
-                    <?= htmlspecialchars($_SESSION["FirstName"]) ?>
-
-                    <?= htmlspecialchars($_SESSION["LastName"]) ?>
-
-                </span>
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr($_SESSION["FirstName"], 0, 1)
-                    ) ?>
-
-                </div>
-
-            </div>
-
-        </header>
+        ?>
 
 
         <main class="content">

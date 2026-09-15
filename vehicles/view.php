@@ -87,33 +87,13 @@ if (!$vehicle) {
 
         <!-- TOPBAR -->
 
-        <header class="topbar">
+        <?php
 
-            <div class="topbar-title">
-                Vehicle Details
-            </div>
+            $pageTitle = "Vehicles";
 
-            <div class="user-info">
+            include __DIR__ . "/../includes/header.php";
 
-                <span>
-
-                    <?= htmlspecialchars($_SESSION["FirstName"]) ?>
-
-                    <?= htmlspecialchars($_SESSION["LastName"]) ?>
-
-                </span>
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr($_SESSION["FirstName"], 0, 1)
-                    ) ?>
-
-                </div>
-
-            </div>
-
-        </header>
+        ?>
 
 
         <!-- PAGE CONTENT -->

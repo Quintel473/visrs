@@ -70,17 +70,25 @@ $activePage = $activePage ?? "";
             <span>Accidents</span>
         </a>
 
-        <?php if (isset($_SESSION["Role"]) && $_SESSION["Role"] === "Admin"): ?>
+    <?php if (isset($_SESSION["Role"]) && $_SESSION["Role"] === "Admin"): ?>
 
-            <a
-                href="<?= $basePath ?>users/"
-                class="<?= $activePage === 'users' ? 'active' : '' ?>"
-            >
-                <span></span>
-                <span>User Management</span>
-            </a>
+        <a
+            href="<?= $basePath ?>users/"
+            class="<?= $activePage === 'users' ? 'active' : '' ?>"
+        >
+            <span></span>
+            <span>User Management</span>
+        </a>
 
-        <?php endif; ?>
+        <a
+            href="<?= $basePath ?>audit_logs/"
+            class="<?= $activePage === 'audit_logs' ? 'active' : '' ?>"
+        >
+            <span></span>
+            <span>Audit Trail</span>
+        </a>
+
+    <?php endif; ?>
 
         <a
             href="<?= $basePath ?>logout.php"

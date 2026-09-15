@@ -3,6 +3,8 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "ownership_history";
 
@@ -29,13 +31,10 @@ $stmt = $pdo->prepare("
         o.FirstName,
         o.LastName
     FROM ownership_history oh
-
     INNER JOIN vehicles v
         ON oh.VehicleID = v.VehicleID
-
     INNER JOIN owners o
         ON oh.OwnerID = o.OwnerID
-
     WHERE oh.OwnershipID = ?
 ");
 
@@ -47,7 +46,6 @@ if (!$record) {
     header("Location: index.php");
     exit;
 }
-
 
 $error = "";
 
@@ -62,15 +60,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $pdo->beginTransaction();
 
-
         $vehicleID = (int) $record["VehicleID"];
 
         $wasCurrent = empty($record["EndDate"]);
 
-
         /*
-         * If deleting a CURRENT ownership record,
-         * we need to find the previous owner.
+         * If deleting the current ownership record,
+         * find the most recent previous owner.
          */
 
         $previousOwner = null;
@@ -84,14 +80,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     StartDate,
                     EndDate
                 FROM ownership_history
-
                 WHERE VehicleID = ?
                 AND OwnershipID <> ?
-
                 AND StartDate <= ?
-
                 ORDER BY StartDate DESC, OwnershipID DESC
-
                 LIMIT 1
             ");
 
@@ -102,7 +94,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ]);
 
             $previousOwner = $previousStmt->fetch();
-
         }
 
 
@@ -122,17 +113,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
          * If the deleted record was current and
          * a previous owner exists:
          *
-         * 1. Make previous record current.
-         * 2. Update vehicles.OwnerID.
+         * 1. Make the previous record current.
+         * 2. Update the vehicle's current owner.
          */
 
         if ($wasCurrent && $previousOwner) {
 
             $restoreHistoryStmt = $pdo->prepare("
                 UPDATE ownership_history
-
                 SET EndDate = NULL
-
                 WHERE OwnershipID = ?
             ");
 
@@ -143,9 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $restoreVehicleStmt = $pdo->prepare("
                 UPDATE vehicles
-
                 SET OwnerID = ?
-
                 WHERE VehicleID = ?
             ");
 
@@ -153,12 +140,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $previousOwner["OwnerID"],
                 $vehicleID
             ]);
-
         }
 
 
         /*
-         * If there is no previous owner,
+         * If there was no previous owner,
          * check whether another current record exists.
          */
 
@@ -166,14 +152,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $remainingCurrentStmt = $pdo->prepare("
                 SELECT OwnerID
-
                 FROM ownership_history
-
                 WHERE VehicleID = ?
                 AND EndDate IS NULL
-
                 ORDER BY StartDate DESC, OwnershipID DESC
-
                 LIMIT 1
             ");
 
@@ -188,9 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $restoreVehicleStmt = $pdo->prepare("
                     UPDATE vehicles
-
                     SET OwnerID = ?
-
                     WHERE VehicleID = ?
                 ");
 
@@ -198,20 +178,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $remainingCurrent["OwnerID"],
                     $vehicleID
                 ]);
-
-            } else {
-
-                /*
-                 * There is no remaining ownership history.
-                 *
-                 * We deliberately do not change vehicles.OwnerID.
-                 *
-                 * This avoids creating an invalid owner relationship
-                 * because vehicles.OwnerID is NOT NULL.
-                 */
-
             }
-
         }
 
 
@@ -289,61 +256,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <main class="main-content">
 
-        <div class="topbar">
+        <?php
 
-            <div>
+        $pageTitle = "Delete Ownership Record";
+        $pageSubtitle = "Confirm removal of this ownership record.";
 
-                <h1>Delete Ownership Record</h1>
+        include __DIR__ . "/../includes/header.php";
 
-                <p>
-                    Confirm removal of this ownership record.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-                    <small>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["Role"] ?? ""
-                        ) ?>
-
-                    </small>
-
-                </div>
-
-            </div>
-
-        </div>
+        ?>
 
 
         <div class="content">

@@ -3,16 +3,26 @@
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
 
+requireRole(["Admin", "Police"]);
+
 $basePath = "../";
 $activePage = "insurance";
+
 $error = "";
 
 $insuranceID = (int) ($_GET["id"] ?? 0);
 
 if ($insuranceID <= 0) {
+
     header("Location: index.php");
     exit;
+
 }
+
+
+/*
+ * Load the insurance record.
+ */
 
 $stmt = $pdo->prepare("
     SELECT
@@ -33,14 +43,24 @@ $stmt = $pdo->prepare("
     WHERE i.InsuranceID = ?
 ");
 
-$stmt->execute([$insuranceID]);
+$stmt->execute([
+    $insuranceID
+]);
 
 $insurance = $stmt->fetch();
 
+
 if (!$insurance) {
+
     header("Location: index.php");
     exit;
+
 }
+
+
+/*
+ * Process deletion.
+ */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -48,12 +68,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $pdo->beginTransaction();
 
+
+        /*
+         * Delete the insurance record.
+         */
+
         $deleteStmt = $pdo->prepare("
             DELETE FROM insurance
             WHERE InsuranceID = ?
         ");
 
-        $deleteStmt->execute([$insuranceID]);
+        $deleteStmt->execute([
+            $insuranceID
+        ]);
+
+
+        /*
+         * Create an audit log.
+         */
 
         $auditStmt = $pdo->prepare("
             INSERT INTO audit_logs
@@ -68,30 +100,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ");
 
         $auditStmt->execute([
+
             $_SESSION["UserID"],
+
             "Deleted insurance policy " .
             $insurance["PolicyNumber"] .
             " for vehicle " .
             $insurance["PlateNumber"],
+
             "insurance",
+
             $insuranceID,
+
             $_SERVER["REMOTE_ADDR"] ?? null
+
         ]);
 
+
         $pdo->commit();
+
 
         header("Location: index.php");
         exit;
 
+
     } catch (Exception $e) {
 
         if ($pdo->inTransaction()) {
+
             $pdo->rollBack();
+
         }
 
-        die("Unable to delete the insurance record.");
+        $error =
+            "Unable to delete the insurance record.";
     }
 }
+
+
+/*
+ * Page header information.
+ */
+
+$pageTitle = "Delete Insurance Record";
+$pageSubtitle = "Confirm removal of this insurance record.";
 
 ?>
 
@@ -107,7 +159,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Delete Insurance Record - VISRS</title>
+    <title>
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
+    </title>
 
     <link
         rel="stylesheet"
@@ -122,55 +176,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <?php require_once "../includes/sidebar.php"; ?>
 
+
     <main class="main-content">
 
-        <div class="topbar">
-
-            <div>
-
-                <h1>Delete Insurance Record</h1>
-
-                <p>
-                    Confirm removal of this insurance record.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </div>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <div class="content">
@@ -332,7 +341,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <input
                         type="hidden"
                         name="InsuranceID"
-                        value="<?= $insuranceID ?>"
+                        value="<?= htmlspecialchars($insuranceID) ?>"
                     >
 
 
@@ -346,7 +355,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <a
-                        href="view.php?id=<?= $insuranceID ?>"
+                        href="view.php?id=<?= htmlspecialchars($insuranceID) ?>"
                         class="button button-secondary"
                     >
                         Cancel

@@ -6,6 +6,12 @@ require_once "../includes/database.php";
 $basePath = "../";
 $activePage = "insurance";
 
+$pageTitle = "Insurance Details";
+$pageSubtitle = "View insurance policy information and associated vehicle details.";
+
+include __DIR__ . "/../includes/header.php";
+
+
 $insuranceID = (int) ($_GET["id"] ?? 0);
 
 if ($insuranceID <= 0) {
@@ -112,60 +118,6 @@ function formatInsuranceDate($date)
 
     <main class="main-content">
 
-        <!-- TOP BAR -->
-
-        <div class="topbar">
-
-            <div>
-
-                <h1>
-                    Insurance Details
-                </h1>
-
-                <p>
-                    View insurance policy information and
-                    associated vehicle details.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
         <!-- CONTENT -->
 
         <div class="content">
@@ -201,23 +153,27 @@ function formatInsuranceDate($date)
                     "
                 >
 
-                    <a
-                        href="edit.php?id=<?= $insurance["InsuranceID"] ?>"
-                        class="button"
-                    >
-                        Edit Insurance
-                    </a>
+                    <?php if (canManageInsurance()): ?>
+
+                        <a
+                            href="edit.php?id=<?= $insurance["InsuranceID"] ?>"
+                            class="button"
+                        >
+                            Edit Insurance
+                        </a>
 
 
-                    <a
-                        href="delete.php?id=<?= $insurance["InsuranceID"] ?>"
-                        class="button"
-                        style="
-                            background:#991b1b;
-                        "
-                    >
-                        Delete
-                    </a>
+                        <a
+                            href="delete.php?id=<?= $insurance["InsuranceID"] ?>"
+                            class="button"
+                            style="
+                                background:#991b1b;
+                            "
+                        >
+                            Delete
+                        </a>
+
+                    <?php endif; ?>
 
 
                     <a
