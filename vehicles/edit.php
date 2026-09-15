@@ -49,6 +49,11 @@ $stmt = $pdo->prepare("
         Make,
         Model,
         VehicleYear,
+        Mileage,
+        LastServiceDate,
+        OilChangeIntervalKm,
+        LastOilChangeDate,
+        LastOilChangeMileage,
         Color,
         VehicleType,
         EngineNumber,
@@ -285,6 +290,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_POST["vehicle_year"] ?? ""
     );
 
+    $mileage = trim(
+        $_POST["mileage"] ?? ""
+    );
+
+    $lastServiceDate = trim(
+        $_POST["last_service_date"] ?? ""
+    );
+
+    $oilChangeIntervalKm = trim(
+        $_POST["oil_change_interval_km"] ?? ""
+    );
+
+    $lastOilChangeDate = trim(
+        $_POST["last_oil_change_date"] ?? ""
+    );
+
+    $lastOilChangeMileage = trim(
+        $_POST["last_oil_change_mileage"] ?? ""
+    );
+
     $color = trim(
         $_POST["color"] ?? ""
     );
@@ -329,6 +354,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $vehicle["VehicleYear"] =
             $vehicleYear;
+
+        $vehicle["Mileage"] =
+            $mileage;
+
+        $vehicle["LastServiceDate"] =
+            $lastServiceDate;
+
+        $vehicle["OilChangeIntervalKm"] =
+            $oilChangeIntervalKm;
+
+        $vehicle["LastOilChangeDate"] =
+            $lastOilChangeDate;
+
+        $vehicle["LastOilChangeMileage"] =
+            $lastOilChangeMileage;
 
         $vehicle["Color"] =
             $color;
@@ -446,6 +486,245 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "Please enter a valid vehicle year.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mileage Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $mileage !== ""
+    ) {
+
+        if (
+            !ctype_digit($mileage) ||
+            (int) $mileage < 0
+        ) {
+
+            $error =
+                "Please enter a valid vehicle mileage.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Oil Change Interval Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $oilChangeIntervalKm !== ""
+    ) {
+
+        if (
+            !ctype_digit($oilChangeIntervalKm) ||
+            (int) $oilChangeIntervalKm <= 0
+        ) {
+
+            $error =
+                "Please enter a valid oil change interval.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Last Oil Change Mileage Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $lastOilChangeMileage !== ""
+    ) {
+
+        if (
+            !ctype_digit($lastOilChangeMileage) ||
+            (int) $lastOilChangeMileage < 0
+        ) {
+
+            $error =
+                "Please enter a valid last oil change mileage.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Last Oil Change Mileage vs Current Mileage
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $mileage !== "" &&
+        $lastOilChangeMileage !== ""
+    ) {
+
+        if (
+            (int) $lastOilChangeMileage >
+            (int) $mileage
+        ) {
+
+            $error =
+                "Last oil change mileage cannot be greater than the current vehicle mileage.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Last Service Date Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $lastServiceDate !== ""
+    ) {
+
+        $dateObject =
+            DateTime::createFromFormat(
+                "Y-m-d",
+                $lastServiceDate
+            );
+
+        $dateErrors =
+            DateTime::getLastErrors();
+
+
+        if ($dateErrors === false) {
+
+            $dateErrors = [
+                "warning_count" => 0,
+                "error_count" => 0
+            ];
+
+        }
+
+
+        if (
+            !$dateObject ||
+            $dateErrors["warning_count"] > 0 ||
+            $dateErrors["error_count"] > 0 ||
+            $dateObject->format("Y-m-d")
+                !== $lastServiceDate
+        ) {
+
+            $error =
+                "Please enter a valid last service date.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prevent Future Last Service Date
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $lastServiceDate !== ""
+    ) {
+
+        if (
+            $lastServiceDate >
+            date("Y-m-d")
+        ) {
+
+            $error =
+                "Last service date cannot be in the future.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Last Oil Change Date Validation
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $lastOilChangeDate !== ""
+    ) {
+
+        $dateObject =
+            DateTime::createFromFormat(
+                "Y-m-d",
+                $lastOilChangeDate
+            );
+
+        $dateErrors =
+            DateTime::getLastErrors();
+
+
+        if ($dateErrors === false) {
+
+            $dateErrors = [
+                "warning_count" => 0,
+                "error_count" => 0
+            ];
+
+        }
+
+
+        if (
+            !$dateObject ||
+            $dateErrors["warning_count"] > 0 ||
+            $dateErrors["error_count"] > 0 ||
+            $dateObject->format("Y-m-d")
+                !== $lastOilChangeDate
+        ) {
+
+            $error =
+                "Please enter a valid last oil change date.";
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Prevent Future Last Oil Change Date
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $error === "" &&
+        $lastOilChangeDate !== ""
+    ) {
+
+        if (
+            $lastOilChangeDate >
+            date("Y-m-d")
+        ) {
+
+            $error =
+                "Last oil change date cannot be in the future.";
 
         }
 
@@ -688,6 +967,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Make = ?,
                     Model = ?,
                     VehicleYear = ?,
+                    Mileage = ?,
+                    LastServiceDate = ?,
+                    OilChangeIntervalKm = ?,
+                    LastOilChangeDate = ?,
+                    LastOilChangeMileage = ?,
                     Color = ?,
                     VehicleType = ?,
                     EngineNumber = ?,
@@ -710,6 +994,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $model,
 
                 (int) $vehicleYear,
+
+                $mileage !== ""
+                    ? (int) $mileage
+                    : null,
+
+                $lastServiceDate !== ""
+                    ? $lastServiceDate
+                    : null,
+
+                $oilChangeIntervalKm !== ""
+                    ? (int) $oilChangeIntervalKm
+                    : null,
+
+                $lastOilChangeDate !== ""
+                    ? $lastOilChangeDate
+                    : null,
+
+                $lastOilChangeMileage !== ""
+                    ? (int) $lastOilChangeMileage
+                    : null,
 
                 $color !== ""
                     ? $color
@@ -791,6 +1095,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Make,
                     Model,
                     VehicleYear,
+                    Mileage,
+                    LastServiceDate,
+                    OilChangeIntervalKm,
+                    LastOilChangeDate,
+                    LastOilChangeMileage,
                     Color,
                     VehicleType,
                     EngineNumber,
@@ -859,6 +1168,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         rel="stylesheet"
         href="/visrs/css/style.css"
     >
+
+    <style>
+
+        /*
+        |--------------------------------------------------------------------------
+        | Maintenance Section
+        |--------------------------------------------------------------------------
+        */
+
+        .maintenance-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .maintenance-section-title {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .maintenance-section-description {
+            margin: 0 0 20px;
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .maintenance-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .maintenance-field-help {
+            display: block;
+            margin-top: 5px;
+            color: #6b7280;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .maintenance-info-note {
+            margin-top: 18px;
+            padding: 14px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+            color: #4b5563;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .maintenance-info-note strong {
+            color: #111827;
+        }
+
+        @media (max-width: 700px) {
+
+            .maintenance-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
 
 </head>
 
@@ -1340,6 +1716,169 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     </div>
 
 
+                    <!-- MAINTENANCE & SERVICE -->
+
+                    <div class="maintenance-section">
+
+                        <h3 class="maintenance-section-title">
+                            Maintenance & Service
+                        </h3>
+
+                        <p class="maintenance-section-description">
+                            Update the vehicle's mileage and maintenance history.
+                        </p>
+
+
+                        <div class="maintenance-grid">
+
+
+                            <!-- CURRENT MILEAGE -->
+
+                            <div class="form-group">
+
+                                <label for="mileage">
+                                    Current Mileage
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="mileage"
+                                    name="mileage"
+                                    min="0"
+                                    step="1"
+                                    value="<?= htmlspecialchars(
+                                        $vehicle["Mileage"] ?? ""
+                                    ) ?>"
+                                >
+
+                                <span class="maintenance-field-help">
+                                    Current vehicle mileage in kilometres.
+                                </span>
+
+                            </div>
+
+
+                            <!-- LAST SERVICE DATE -->
+
+                            <div class="form-group">
+
+                                <label for="last_service_date">
+                                    Last Service Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="last_service_date"
+                                    name="last_service_date"
+                                    value="<?= htmlspecialchars(
+                                        $vehicle["LastServiceDate"] ?? ""
+                                    ) ?>"
+                                    max="<?= date("Y-m-d") ?>"
+                                >
+
+                                <span class="maintenance-field-help">
+                                    Date the vehicle was most recently serviced.
+                                </span>
+
+                            </div>
+
+
+                            <!-- OIL CHANGE INTERVAL -->
+
+                            <div class="form-group">
+
+                                <label for="oil_change_interval_km">
+                                    Oil Change Interval
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="oil_change_interval_km"
+                                    name="oil_change_interval_km"
+                                    min="1"
+                                    step="1"
+                                    value="<?= htmlspecialchars(
+                                        $vehicle["OilChangeIntervalKm"] ?? ""
+                                    ) ?>"
+                                >
+
+                                <span class="maintenance-field-help">
+                                    Recommended distance between oil changes in kilometres.
+                                </span>
+
+                            </div>
+
+
+                            <!-- LAST OIL CHANGE DATE -->
+
+                            <div class="form-group">
+
+                                <label for="last_oil_change_date">
+                                    Last Oil Change Date
+                                </label>
+
+                                <input
+                                    type="date"
+                                    id="last_oil_change_date"
+                                    name="last_oil_change_date"
+                                    value="<?= htmlspecialchars(
+                                        $vehicle["LastOilChangeDate"] ?? ""
+                                    ) ?>"
+                                    max="<?= date("Y-m-d") ?>"
+                                >
+
+                                <span class="maintenance-field-help">
+                                    Date the engine oil was last changed.
+                                </span>
+
+                            </div>
+
+
+                            <!-- LAST OIL CHANGE MILEAGE -->
+
+                            <div class="form-group">
+
+                                <label for="last_oil_change_mileage">
+                                    Mileage at Last Oil Change
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="last_oil_change_mileage"
+                                    name="last_oil_change_mileage"
+                                    min="0"
+                                    step="1"
+                                    value="<?= htmlspecialchars(
+                                        $vehicle["LastOilChangeMileage"] ?? ""
+                                    ) ?>"
+                                >
+
+                                <span class="maintenance-field-help">
+                                    Vehicle mileage when the last oil change was performed.
+                                </span>
+
+                            </div>
+
+
+                        </div>
+
+
+                        <div class="maintenance-info-note">
+
+                            <strong>
+                                Maintenance information:
+                            </strong>
+
+                            Keep the mileage and maintenance information
+                            up to date so VISRS can accurately track the
+                            vehicle's service history and upcoming oil-change
+                            requirements.
+
+                        </div>
+
+                    </div>
+
+
                     <!-- BUTTONS -->
 
                     <div
@@ -1389,3 +1928,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>
+
+</body>
+
+</html>

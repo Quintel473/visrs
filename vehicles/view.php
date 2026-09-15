@@ -44,6 +44,11 @@ $stmt = $pdo->prepare("
         v.Make,
         v.Model,
         v.VehicleYear,
+        v.Mileage,
+        v.LastServiceDate,
+        v.OilChangeIntervalKm,
+        v.LastOilChangeDate,
+        v.LastOilChangeMileage,
         v.Color,
         v.VehicleType,
         v.EngineNumber,
@@ -223,6 +228,79 @@ $accidentStmt->execute([
 $accidentCount =
     (int) $accidentStmt->fetchColumn();
 
+
+/*
+|--------------------------------------------------------------------------
+| Maintenance Calculations
+|--------------------------------------------------------------------------
+*/
+
+$currentMileage = $vehicle["Mileage"] !== null
+    ? (int) $vehicle["Mileage"]
+    : null;
+
+$oilInterval = $vehicle["OilChangeIntervalKm"] !== null
+    ? (int) $vehicle["OilChangeIntervalKm"]
+    : null;
+
+$lastOilMileage = $vehicle["LastOilChangeMileage"] !== null
+    ? (int) $vehicle["LastOilChangeMileage"]
+    : null;
+
+
+/*
+|--------------------------------------------------------------------------
+| Calculate Mileage Until Next Oil Change
+|--------------------------------------------------------------------------
+*/
+
+$mileageUntilOilChange = null;
+
+if (
+    $currentMileage !== null &&
+    $lastOilMileage !== null &&
+    $oilInterval !== null &&
+    $oilInterval > 0
+) {
+
+    $nextOilChangeMileage =
+        $lastOilMileage + $oilInterval;
+
+    $mileageUntilOilChange =
+        $nextOilChangeMileage - $currentMileage;
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Determine Oil Change Status
+|--------------------------------------------------------------------------
+*/
+
+$oilChangeStatus = "Not enough information";
+
+if ($mileageUntilOilChange !== null) {
+
+    if ($mileageUntilOilChange <= 0) {
+
+        $oilChangeStatus =
+            "Oil change due";
+
+    } elseif ($mileageUntilOilChange <= 1000) {
+
+        $oilChangeStatus =
+            "Oil change approaching";
+
+    } else {
+
+        $oilChangeStatus =
+            "Oil change not yet due";
+
+    }
+
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -246,6 +324,129 @@ $accidentCount =
         rel="stylesheet"
         href="/visrs/css/style.css"
     >
+
+    <style>
+
+        /*
+        |--------------------------------------------------------------------------
+        | Maintenance Section
+        |--------------------------------------------------------------------------
+        */
+
+        .maintenance-section {
+            margin-top:20px;
+        }
+
+        .maintenance-grid {
+            display:grid;
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+            gap:16px;
+            margin-top:20px;
+        }
+
+        .maintenance-card {
+            padding:18px;
+            border:1px solid #e5e7eb;
+            border-radius:8px;
+            background:#ffffff;
+        }
+
+        .maintenance-card h3 {
+            margin:0 0 8px;
+            font-size:13px;
+            color:#6b7280;
+            font-weight:600;
+        }
+
+        .maintenance-card-value {
+            font-size:20px;
+            font-weight:700;
+            color:#111827;
+            word-break:break-word;
+        }
+
+        .maintenance-card-help {
+            margin-top:6px;
+            font-size:12px;
+            color:#6b7280;
+            line-height:1.4;
+        }
+
+        .maintenance-status {
+            margin-top:20px;
+            padding:14px 16px;
+            border-radius:8px;
+            background:#f9fafb;
+            border:1px solid #e5e7eb;
+        }
+
+        .maintenance-status-title {
+            margin:0 0 5px;
+            font-size:13px;
+            color:#6b7280;
+        }
+
+        .maintenance-status-value {
+            font-size:16px;
+            font-weight:700;
+            color:#111827;
+        }
+
+        .maintenance-status-due {
+            background:#fef2f2;
+            border-color:#fecaca;
+        }
+
+        .maintenance-status-due
+        .maintenance-status-value {
+            color:#991b1b;
+        }
+
+        .maintenance-status-warning {
+            background:#fffbeb;
+            border-color:#fde68a;
+        }
+
+        .maintenance-status-warning
+        .maintenance-status-value {
+            color:#92400e;
+        }
+
+        .maintenance-status-ok {
+            background:#f0fdf4;
+            border-color:#bbf7d0;
+        }
+
+        .maintenance-status-ok
+        .maintenance-status-value {
+            color:#166534;
+        }
+
+        .maintenance-info-note {
+            margin-top:18px;
+            padding:14px 16px;
+            border:1px solid #e5e7eb;
+            border-radius:8px;
+            background:#f9fafb;
+            color:#4b5563;
+            font-size:12px;
+            line-height:1.6;
+        }
+
+        .maintenance-info-note strong {
+            color:#111827;
+        }
+
+        @media (max-width:700px) {
+
+            .maintenance-grid {
+                grid-template-columns:1fr;
+            }
+
+        }
+
+    </style>
 
 </head>
 
@@ -460,6 +661,307 @@ $accidentCount =
             </section>
 
 
+            <!-- MAINTENANCE & SERVICE -->
+
+            <section
+                class="card maintenance-section"
+            >
+
+                <h2>
+                    Maintenance & Service
+                </h2>
+
+                <p
+                    style="
+                        color:#6b7280;
+                        margin:0;
+                        font-size:13px;
+                    "
+                >
+                    Current mileage, service history, and oil-change information.
+                </p>
+
+
+                <div class="maintenance-grid">
+
+
+                    <!-- CURRENT MILEAGE -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Current Mileage
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?php if ($currentMileage !== null): ?>
+
+                                <?= number_format(
+                                    $currentMileage
+                                ) ?> km
+
+                            <?php else: ?>
+
+                                Not provided
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Current recorded vehicle mileage.
+                        </div>
+
+                    </div>
+
+
+                    <!-- LAST SERVICE -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Last Service
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?= $vehicle["LastServiceDate"]
+                                ? htmlspecialchars(
+                                    formatDate(
+                                        $vehicle["LastServiceDate"]
+                                    )
+                                )
+                                : "Not provided"
+                            ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Most recent recorded service date.
+                        </div>
+
+                    </div>
+
+
+                    <!-- OIL CHANGE INTERVAL -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Oil Change Interval
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?php if ($oilInterval !== null): ?>
+
+                                <?= number_format(
+                                    $oilInterval
+                                ) ?> km
+
+                            <?php else: ?>
+
+                                Not provided
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Recommended distance between oil changes.
+                        </div>
+
+                    </div>
+
+
+                    <!-- LAST OIL CHANGE DATE -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Last Oil Change
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?= $vehicle["LastOilChangeDate"]
+                                ? htmlspecialchars(
+                                    formatDate(
+                                        $vehicle["LastOilChangeDate"]
+                                    )
+                                )
+                                : "Not provided"
+                            ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Date of the most recent oil change.
+                        </div>
+
+                    </div>
+
+
+                    <!-- LAST OIL CHANGE MILEAGE -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Mileage at Last Oil Change
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?php if ($lastOilMileage !== null): ?>
+
+                                <?= number_format(
+                                    $lastOilMileage
+                                ) ?> km
+
+                            <?php else: ?>
+
+                                Not provided
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Mileage recorded when the oil was last changed.
+                        </div>
+
+                    </div>
+
+
+                    <!-- NEXT OIL CHANGE -->
+
+                    <div class="maintenance-card">
+
+                        <h3>
+                            Next Oil Change Mileage
+                        </h3>
+
+                        <div class="maintenance-card-value">
+
+                            <?php if (
+                                $lastOilMileage !== null &&
+                                $oilInterval !== null &&
+                                $oilInterval > 0
+                            ): ?>
+
+                                <?= number_format(
+                                    $lastOilMileage +
+                                    $oilInterval
+                                ) ?> km
+
+                            <?php else: ?>
+
+                                Not available
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="maintenance-card-help">
+                            Estimated mileage when the next oil change is due.
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- OIL CHANGE STATUS -->
+
+                <?php
+
+                $oilStatusClass = "";
+
+                if (
+                    $mileageUntilOilChange !== null
+                ) {
+
+                    if (
+                        $mileageUntilOilChange <= 0
+                    ) {
+
+                        $oilStatusClass =
+                            "maintenance-status-due";
+
+                    } elseif (
+                        $mileageUntilOilChange <= 1000
+                    ) {
+
+                        $oilStatusClass =
+                            "maintenance-status-warning";
+
+                    } else {
+
+                        $oilStatusClass =
+                            "maintenance-status-ok";
+
+                    }
+
+                }
+
+                ?>
+
+
+                <div
+                    class="
+                        maintenance-status
+                        <?= $oilStatusClass ?>
+                    "
+                >
+
+                    <div class="maintenance-status-title">
+                        Oil Change Status
+                    </div>
+
+                    <div class="maintenance-status-value">
+
+                        <?= htmlspecialchars(
+                            $oilChangeStatus
+                        ) ?>
+
+                        <?php if (
+                            $mileageUntilOilChange !== null
+                        ): ?>
+
+                            <?php if (
+                                $mileageUntilOilChange > 0
+                            ): ?>
+
+                                — <?= number_format(
+                                    $mileageUntilOilChange
+                                ) ?> km remaining
+
+                            <?php endif; ?>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </div>
+
+
+                <div class="maintenance-info-note">
+
+                    <strong>
+                        Maintenance information:
+                    </strong>
+
+                    Oil-change status is calculated using the current
+                    mileage, the mileage at the last oil change, and the
+                    configured oil-change interval.
+
+                </div>
+
+            </section>
+
+
             <!-- ADDITIONAL INFORMATION -->
 
             <section
@@ -579,10 +1081,14 @@ $accidentCount =
 
                         <td style="padding:12px;">
 
-                            <?= htmlspecialchars(
-                                $vehicle["RegistrationDate"]
-                                ?: "Not provided"
-                            ) ?>
+                            <?= $vehicle["RegistrationDate"]
+                                ? htmlspecialchars(
+                                    formatDate(
+                                        $vehicle["RegistrationDate"]
+                                    )
+                                )
+                                : "Not provided"
+                            ?>
 
                         </td>
 
@@ -842,14 +1348,12 @@ $accidentCount =
 
                 <?php if (canManageVehicles()): ?>
 
-
                     <a
                         href="edit.php?id=<?= (int) $vehicle["VehicleID"] ?>"
                         class="button"
                     >
                         Edit Vehicle
                     </a>
-
 
                 <?php endif; ?>
 
@@ -867,3 +1371,7 @@ $accidentCount =
 
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>
+
+</body>
+
+</html>
