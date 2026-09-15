@@ -1,6 +1,5 @@
 <?php
 
-$basePath = $basePath ?? "";
 $activePage = $activePage ?? "";
 
 ?>
@@ -15,86 +14,87 @@ $activePage = $activePage ?? "";
     <nav class="sidebar-nav">
 
         <a
-            href="<?= $basePath ?>dashboard.php"
+            href="/visrs/dashboard.php"
             class="<?= $activePage === 'dashboard' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Dashboard</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Dashboard</span>
         </a>
 
         <a
-            href="<?= $basePath ?>search.php"
+            href="/visrs/search.php"
             class="<?= $activePage === 'search' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Vehicle Search</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Vehicle Search</span>
         </a>
 
         <a
-            href="<?= $basePath ?>vehicles/"
+            href="/visrs/vehicles/"
             class="<?= $activePage === 'vehicles' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Vehicles</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Vehicles</span>
         </a>
 
         <a
-            href="<?= $basePath ?>owners/"
+            href="/visrs/owners/"
             class="<?= $activePage === 'owners' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Owners</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Owners</span>
         </a>
 
         <a
-            href="<?= $basePath ?>ownership_history/"
+            href="/visrs/ownership_history/"
             class="<?= $activePage === 'ownership_history' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Ownership History</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Ownership History</span>
         </a>
 
         <a
-            href="<?= $basePath ?>insurance/"
+            href="/visrs/insurance/"
             class="<?= $activePage === 'insurance' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Insurance</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Insurance</span>
         </a>
 
         <a
-            href="<?= $basePath ?>accidents/"
+            href="/visrs/accidents/"
             class="<?= $activePage === 'accidents' ? 'active' : '' ?>"
         >
-            <span></span>
-            <span>Accidents</span>
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Accidents</span>
         </a>
 
-    <?php if (isset($_SESSION["Role"]) && $_SESSION["Role"] === "Admin"): ?>
+        <?php if (
+            isset($_SESSION["Role"]) &&
+            $_SESSION["Role"] === "Admin"
+        ): ?>
 
-        <a
-            href="<?= $basePath ?>users/"
-            class="<?= $activePage === 'users' ? 'active' : '' ?>"
-        >
-            <span></span>
-            <span>User Management</span>
-        </a>
+            <a
+                href="/visrs/users/"
+                class="<?= $activePage === 'users' ? 'active' : '' ?>"
+            >
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">User Management</span>
+            </a>
 
-        <a
-            href="<?= $basePath ?>audit_logs/"
-            class="<?= $activePage === 'audit_logs' ? 'active' : '' ?>"
-        >
-            <span></span>
-            <span>Audit Trail</span>
-        </a>
+            <a
+                href="/visrs/audit_logs/"
+                class="<?= $activePage === 'audit_logs' ? 'active' : '' ?>"
+            >
+                <span class="sidebar-icon"></span>
+                <span class="sidebar-text">Audit Trail</span>
+            </a>
 
-    <?php endif; ?>
+        <?php endif; ?>
 
-        <a
-            href="<?= $basePath ?>logout.php"
-        >
-            <span></span>
-            <span>Logout</span>
+        <a href="/visrs/logout.php">
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text">Logout</span>
         </a>
 
     </nav>
