@@ -1,20 +1,35 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
 
-$basePath = "../";
 $activePage = "owners";
+$pageTitle = "Owner Details";
+$pageSubtitle = "Owner profile and associated vehicle information.";
 
 $ownerID = $_GET["id"] ?? "";
 
-if (!is_numeric($ownerID)) {
+
+/*
+|--------------------------------------------------------------------------
+| Validate Owner ID
+|--------------------------------------------------------------------------
+*/
+
+if (!ctype_digit((string) $ownerID) || (int) $ownerID <= 0) {
     header("Location: index.php");
     exit;
 }
 
+$ownerID = (int) $ownerID;
 
-/* Get owner information */
+
+/*
+|--------------------------------------------------------------------------
+| Get Owner Information
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -35,21 +50,106 @@ $stmt->execute([$ownerID]);
 $owner = $stmt->fetch();
 
 
-/* Check that owner exists */
+/*
+|--------------------------------------------------------------------------
+| Check That Owner Exists
+|--------------------------------------------------------------------------
+*/
 
 if (!$owner) {
 
     http_response_code(404);
 
-    echo "<h1>Owner Not Found</h1>";
-    echo "<p>The requested owner could not be found.</p>";
-    echo '<p><a href="index.php">Return to Owners</a></p>';
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>Owner Not Found - VISRS</title>
+
+        <link
+            rel="stylesheet"
+            href="/visrs/css/style.css"
+        >
+
+    </head>
+
+    <body>
+
+    <div class="layout">
+
+        <main
+            class="main-content"
+            style="margin-left:0;width:100%;"
+        >
+
+            <div
+                class="content"
+                style="max-width:700px;margin:80px auto;"
+            >
+
+                <div class="card">
+
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+                        <strong>
+                            Owner Not Found
+                        </strong>
+                    </div>
+
+                    <h2>
+                        The requested owner could not be found.
+                    </h2>
+
+                    <p>
+                        The owner record may have been deleted
+                        or the supplied owner ID is invalid.
+                    </p>
+
+                    <a
+                        href="index.php"
+                        class="button"
+                    >
+                        Return to Owners
+                    </a>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    </body>
+
+    </html>
+    <?php
 
     exit;
 }
 
 
-/* Get vehicles belonging to this owner */
+/*
+|--------------------------------------------------------------------------
+| Get Vehicles Belonging to Owner
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -71,6 +171,23 @@ $stmt->execute([$ownerID]);
 
 $vehicles = $stmt->fetchAll();
 
+
+/*
+|--------------------------------------------------------------------------
+| Permission
+|--------------------------------------------------------------------------
+|
+| All authenticated users can view owner information.
+| Only Admin and Police can edit owners.
+|
+*/
+
+$canManageOwners = in_array(
+    $_SESSION["Role"] ?? "",
+    ["Admin", "Police"],
+    true
+);
+
 ?>
 
 <!DOCTYPE html>
@@ -91,7 +208,7 @@ $vehicles = $stmt->fetchAll();
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -100,32 +217,15 @@ $vehicles = $stmt->fetchAll();
 
 <div class="layout">
 
-    <!-- SIDEBAR -->
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
-    <aside class="sidebar">
-
-        <?php require_once "../includes/sidebar.php"; ?>
-
-    </aside>
-
-
-    <!-- MAIN CONTENT -->
 
     <div class="main-content">
 
-
-        <!-- TOP BAR -->
-
         <?php
-
-            $pageTitle = "Owners";
-
-            include __DIR__ . "/../includes/header.php";
-
+        include __DIR__ . "/../includes/header.php";
         ?>
 
-
-        <!-- PAGE CONTENT -->
 
         <main class="content">
 
@@ -167,29 +267,29 @@ $vehicles = $stmt->fetchAll();
 
                 <table
                     style="
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 15px;
+                        width:100%;
+                        border-collapse:collapse;
+                        margin-top:15px;
                     "
                 >
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
-                                width: 35%;
+                                padding:12px;
+                                font-weight:bold;
+                                width:35%;
                             "
                         >
                             Full Name
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
                                 $owner["FirstName"]
@@ -204,23 +304,24 @@ $vehicles = $stmt->fetchAll();
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Address
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $owner["Address"] ?: "Not provided"
+                                $owner["Address"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -230,23 +331,24 @@ $vehicles = $stmt->fetchAll();
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Phone
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $owner["Phone"] ?: "Not provided"
+                                $owner["Phone"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -256,23 +358,24 @@ $vehicles = $stmt->fetchAll();
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Email
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $owner["Email"] ?: "Not provided"
+                                $owner["Email"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -284,14 +387,14 @@ $vehicles = $stmt->fetchAll();
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Owner ID
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
                                 $owner["OwnerID"]
@@ -310,7 +413,7 @@ $vehicles = $stmt->fetchAll();
 
             <section
                 class="card"
-                style="margin-top: 20px;"
+                style="margin-top:20px;"
             >
 
                 <h2>
@@ -319,24 +422,22 @@ $vehicles = $stmt->fetchAll();
 
                 <p
                     style="
-                        color: #6b7280;
-                        margin-bottom: 20px;
+                        color:#6b7280;
+                        margin-bottom:20px;
                     "
                 >
-
                     Vehicles currently registered to this owner.
-
                 </p>
 
 
                 <?php if (count($vehicles) > 0): ?>
 
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x:auto;">
 
                         <table
                             style="
-                                width: 100%;
-                                border-collapse: collapse;
+                                width:100%;
+                                border-collapse:collapse;
                             "
                         >
 
@@ -344,32 +445,32 @@ $vehicles = $stmt->fetchAll();
 
                                 <tr
                                     style="
-                                        border-bottom: 2px solid #e5e7eb;
-                                        text-align: left;
+                                        border-bottom:2px solid #e5e7eb;
+                                        text-align:left;
                                     "
                                 >
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Plate Number
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         VIN
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Vehicle
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Year
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Status
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Action
                                     </th>
 
@@ -380,82 +481,82 @@ $vehicles = $stmt->fetchAll();
 
                             <tbody>
 
-                                <?php foreach ($vehicles as $vehicle): ?>
+                            <?php foreach ($vehicles as $vehicle): ?>
 
-                                    <tr
-                                        style="
-                                            border-bottom: 1px solid #e5e7eb;
-                                        "
-                                    >
+                                <tr
+                                    style="
+                                        border-bottom:1px solid #e5e7eb;
+                                    "
+                                >
 
-                                        <td style="padding: 12px;">
+                                    <td style="padding:12px;">
 
-                                            <strong>
-
-                                                <?= htmlspecialchars(
-                                                    $vehicle["PlateNumber"]
-                                                ) ?>
-
-                                            </strong>
-
-                                        </td>
-
-
-                                        <td style="padding: 12px;">
+                                        <strong>
 
                                             <?= htmlspecialchars(
-                                                $vehicle["VIN"]
+                                                $vehicle["PlateNumber"]
                                             ) ?>
 
-                                        </td>
+                                        </strong>
+
+                                    </td>
 
 
-                                        <td style="padding: 12px;">
+                                    <td style="padding:12px;">
 
-                                            <?= htmlspecialchars(
-                                                $vehicle["Make"]
-                                            ) ?>
+                                        <?= htmlspecialchars(
+                                            $vehicle["VIN"]
+                                        ) ?>
 
-                                            <?= htmlspecialchars(
-                                                $vehicle["Model"]
-                                            ) ?>
-
-                                        </td>
+                                    </td>
 
 
-                                        <td style="padding: 12px;">
+                                    <td style="padding:12px;">
 
-                                            <?= htmlspecialchars(
-                                                $vehicle["VehicleYear"]
-                                            ) ?>
+                                        <?= htmlspecialchars(
+                                            $vehicle["Make"]
+                                        ) ?>
 
-                                        </td>
+                                        <?= htmlspecialchars(
+                                            $vehicle["Model"]
+                                        ) ?>
 
-
-                                        <td style="padding: 12px;">
-
-                                            <?= htmlspecialchars(
-                                                $vehicle["Status"]
-                                            ) ?>
-
-                                        </td>
+                                    </td>
 
 
-                                        <td style="padding: 12px;">
+                                    <td style="padding:12px;">
 
-                                            <a
-                                                href="../vehicles/view.php?id=<?= $vehicle["VehicleID"] ?>"
-                                                class="button button-secondary"
-                                                style="padding: 8px 12px;"
-                                            >
-                                                View
-                                            </a>
+                                        <?= htmlspecialchars(
+                                            $vehicle["VehicleYear"]
+                                        ) ?>
 
-                                        </td>
+                                    </td>
 
-                                    </tr>
 
-                                <?php endforeach; ?>
+                                    <td style="padding:12px;">
+
+                                        <?= htmlspecialchars(
+                                            $vehicle["Status"]
+                                        ) ?>
+
+                                    </td>
+
+
+                                    <td style="padding:12px;">
+
+                                        <a
+                                            href="../vehicles/view.php?id=<?= (int) $vehicle["VehicleID"] ?>"
+                                            class="button button-secondary"
+                                            style="padding:8px 12px;"
+                                        >
+                                            View
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+
+                            <?php endforeach; ?>
 
                             </tbody>
 
@@ -467,9 +568,9 @@ $vehicles = $stmt->fetchAll();
 
                     <div
                         style="
-                            padding: 30px;
-                            text-align: center;
-                            color: #6b7280;
+                            padding:30px;
+                            text-align:center;
+                            color:#6b7280;
                         "
                     >
 
@@ -489,10 +590,10 @@ $vehicles = $stmt->fetchAll();
 
             <div
                 style="
-                    display: flex;
-                    gap: 10px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
+                    display:flex;
+                    gap:10px;
+                    margin-top:20px;
+                    flex-wrap:wrap;
                 "
             >
 
@@ -504,24 +605,28 @@ $vehicles = $stmt->fetchAll();
                 </a>
 
 
-                <a
-                    href="edit.php?id=<?= $owner["OwnerID"] ?>"
-                    class="button"
-                >
-                    Edit Owner
-                </a>
+                <?php if ($canManageOwners): ?>
+
+                    <a
+                        href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
+                        class="button"
+                    >
+                        Edit Owner
+                    </a>
+
+                <?php endif; ?>
 
             </div>
 
 
         </main>
 
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
+
     </div>
 
 </div>
-
-
-<script src="../js/app.js"></script>
 
 </body>
 

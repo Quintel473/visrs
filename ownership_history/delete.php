@@ -1,14 +1,18 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
-
+require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
+
 $activePage = "ownership_history";
 
-$ownershipID = (int) ($_GET["id"] ?? $_POST["OwnershipID"] ?? 0);
+$ownershipID = (int) (
+    $_GET["id"] ??
+    $_POST["OwnershipID"] ??
+    0
+);
 
 if ($ownershipID <= 0) {
     header("Location: index.php");
@@ -17,8 +21,10 @@ if ($ownershipID <= 0) {
 
 
 /*
- * Load ownership record.
- */
+|--------------------------------------------------------------------------
+| Load Ownership Record
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -36,25 +42,34 @@ $stmt = $pdo->prepare("
     INNER JOIN owners o
         ON oh.OwnerID = o.OwnerID
     WHERE oh.OwnershipID = ?
+    LIMIT 1
 ");
 
-$stmt->execute([$ownershipID]);
+$stmt->execute([
+    $ownershipID
+]);
 
 $record = $stmt->fetch();
+
 
 if (!$record) {
     header("Location: index.php");
     exit;
 }
 
+
 $error = "";
 
 
 /*
- * Delete ownership record.
- */
+|--------------------------------------------------------------------------
+| Delete Ownership Record
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    requireValidCSRF();
 
     try {
 
@@ -62,7 +77,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $vehicleID = (int) $record["VehicleID"];
 
-        $wasCurrent = empty($record["EndDate"]);
+        $wasCurrent = empty(
+            $record["EndDate"]
+        );
+
 
         /*
          * If deleting the current ownership record,
@@ -83,7 +101,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 WHERE VehicleID = ?
                 AND OwnershipID <> ?
                 AND StartDate <= ?
-                ORDER BY StartDate DESC, OwnershipID DESC
+                ORDER BY
+                    StartDate DESC,
+                    OwnershipID DESC
                 LIMIT 1
             ");
 
@@ -93,7 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $record["StartDate"]
             ]);
 
-            $previousOwner = $previousStmt->fetch();
+            $previousOwner =
+                $previousStmt->fetch();
         }
 
 
@@ -106,7 +127,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             WHERE OwnershipID = ?
         ");
 
-        $deleteStmt->execute([$ownershipID]);
+        $deleteStmt->execute([
+            $ownershipID
+        ]);
 
 
         /*
@@ -117,7 +140,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
          * 2. Update the vehicle's current owner.
          */
 
-        if ($wasCurrent && $previousOwner) {
+        if (
+            $wasCurrent &&
+            $previousOwner
+        ) {
 
             $restoreHistoryStmt = $pdo->prepare("
                 UPDATE ownership_history
@@ -148,14 +174,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
          * check whether another current record exists.
          */
 
-        if ($wasCurrent && !$previousOwner) {
+        if (
+            $wasCurrent &&
+            !$previousOwner
+        ) {
 
             $remainingCurrentStmt = $pdo->prepare("
-                SELECT OwnerID
+                SELECT
+                    OwnerID
                 FROM ownership_history
                 WHERE VehicleID = ?
                 AND EndDate IS NULL
-                ORDER BY StartDate DESC, OwnershipID DESC
+                ORDER BY
+                    StartDate DESC,
+                    OwnershipID DESC
                 LIMIT 1
             ");
 
@@ -163,7 +195,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $vehicleID
             ]);
 
-            $remainingCurrent = $remainingCurrentStmt->fetch();
+            $remainingCurrent =
+                $remainingCurrentStmt->fetch();
 
 
             if ($remainingCurrent) {
@@ -200,7 +233,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $auditStmt->execute([
             $_SESSION["UserID"],
-            "Deleted ownership record for vehicle " . $record["PlateNumber"],
+            "Deleted ownership record for vehicle " .
+            $record["PlateNumber"],
             "ownership_history",
             $ownershipID,
             $_SERVER["REMOTE_ADDR"] ?? null
@@ -211,6 +245,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         header("Location: index.php");
+
         exit;
 
 
@@ -220,9 +255,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $pdo->rollBack();
         }
 
-        $error = "Unable to delete the ownership record.";
+        $error =
+            "Unable to delete the ownership record.";
     }
-
 }
 
 ?>
@@ -239,11 +274,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Delete Ownership Record - VISRS</title>
+    <title>
+        Delete Ownership Record - VISRS
+    </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -252,7 +289,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
     <main class="main-content">
 
@@ -268,6 +305,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <div class="content">
 
+            <div class="page-title">
+
+                <h1>
+                    Delete Ownership Record
+                </h1>
+
+                <p class="page-subtitle">
+                    Confirm removal of this ownership record.
+                </p>
+
+            </div>
+
+
             <div class="card">
 
                 <?php if ($error !== ""): ?>
@@ -282,7 +332,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         "
                     >
 
-                        <?= htmlspecialchars($error) ?>
+                        <strong>
+                            Unable to Delete Record
+                        </strong>
+
+                        <div style="margin-top:5px;">
+
+                            <?= htmlspecialchars($error) ?>
+
+                        </div>
 
                     </div>
 
@@ -297,7 +355,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div style="margin-top:20px;">
 
                     <p>
-                        <strong>Vehicle:</strong>
+
+                        <strong>
+                            Vehicle:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $record["PlateNumber"]
@@ -317,7 +378,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <p>
-                        <strong>Owner:</strong>
+
+                        <strong>
+                            Owner:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $record["FirstName"]
@@ -331,7 +395,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <p>
-                        <strong>Start Date:</strong>
+
+                        <strong>
+                            Start Date:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $record["StartDate"]
@@ -341,10 +408,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <p>
-                        <strong>End Date:</strong>
 
-                        <?= $record["EndDate"]
-                            ? htmlspecialchars($record["EndDate"])
+                        <strong>
+                            End Date:
+                        </strong>
+
+                        <?= !empty($record["EndDate"])
+                            ? htmlspecialchars(
+                                $record["EndDate"]
+                            )
                             : "Current Owner"
                         ?>
 
@@ -352,9 +424,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <p>
-                        <strong>Transfer Reason:</strong>
 
-                        <?= $record["TransferReason"]
+                        <strong>
+                            Transfer Reason:
+                        </strong>
+
+                        <?= !empty($record["TransferReason"])
                             ? htmlspecialchars(
                                 $record["TransferReason"]
                             )
@@ -366,7 +441,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
 
 
-                <?php if (empty($record["EndDate"])): ?>
+                <?php if (
+                    empty($record["EndDate"])
+                ): ?>
 
                     <div
                         style="
@@ -378,13 +455,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         "
                     >
 
-                        <strong>Important:</strong>
+                        <strong>
+                            Important:
+                        </strong>
 
-                        This is the vehicle's current ownership record.
+                        This is the vehicle's current
+                        ownership record.
 
                         If a previous ownership record exists,
-                        the previous owner will be restored as the
-                        current owner.
+                        the previous owner will be restored as
+                        the current owner.
 
                     </div>
 
@@ -397,6 +477,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         display:flex;
                         gap:10px;
                         margin-top:25px;
+                        flex-wrap:wrap;
                     "
                 >
 
@@ -404,6 +485,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         type="hidden"
                         name="OwnershipID"
                         value="<?= $ownershipID ?>"
+                    >
+
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
                     >
 
 
@@ -428,6 +518,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

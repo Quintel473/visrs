@@ -1,23 +1,31 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
 $activePage = "insurance";
+
+$pageTitle = "Add Insurance";
+$pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
 $error = "";
 
 
 /*
- * Process the form when submitted.
- */
+|--------------------------------------------------------------------------
+| Process Form Submission
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $vehicleID = (int) ($_POST["VehicleID"] ?? 0);
+    requireValidCSRF();
+
+    $vehicleID = (int) (
+        $_POST["VehicleID"] ?? 0
+    );
 
     $providerName = trim(
         $_POST["ProviderName"] ?? ""
@@ -45,43 +53,129 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /*
+     * Allowed coverage types.
+     */
+
+    $allowedCoverageTypes = [
+        "",
+        "Third Party",
+        "Comprehensive",
+        "Collision",
+        "Liability"
+    ];
+
+
+    /*
+     * Allowed insurance statuses.
+     */
+
+    $allowedStatuses = [
+        "Active",
+        "Expired",
+        "Cancelled"
+    ];
+
+
+    /*
      * Basic validation.
      */
 
     if ($vehicleID <= 0) {
 
-        $error = "Please select a vehicle.";
+        $error =
+            "Please select a vehicle.";
 
     } elseif ($providerName === "") {
 
-        $error = "Insurance provider is required.";
+        $error =
+            "Insurance provider is required.";
+
+    } elseif (strlen($providerName) > 150) {
+
+        $error =
+            "Insurance provider cannot exceed 150 characters.";
 
     } elseif ($policyNumber === "") {
 
-        $error = "Policy number is required.";
+        $error =
+            "Policy number is required.";
 
-    } elseif ($startDate === "") {
+    } elseif (strlen($policyNumber) > 100) {
 
-        $error = "Start date is required.";
-
-    } elseif ($expiryDate !== "" && $expiryDate < $startDate) {
-
-        $error = "Expiry date cannot be earlier than the start date.";
+        $error =
+            "Policy number cannot exceed 100 characters.";
 
     } elseif (
         !in_array(
-            $status,
-            ["Active", "Expired", "Cancelled"],
+            $coverageType,
+            $allowedCoverageTypes,
             true
         )
     ) {
 
-        $error = "Invalid insurance status.";
+        $error =
+            "Invalid coverage type.";
+
+    } elseif ($startDate === "") {
+
+        $error =
+            "Start date is required.";
+
+    } elseif (
+        !DateTime::createFromFormat(
+            "Y-m-d",
+            $startDate
+        ) ||
+        DateTime::createFromFormat(
+            "Y-m-d",
+            $startDate
+        )->format("Y-m-d") !== $startDate
+    ) {
+
+        $error =
+            "Please enter a valid policy start date.";
+
+    } elseif (
+        $expiryDate !== "" &&
+        (
+            !DateTime::createFromFormat(
+                "Y-m-d",
+                $expiryDate
+            ) ||
+            DateTime::createFromFormat(
+                "Y-m-d",
+                $expiryDate
+            )->format("Y-m-d") !== $expiryDate
+        )
+    ) {
+
+        $error =
+            "Please enter a valid policy expiry date.";
+
+    } elseif (
+        $expiryDate !== "" &&
+        $expiryDate < $startDate
+    ) {
+
+        $error =
+            "Expiry date cannot be earlier than the start date.";
+
+    } elseif (
+        !in_array(
+            $status,
+            $allowedStatuses,
+            true
+        )
+    ) {
+
+        $error =
+            "Invalid insurance status.";
 
     } else {
 
+
         /*
-         * Verify that the selected vehicle exists.
+         * Verify selected vehicle.
          */
 
         $vehicleStmt = $pdo->prepare("
@@ -94,6 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 VehicleYear
             FROM vehicles
             WHERE VehicleID = ?
+            LIMIT 1
         ");
 
         $vehicleStmt->execute([
@@ -105,16 +200,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if (!$vehicle) {
 
-            $error = "The selected vehicle does not exist.";
+            $error =
+                "The selected vehicle does not exist.";
 
         } else {
 
+
             /*
-             * Check for duplicate policy numbers.
+             * Check for duplicate policy number.
              */
 
             $duplicateStmt = $pdo->prepare("
-                SELECT InsuranceID
+                SELECT
+                    InsuranceID
                 FROM insurance
                 WHERE PolicyNumber = ?
                 LIMIT 1
@@ -124,7 +222,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $policyNumber
             ]);
 
-            $duplicate = $duplicateStmt->fetch();
+            $duplicate =
+                $duplicateStmt->fetch();
 
 
             if ($duplicate) {
@@ -134,14 +233,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             } else {
 
-                /*
-                 * Insert the insurance record.
-                 */
-
                 try {
 
                     $pdo->beginTransaction();
 
+
+                    /*
+                     * Insert insurance record.
+                     */
 
                     $insertStmt = $pdo->prepare("
                         INSERT INTO insurance
@@ -156,7 +255,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ");
-
 
                     $insertStmt->execute([
 
@@ -182,11 +280,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     $insuranceID =
-                        $pdo->lastInsertId();
+                        (int) $pdo->lastInsertId();
 
 
                     /*
-                     * Create an audit log.
+                     * Create audit log.
                      */
 
                     $auditStmt = $pdo->prepare("
@@ -200,7 +298,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         )
                         VALUES (?, ?, ?, ?, ?)
                     ");
-
 
                     $auditStmt->execute([
 
@@ -224,8 +321,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     /*
-                     * Send the user to the new
-                     * insurance record.
+                     * Open the newly-created record.
                      */
 
                     header(
@@ -238,10 +334,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 } catch (Exception $e) {
 
-                    if ($pdo->inTransaction()) {
-
+                    if (
+                        $pdo->inTransaction()
+                    ) {
                         $pdo->rollBack();
-
                     }
 
                     $error =
@@ -254,8 +350,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
 /*
- * Load vehicles for the dropdown.
- */
+|--------------------------------------------------------------------------
+| Load Vehicles
+|--------------------------------------------------------------------------
+*/
 
 $vehiclesStmt = $pdo->query("
     SELECT
@@ -269,15 +367,8 @@ $vehiclesStmt = $pdo->query("
     ORDER BY PlateNumber ASC
 ");
 
-$vehicles = $vehiclesStmt->fetchAll();
-
-
-/*
- * Page header information.
- */
-
-$pageTitle = "Add Insurance";
-$pageSubtitle = "Add an insurance policy for a registered vehicle.";
+$vehicles =
+    $vehiclesStmt->fetchAll();
 
 ?>
 
@@ -299,7 +390,7 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -308,17 +399,32 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-        <?php require_once "../includes/header.php"; ?>
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
-
-        <!-- CONTENT -->
 
         <div class="content">
+
+            <div class="page-title">
+
+                <div>
+
+                    <h1>
+                        Add Insurance
+                    </h1>
+
+                    <p class="page-subtitle">
+                        Add an insurance policy for a registered vehicle.
+                    </p>
+
+                </div>
+
+            </div>
+
 
             <div class="card">
 
@@ -334,7 +440,15 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                         "
                     >
 
-                        <?= htmlspecialchars($error) ?>
+                        <strong>
+                            Unable to Save Insurance
+                        </strong>
+
+                        <div style="margin-top:5px;">
+
+                            <?= htmlspecialchars($error) ?>
+
+                        </div>
 
                     </div>
 
@@ -342,6 +456,14 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
 
                 <form method="POST">
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
+                    >
 
 
                     <!-- VEHICLE -->
@@ -355,7 +477,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             </strong>
 
                         </label>
-
 
                         <select
                             name="VehicleID"
@@ -371,9 +492,7 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                         >
 
                             <option value="">
-
                                 -- Select Vehicle --
-
                             </option>
 
 
@@ -383,12 +502,12 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             ): ?>
 
                                 <option
-                                    value="<?= htmlspecialchars($vehicle["VehicleID"]) ?>"
+                                    value="<?= (int) $vehicle["VehicleID"] ?>"
                                     <?= (
-                                        isset($_POST["VehicleID"])
-                                        &&
-                                        $_POST["VehicleID"]
-                                        == $vehicle["VehicleID"]
+                                        (
+                                            $_POST["VehicleID"]
+                                            ?? ""
+                                        ) == $vehicle["VehicleID"]
                                     )
                                         ? "selected"
                                         : ""
@@ -434,7 +553,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
                         </label>
 
-
                         <input
                             type="text"
                             name="ProviderName"
@@ -442,7 +560,8 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             maxlength="150"
                             required
                             value="<?= htmlspecialchars(
-                                $_POST["ProviderName"] ?? ""
+                                $_POST["ProviderName"]
+                                ?? ""
                             ) ?>"
                             placeholder="Example: Caribbean Insurance"
                             style="
@@ -468,7 +587,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
                         </label>
 
-
                         <input
                             type="text"
                             name="PolicyNumber"
@@ -476,7 +594,8 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             maxlength="100"
                             required
                             value="<?= htmlspecialchars(
-                                $_POST["PolicyNumber"] ?? ""
+                                $_POST["PolicyNumber"]
+                                ?? ""
                             ) ?>"
                             placeholder="Example: POL-2025-001245"
                             style="
@@ -501,7 +620,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             </strong>
 
                         </label>
-
 
                         <select
                             name="CoverageType"
@@ -600,14 +718,14 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
                         </label>
 
-
                         <input
                             type="date"
                             name="StartDate"
                             id="StartDate"
                             required
                             value="<?= htmlspecialchars(
-                                $_POST["StartDate"] ?? ""
+                                $_POST["StartDate"]
+                                ?? ""
                             ) ?>"
                             style="
                                 width:100%;
@@ -632,13 +750,13 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
                         </label>
 
-
                         <input
                             type="date"
                             name="ExpiryDate"
                             id="ExpiryDate"
                             value="<?= htmlspecialchars(
-                                $_POST["ExpiryDate"] ?? ""
+                                $_POST["ExpiryDate"]
+                                ?? ""
                             ) ?>"
                             style="
                                 width:100%;
@@ -647,6 +765,16 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                                 margin-top:8px;
                             "
                         >
+
+                        <small
+                            style="
+                                display:block;
+                                margin-top:6px;
+                                color:#6b7280;
+                            "
+                        >
+                            Leave blank if an expiry date is not available.
+                        </small>
 
                     </div>
 
@@ -662,7 +790,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             </strong>
 
                         </label>
-
 
                         <select
                             name="Status"
@@ -693,7 +820,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                                 Active
                             </option>
 
-
                             <option
                                 value="Expired"
                                 <?= (
@@ -709,7 +835,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             >
                                 Expired
                             </option>
-
 
                             <option
                                 value="Cancelled"
@@ -738,6 +863,7 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                         style="
                             display:flex;
                             gap:10px;
+                            flex-wrap:wrap;
                         "
                     >
 
@@ -748,7 +874,6 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
                             Save Insurance
                         </button>
 
-
                         <a
                             href="index.php"
                             class="button button-secondary"
@@ -758,12 +883,14 @@ $pageSubtitle = "Add an insurance policy for a registered vehicle.";
 
                     </div>
 
-
                 </form>
 
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

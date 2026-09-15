@@ -1,21 +1,54 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
 
-$basePath = "../";
+$pageTitle = "Vehicles";
+$pageSubtitle = "View complete vehicle information";
+
 $activePage = "vehicles";
 
-$vehicleID = $_GET["id"] ?? "";
 
-if (!is_numeric($vehicleID)) {
+/*
+|--------------------------------------------------------------------------
+| Get Vehicle ID
+|--------------------------------------------------------------------------
+*/
+
+$vehicleID = isset($_GET["id"])
+    ? (int) $_GET["id"]
+    : 0;
+
+
+if ($vehicleID <= 0) {
+
     header("Location: index.php");
     exit;
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| Load Vehicle and Owner
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
-        v.*,
+        v.VehicleID,
+        v.PlateNumber,
+        v.VIN,
+        v.OwnerID,
+        v.Make,
+        v.Model,
+        v.VehicleYear,
+        v.Color,
+        v.VehicleType,
+        v.EngineNumber,
+        v.RegistrationDate,
+        v.Status,
         o.FirstName AS OwnerFirstName,
         o.LastName AS OwnerLastName,
         o.Address AS OwnerAddress,
@@ -28,20 +61,167 @@ $stmt = $pdo->prepare("
     LIMIT 1
 ");
 
-$stmt->execute([$vehicleID]);
+$stmt->execute([
+    $vehicleID
+]);
 
 $vehicle = $stmt->fetch();
+
+
+/*
+|--------------------------------------------------------------------------
+| Vehicle Not Found
+|--------------------------------------------------------------------------
+*/
 
 if (!$vehicle) {
 
     http_response_code(404);
 
-    echo "<h1>Vehicle Not Found</h1>";
-    echo "<p>The requested vehicle could not be found.</p>";
-    echo '<p><a href="index.php">Return to Vehicles</a></p>';
+    ?>
+
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>
+            Vehicle Not Found - VISRS
+        </title>
+
+        <link
+            rel="stylesheet"
+            href="/visrs/css/style.css"
+        >
+
+    </head>
+
+    <body>
+
+    <div class="layout">
+
+        <main
+            class="main-content"
+            style="
+                margin-left:0;
+                width:100%;
+            "
+        >
+
+            <div
+                class="content"
+                style="
+                    max-width:700px;
+                    margin:80px auto;
+                "
+            >
+
+                <div class="card">
+
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+
+                        <strong>
+                            Vehicle Not Found
+                        </strong>
+
+                    </div>
+
+                    <h2>
+                        The requested vehicle could not be found.
+                    </h2>
+
+                    <p>
+                        The vehicle may have been deleted or
+                        the requested vehicle ID is invalid.
+                    </p>
+
+                    <a
+                        href="index.php"
+                        class="button"
+                    >
+                        Return to Vehicles
+                    </a>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    </body>
+
+    </html>
+
+    <?php
 
     exit;
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| Load Related Record Counts
+|--------------------------------------------------------------------------
+*/
+
+$ownershipStmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM ownership_history
+    WHERE VehicleID = ?
+");
+
+$ownershipStmt->execute([
+    $vehicleID
+]);
+
+$ownershipCount =
+    (int) $ownershipStmt->fetchColumn();
+
+
+$insuranceStmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM insurance
+    WHERE VehicleID = ?
+");
+
+$insuranceStmt->execute([
+    $vehicleID
+]);
+
+$insuranceCount =
+    (int) $insuranceStmt->fetchColumn();
+
+
+$accidentStmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM accidents
+    WHERE VehicleID = ?
+");
+
+$accidentStmt->execute([
+    $vehicleID
+]);
+
+$accidentCount =
+    (int) $accidentStmt->fetchColumn();
 
 ?>
 
@@ -58,68 +238,59 @@ if (!$vehicle) {
     >
 
     <title>
-        VISRS - <?= htmlspecialchars($vehicle["PlateNumber"]) ?>
+        VISRS -
+        <?= htmlspecialchars($vehicle["PlateNumber"]) ?>
     </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
+
 
 <body>
 
 <div class="layout">
 
-    <!-- SIDEBAR -->
 
-    <aside class="sidebar">
+    <?php
 
-        <?php require_once "../includes/sidebar.php"; ?>
+    $activePage = "vehicles";
 
-    </aside>
+    include __DIR__ . "/../includes/sidebar.php";
 
-
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-        <!-- TOPBAR -->
-
-        <?php
-
-            $pageTitle = "Vehicles";
-
-            include __DIR__ . "/../includes/header.php";
-
-        ?>
+    ?>
 
 
-        <!-- PAGE CONTENT -->
+    <main class="main-content">
+
+
+        <?php include __DIR__ . "/../includes/header.php"; ?>
+
 
         <main class="content">
 
+
             <!-- PAGE HEADER -->
 
-            <div class="page-title">
+            <h1 class="page-title">
 
-                <h1>
+                <?= htmlspecialchars(
+                    $vehicle["Make"]
+                ) ?>
 
-                    <?= htmlspecialchars($vehicle["Make"]) ?>
+                <?= htmlspecialchars(
+                    $vehicle["Model"]
+                ) ?>
 
-                    <?= htmlspecialchars($vehicle["Model"]) ?>
+            </h1>
 
-                </h1>
 
-                <p class="page-subtitle">
-
-                    Complete vehicle registration and ownership
-                    information.
-
-                </p>
-
-            </div>
+            <p class="page-subtitle">
+                Complete vehicle registration and ownership information.
+            </p>
 
 
             <!-- VEHICLE SUMMARY -->
@@ -128,11 +299,11 @@ if (!$vehicle) {
 
                 <div
                     style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        gap: 20px;
-                        flex-wrap: wrap;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:20px;
+                        flex-wrap:wrap;
                     "
                 >
 
@@ -140,15 +311,15 @@ if (!$vehicle) {
 
                         <p
                             style="
-                                margin: 0 0 6px;
-                                color: #6b7280;
-                                font-size: 14px;
+                                margin:0 0 6px;
+                                color:#6b7280;
+                                font-size:14px;
                             "
                         >
                             License Plate
                         </p>
 
-                        <h2 style="margin: 0;">
+                        <h2 style="margin:0;">
 
                             <?= htmlspecialchars(
                                 $vehicle["PlateNumber"]
@@ -163,9 +334,9 @@ if (!$vehicle) {
 
                         <p
                             style="
-                                margin: 0 0 6px;
-                                color: #6b7280;
-                                font-size: 14px;
+                                margin:0 0 6px;
+                                color:#6b7280;
+                                font-size:14px;
                             "
                         >
                             Vehicle Status
@@ -188,13 +359,18 @@ if (!$vehicle) {
 
             <!-- BASIC VEHICLE INFORMATION -->
 
-            <section class="card" style="margin-top: 20px;">
+            <section
+                class="card"
+                style="margin-top:20px;"
+            >
 
                 <h2>
                     Vehicle Information
                 </h2>
 
+
                 <div class="stats-grid">
+
 
                     <div class="stat-card">
 
@@ -221,9 +397,9 @@ if (!$vehicle) {
 
                         <div
                             style="
-                                font-size: 16px;
-                                font-weight: bold;
-                                word-break: break-all;
+                                font-size:16px;
+                                font-weight:bold;
+                                word-break:break-all;
                             "
                         >
 
@@ -244,8 +420,8 @@ if (!$vehicle) {
 
                         <div
                             style="
-                                font-size: 20px;
-                                font-weight: bold;
+                                font-size:20px;
+                                font-weight:bold;
                             "
                         >
 
@@ -278,6 +454,7 @@ if (!$vehicle) {
 
                     </div>
 
+
                 </div>
 
             </section>
@@ -287,40 +464,43 @@ if (!$vehicle) {
 
             <section
                 class="card"
-                style="margin-top: 20px;"
+                style="margin-top:20px;"
             >
 
                 <h2>
                     Additional Vehicle Information
                 </h2>
 
+
                 <table
                     style="
-                        width: 100%;
-                        border-collapse: collapse;
+                        width:100%;
+                        border-collapse:collapse;
                     "
                 >
 
+
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
-                                width: 35%;
+                                padding:12px;
+                                font-weight:bold;
+                                width:35%;
                             "
                         >
                             Color
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["Color"] ?: "Not provided"
+                                $vehicle["Color"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -330,23 +510,24 @@ if (!$vehicle) {
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Vehicle Type
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["VehicleType"] ?: "Not provided"
+                                $vehicle["VehicleType"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -356,23 +537,24 @@ if (!$vehicle) {
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Engine Number
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["EngineNumber"] ?: "Not provided"
+                                $vehicle["EngineNumber"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -382,23 +564,24 @@ if (!$vehicle) {
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Registration Date
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["RegistrationDate"] ?: "Not provided"
+                                $vehicle["RegistrationDate"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -410,14 +593,14 @@ if (!$vehicle) {
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Status
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <strong>
 
@@ -431,6 +614,7 @@ if (!$vehicle) {
 
                     </tr>
 
+
                 </table>
 
             </section>
@@ -440,37 +624,39 @@ if (!$vehicle) {
 
             <section
                 class="card"
-                style="margin-top: 20px;"
+                style="margin-top:20px;"
             >
 
                 <h2>
                     Current Owner
                 </h2>
 
+
                 <table
                     style="
-                        width: 100%;
-                        border-collapse: collapse;
+                        width:100%;
+                        border-collapse:collapse;
                     "
                 >
 
+
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
-                                width: 35%;
+                                padding:12px;
+                                font-weight:bold;
+                                width:35%;
                             "
                         >
                             Full Name
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
                                 $vehicle["OwnerFirstName"]
@@ -485,23 +671,24 @@ if (!$vehicle) {
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Address
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["OwnerAddress"] ?: "Not provided"
+                                $vehicle["OwnerAddress"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -511,23 +698,24 @@ if (!$vehicle) {
 
                     <tr
                         style="
-                            border-bottom: 1px solid #e5e7eb;
+                            border-bottom:1px solid #e5e7eb;
                         "
                     >
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Phone
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["OwnerPhone"] ?: "Not provided"
+                                $vehicle["OwnerPhone"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
@@ -539,64 +727,93 @@ if (!$vehicle) {
 
                         <td
                             style="
-                                padding: 12px;
-                                font-weight: bold;
+                                padding:12px;
+                                font-weight:bold;
                             "
                         >
                             Email
                         </td>
 
-                        <td style="padding: 12px;">
+                        <td style="padding:12px;">
 
                             <?= htmlspecialchars(
-                                $vehicle["OwnerEmail"] ?: "Not provided"
+                                $vehicle["OwnerEmail"]
+                                ?: "Not provided"
                             ) ?>
 
                         </td>
 
                     </tr>
 
+
                 </table>
 
             </section>
 
 
-            <!-- FUTURE RECORDS -->
+            <!-- RELATED RECORDS -->
 
             <section
                 class="card"
-                style="margin-top: 20px;"
+                style="margin-top:20px;"
             >
 
                 <h2>
                     Related Records
                 </h2>
 
+
                 <p
                     style="
-                        color: #6b7280;
-                        margin-bottom: 20px;
+                        color:#6b7280;
+                        margin-bottom:20px;
                     "
                 >
-                    Additional records associated with this vehicle
-                    will appear here.
+                    Records associated with this vehicle.
                 </p>
 
-                <div class="quick-actions">
+
+                <div
+                    style="
+                        display:flex;
+                        gap:10px;
+                        flex-wrap:wrap;
+                    "
+                >
+
 
                     <a
-                        href="../insurance/"
+                        href="../ownership_history/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>"
                         class="button button-secondary"
                     >
+
+                        Ownership History
+                        (<?= $ownershipCount ?>)
+
+                    </a>
+
+
+                    <a
+                        href="../insurance/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>"
+                        class="button button-secondary"
+                    >
+
                         Insurance Records
+                        (<?= $insuranceCount ?>)
+
                     </a>
 
+
                     <a
-                        href="../accidents/"
+                        href="../accidents/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>"
                         class="button button-secondary"
                     >
+
                         Accident Records
+                        (<?= $accidentCount ?>)
+
                     </a>
+
 
                 </div>
 
@@ -607,12 +824,13 @@ if (!$vehicle) {
 
             <div
                 style="
-                    display: flex;
-                    gap: 10px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
+                    display:flex;
+                    gap:10px;
+                    margin-top:20px;
+                    flex-wrap:wrap;
                 "
             >
+
 
                 <a
                     href="index.php"
@@ -624,26 +842,28 @@ if (!$vehicle) {
 
                 <?php if (canManageVehicles()): ?>
 
+
                     <a
-                        href="edit.php?id=<?= $vehicle["VehicleID"] ?>"
+                        href="edit.php?id=<?= (int) $vehicle["VehicleID"] ?>"
                         class="button"
                     >
                         Edit Vehicle
                     </a>
 
+
                 <?php endif; ?>
+
 
             </div>
 
+
         </main>
 
-    </div>
+
+    </main>
+
 
 </div>
 
 
-<script src="../js/app.js"></script>
-
-</body>
-
-</html>
+<?php include __DIR__ . "/../includes/footer.php"; ?>

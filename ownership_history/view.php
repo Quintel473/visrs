@@ -1,17 +1,43 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
-$basePath = "../";
 $activePage = "ownership_history";
 
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+$canManage =
+    isset($_SESSION["Role"]) &&
+    in_array(
+        $_SESSION["Role"],
+        ["Admin", "Police"],
+        true
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Validate Ownership Record ID
+|--------------------------------------------------------------------------
+*/
+
+if (
+    !isset($_GET["id"]) ||
+    !is_numeric($_GET["id"]) ||
+    (int) $_GET["id"] <= 0
+) {
+
     header("Location: index.php");
     exit;
 }
 
 $ownershipID = (int) $_GET["id"];
+
+
+/*
+|--------------------------------------------------------------------------
+| Load Ownership Record
+|--------------------------------------------------------------------------
+*/
 
 $sql = "
     SELECT
@@ -46,21 +72,140 @@ $sql = "
         ON oh.OwnerID = o.OwnerID
 
     WHERE oh.OwnershipID = :ownershipID
+
+    LIMIT 1
 ";
 
 $stmt = $pdo->prepare($sql);
+
 $stmt->execute([
     "ownershipID" => $ownershipID
 ]);
 
 $record = $stmt->fetch();
 
+
+/*
+|--------------------------------------------------------------------------
+| Record Not Found
+|--------------------------------------------------------------------------
+*/
+
 if (!$record) {
+
     http_response_code(404);
-    die("Ownership history record not found.");
+
+    $pageTitle = "Ownership Record Not Found";
+    $pageSubtitle = "The requested ownership record could not be found.";
+
+    ?>
+
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>
+            Ownership Record Not Found - VISRS
+        </title>
+
+        <link
+            rel="stylesheet"
+            href="/visrs/css/style.css"
+        >
+
+    </head>
+
+    <body>
+
+    <div class="layout">
+
+        <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
+
+        <main class="main-content">
+
+            <?php
+            include __DIR__ . "/../includes/header.php";
+            ?>
+
+            <div class="content">
+
+                <div
+                    class="card"
+                    style="
+                        max-width:700px;
+                        margin:60px auto;
+                    "
+                >
+
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+                        <strong>
+                            Ownership Record Not Found
+                        </strong>
+                    </div>
+
+                    <h2>
+                        The requested ownership record could not be found.
+                    </h2>
+
+                    <p
+                        style="
+                            margin-top:10px;
+                            color:#6b7280;
+                        "
+                    >
+                        The record may have been deleted or the
+                        requested ID may be invalid.
+                    </p>
+
+                    <div style="margin-top:20px;">
+
+                        <a
+                            href="index.php"
+                            class="button"
+                        >
+                            Back to Ownership History
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <?php require_once __DIR__ . "/../includes/footer.php"; ?>
+
+        </main>
+
+    </div>
+
+    </body>
+
+    </html>
+
+    <?php
+
+    exit;
 }
 
-$isCurrentOwner = empty($record["EndDate"]);
+
+$isCurrentOwner =
+    empty($record["EndDate"]);
 
 ?>
 
@@ -70,11 +215,20 @@ $isCurrentOwner = empty($record["EndDate"]);
 <head>
 
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Ownership Record - VISRS</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet" href="../css/style.css">
+    <title>
+        Ownership Record - VISRS
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="/visrs/css/style.css"
+    >
 
     <style>
 
@@ -103,6 +257,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             font-size: 16px;
             font-weight: 500;
             color: #1e293b;
+            word-break: break-word;
         }
 
         .status-badge {
@@ -136,6 +291,15 @@ $isCurrentOwner = empty($record["EndDate"]);
             margin-top: 20px;
         }
 
+        .danger-button {
+            background: #991b1b !important;
+            color: #ffffff !important;
+        }
+
+        .danger-button:hover {
+            background: #7f1d1d !important;
+        }
+
         @media (max-width: 768px) {
 
             .detail-grid {
@@ -152,30 +316,34 @@ $isCurrentOwner = empty($record["EndDate"]);
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
+
 
     <main class="main-content">
 
-    <?php
+        <?php
 
         $pageTitle = "Ownership History";
+        $pageSubtitle =
+            "Detailed information about this ownership period.";
 
         include __DIR__ . "/../includes/header.php";
 
-    ?>
+        ?>
 
-        <section class="content">
+
+        <div class="content">
 
             <div class="page-title">
 
                 <div>
 
-                    <h2>
-                        Ownership Record #<?= htmlspecialchars($record["OwnershipID"]) ?>
-                    </h2>
+                    <h1>
+                        Ownership Record #<?= (int) $record["OwnershipID"] ?>
+                    </h1>
 
                     <p class="page-subtitle">
-                        Detailed information about this ownership period
+                        Detailed information about this ownership period.
                     </p>
 
                 </div>
@@ -183,7 +351,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             </div>
 
 
-            <!-- Ownership Status -->
+            <!-- OWNERSHIP STATUS -->
 
             <div class="card">
 
@@ -193,13 +361,17 @@ $isCurrentOwner = empty($record["EndDate"]);
 
                 <?php if ($isCurrentOwner): ?>
 
-                    <span class="status-badge status-current">
+                    <span
+                        class="status-badge status-current"
+                    >
                         Current Owner
                     </span>
 
                 <?php else: ?>
 
-                    <span class="status-badge status-former">
+                    <span
+                        class="status-badge status-former"
+                    >
                         Former Owner
                     </span>
 
@@ -208,7 +380,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             </div>
 
 
-            <!-- Vehicle Information -->
+            <!-- VEHICLE INFORMATION -->
 
             <div class="card">
 
@@ -225,7 +397,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["PlateNumber"]) ?>
+                            <?= htmlspecialchars(
+                                $record["PlateNumber"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -238,7 +412,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["VIN"]) ?>
+                            <?= htmlspecialchars(
+                                $record["VIN"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -251,7 +427,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Make"]) ?>
+                            <?= htmlspecialchars(
+                                $record["Make"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -264,7 +442,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Model"]) ?>
+                            <?= htmlspecialchars(
+                                $record["Model"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -277,7 +457,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["VehicleYear"]) ?>
+                            <?= htmlspecialchars(
+                                $record["VehicleYear"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -290,7 +472,11 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Color"] ?: "Not provided") ?>
+
+                            <?= htmlspecialchars(
+                                $record["Color"] ?: "Not provided"
+                            ) ?>
+
                         </span>
 
                     </div>
@@ -303,17 +489,23 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["VehicleType"] ?: "Not provided") ?>
+
+                            <?= htmlspecialchars(
+                                $record["VehicleType"]
+                                ?: "Not provided"
+                            ) ?>
+
                         </span>
 
                     </div>
 
                 </div>
 
+
                 <div class="action-row">
 
                     <a
-                        href="<?= $basePath ?>vehicles/view.php?id=<?= $record["VehicleID"] ?>"
+                        href="/visrs/vehicles/view.php?id=<?= (int) $record["VehicleID"] ?>"
                         class="button"
                     >
                         View Vehicle
@@ -324,7 +516,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             </div>
 
 
-            <!-- Owner Information -->
+            <!-- OWNER INFORMATION -->
 
             <div class="card">
 
@@ -341,7 +533,13 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["FirstName"] . " " . $record["LastName"]) ?>
+
+                            <?= htmlspecialchars(
+                                $record["FirstName"] .
+                                " " .
+                                $record["LastName"]
+                            ) ?>
+
                         </span>
 
                     </div>
@@ -354,7 +552,12 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Email"] ?: "Not provided") ?>
+
+                            <?= htmlspecialchars(
+                                $record["Email"]
+                                ?: "Not provided"
+                            ) ?>
+
                         </span>
 
                     </div>
@@ -367,7 +570,12 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Phone"] ?: "Not provided") ?>
+
+                            <?= htmlspecialchars(
+                                $record["Phone"]
+                                ?: "Not provided"
+                            ) ?>
+
                         </span>
 
                     </div>
@@ -380,17 +588,23 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["Address"] ?: "Not provided") ?>
+
+                            <?= htmlspecialchars(
+                                $record["Address"]
+                                ?: "Not provided"
+                            ) ?>
+
                         </span>
 
                     </div>
 
                 </div>
 
+
                 <div class="action-row">
 
                     <a
-                        href="<?= $basePath ?>owners/view.php?id=<?= $record["OwnerID"] ?>"
+                        href="/visrs/owners/view.php?id=<?= (int) $record["OwnerID"] ?>"
                         class="button button-secondary"
                     >
                         View Owner
@@ -401,7 +615,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             </div>
 
 
-            <!-- Ownership Period -->
+            <!-- OWNERSHIP PERIOD -->
 
             <div class="card">
 
@@ -418,7 +632,9 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["StartDate"]) ?>
+                            <?= htmlspecialchars(
+                                $record["StartDate"]
+                            ) ?>
                         </span>
 
                     </div>
@@ -432,9 +648,13 @@ $isCurrentOwner = empty($record["EndDate"]);
 
                         <span class="detail-value">
 
-                            <?php if ($record["EndDate"]): ?>
+                            <?php if (
+                                !empty($record["EndDate"])
+                            ): ?>
 
-                                <?= htmlspecialchars($record["EndDate"]) ?>
+                                <?= htmlspecialchars(
+                                    $record["EndDate"]
+                                ) ?>
 
                             <?php else: ?>
 
@@ -456,7 +676,8 @@ $isCurrentOwner = empty($record["EndDate"]);
                         <span class="detail-value">
 
                             <?= htmlspecialchars(
-                                $record["TransferReason"] ?: "Not provided"
+                                $record["TransferReason"]
+                                ?: "Not provided"
                             ) ?>
 
                         </span>
@@ -471,7 +692,11 @@ $isCurrentOwner = empty($record["EndDate"]);
                         </span>
 
                         <span class="detail-value">
-                            <?= htmlspecialchars($record["CreatedAt"]) ?>
+
+                            <?= htmlspecialchars(
+                                $record["CreatedAt"]
+                            ) ?>
+
                         </span>
 
                     </div>
@@ -481,7 +706,7 @@ $isCurrentOwner = empty($record["EndDate"]);
             </div>
 
 
-            <!-- Navigation -->
+            <!-- NAVIGATION / ACTIONS -->
 
             <div class="action-row">
 
@@ -493,24 +718,31 @@ $isCurrentOwner = empty($record["EndDate"]);
                 </a>
 
 
-                <a
-                    href="delete.php?id=<?= $record["OwnershipID"] ?>"
-                    class="button"
-                    style="background: #991b1b;"
-                >
-                    Delete Ownership Record
-                </a>
+                <?php if ($canManage): ?>
 
-                <a
-                    href="edit.php?id=<?= $record["OwnershipID"] ?>"
-                    class="button"
-                >
-                    Edit Ownership Record
-                </a>
+                    <a
+                        href="edit.php?id=<?= (int) $record["OwnershipID"] ?>"
+                        class="button"
+                    >
+                        Edit Ownership Record
+                    </a>
+
+
+                    <a
+                        href="delete.php?id=<?= (int) $record["OwnershipID"] ?>"
+                        class="button danger-button"
+                    >
+                        Delete Ownership Record
+                    </a>
+
+                <?php endif; ?>
 
             </div>
 
-        </section>
+        </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

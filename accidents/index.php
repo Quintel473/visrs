@@ -23,20 +23,33 @@ $stmt = $pdo->query("
         a.Description,
         a.DamageLevel,
         a.ReportNumber,
+
         v.PlateNumber,
         v.VIN,
         v.Make,
         v.Model,
         v.VehicleYear
+
     FROM accidents a
+
     INNER JOIN vehicles v
         ON a.VehicleID = v.VehicleID
+
     ORDER BY
         a.AccidentDate DESC,
         a.AccidentID DESC
 ");
 
 $accidents = $stmt->fetchAll();
+
+
+$canManage =
+    isset($_SESSION["Role"]) &&
+    in_array(
+        $_SESSION["Role"],
+        ["Admin", "Police"],
+        true
+    );
 
 ?>
 
@@ -63,25 +76,39 @@ $accidents = $stmt->fetchAll();
 
 </head>
 
-
 <body>
 
 <div class="layout">
 
-
     <?php require_once "../includes/sidebar.php"; ?>
-
 
     <main class="main-content">
 
-
         <?php include __DIR__ . "/../includes/header.php"; ?>
-
 
         <div class="content">
 
-
             <div class="card">
+
+                <?php if (
+                    isset($_GET["deleted"]) &&
+                    $_GET["deleted"] === "1"
+                ): ?>
+
+                    <div
+                        class="auto-dismiss"
+                        style="
+                            background:#dcfce7;
+                            color:#166534;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+                        Accident record deleted successfully.
+                    </div>
+
+                <?php endif; ?>
 
 
                 <div
@@ -90,6 +117,7 @@ $accidents = $stmt->fetchAll();
                         justify-content:space-between;
                         align-items:center;
                         margin-bottom:20px;
+                        gap:20px;
                     "
                 >
 
@@ -100,32 +128,20 @@ $accidents = $stmt->fetchAll();
                         </h2>
 
                         <p>
-
                             <?= count($accidents) ?>
-
                             accident record(s) found.
-
                         </p>
 
                     </div>
 
 
-                    <?php if (
-                        isset($_SESSION["Role"]) &&
-                        in_array(
-                            $_SESSION["Role"],
-                            ["Admin", "Police"],
-                            true
-                        )
-                    ): ?>
+                    <?php if ($canManage): ?>
 
                         <a
                             href="add.php"
                             class="button"
                         >
-
                             + Add Accident
-
                         </a>
 
                     <?php endif; ?>
@@ -134,7 +150,6 @@ $accidents = $stmt->fetchAll();
 
 
                 <?php if (empty($accidents)): ?>
-
 
                     <div
                         style="
@@ -154,11 +169,21 @@ $accidents = $stmt->fetchAll();
                             records in the system.
                         </p>
 
+                        <?php if ($canManage): ?>
+
+                            <a
+                                href="add.php"
+                                class="button"
+                                style="margin-top:10px;"
+                            >
+                                Add First Accident Record
+                            </a>
+
+                        <?php endif; ?>
+
                     </div>
 
-
                 <?php else: ?>
-
 
                     <div
                         style="
@@ -173,23 +198,18 @@ $accidents = $stmt->fetchAll();
                             "
                         >
 
-
                             <thead>
 
                                 <tr>
 
-
                                     <th
                                         style="
                                             text-align:left;
                                             padding:12px;
                                         "
                                     >
-
                                         Date
-
                                     </th>
-
 
                                     <th
                                         style="
@@ -197,11 +217,8 @@ $accidents = $stmt->fetchAll();
                                             padding:12px;
                                         "
                                     >
-
                                         Vehicle
-
                                     </th>
-
 
                                     <th
                                         style="
@@ -209,11 +226,8 @@ $accidents = $stmt->fetchAll();
                                             padding:12px;
                                         "
                                     >
-
                                         Location
-
                                     </th>
-
 
                                     <th
                                         style="
@@ -221,11 +235,8 @@ $accidents = $stmt->fetchAll();
                                             padding:12px;
                                         "
                                     >
-
                                         Damage Level
-
                                     </th>
-
 
                                     <th
                                         style="
@@ -233,11 +244,8 @@ $accidents = $stmt->fetchAll();
                                             padding:12px;
                                         "
                                     >
-
                                         Report Number
-
                                     </th>
-
 
                                     <th
                                         style="
@@ -245,28 +253,21 @@ $accidents = $stmt->fetchAll();
                                             padding:12px;
                                         "
                                     >
-
                                         Actions
-
                                     </th>
-
 
                                 </tr>
 
                             </thead>
 
-
                             <tbody>
-
 
                                 <?php foreach (
                                     $accidents
                                     as $accident
                                 ): ?>
 
-
                                     <tr>
-
 
                                         <td
                                             style="
@@ -275,7 +276,12 @@ $accidents = $stmt->fetchAll();
                                         >
 
                                             <?= htmlspecialchars(
-                                                $accident["AccidentDate"]
+                                                date(
+                                                    "M j, Y",
+                                                    strtotime(
+                                                        $accident["AccidentDate"]
+                                                    )
+                                                )
                                             ) ?>
 
                                         </td>
@@ -295,9 +301,7 @@ $accidents = $stmt->fetchAll();
 
                                             </strong>
 
-
                                             <br>
-
 
                                             <small>
 
@@ -368,26 +372,45 @@ $accidents = $stmt->fetchAll();
                                         <td
                                             style="
                                                 padding:12px;
+                                                white-space:nowrap;
                                             "
                                         >
 
                                             <a
-                                                href="view.php?id=<?= $accident["AccidentID"] ?>"
+                                                href="view.php?id=<?= (int) $accident["AccidentID"] ?>"
                                                 class="button button-secondary"
                                             >
-
                                                 View
-
                                             </a>
+
+
+                                            <?php if ($canManage): ?>
+
+                                                <a
+                                                    href="edit.php?id=<?= (int) $accident["AccidentID"] ?>"
+                                                    class="button button-secondary"
+                                                >
+                                                    Edit
+                                                </a>
+
+                                                <a
+                                                    href="delete.php?id=<?= (int) $accident["AccidentID"] ?>"
+                                                    class="button"
+                                                    style="
+                                                        background:#991b1b;
+                                                        margin-left:5px;
+                                                    "
+                                                >
+                                                    Delete
+                                                </a>
+
+                                            <?php endif; ?>
 
                                         </td>
 
-
                                     </tr>
 
-
                                 <?php endforeach; ?>
-
 
                             </tbody>
 
@@ -395,9 +418,7 @@ $accidents = $stmt->fetchAll();
 
                     </div>
 
-
                 <?php endif; ?>
-
 
             </div>
 
@@ -407,6 +428,4 @@ $accidents = $stmt->fetchAll();
 
 </div>
 
-</body>
-
-</html>
+<?php require_once "../includes/footer.php"; ?>

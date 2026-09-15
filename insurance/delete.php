@@ -1,46 +1,61 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
 $activePage = "insurance";
+
+$pageTitle = "Delete Insurance Record";
+$pageSubtitle = "Confirm removal of this insurance record.";
 
 $error = "";
 
-$insuranceID = (int) ($_GET["id"] ?? 0);
+$insuranceID = (int) (
+    $_GET["id"] ??
+    $_POST["InsuranceID"] ??
+    0
+);
+
 
 if ($insuranceID <= 0) {
 
     header("Location: index.php");
     exit;
-
 }
 
 
 /*
- * Load the insurance record.
- */
+|--------------------------------------------------------------------------
+| Load Insurance Record
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
         i.InsuranceID,
+        i.VehicleID,
         i.PolicyNumber,
         i.ProviderName,
         i.CoverageType,
         i.StartDate,
         i.ExpiryDate,
         i.Status,
+
         v.PlateNumber,
         v.Make,
         v.Model,
         v.VehicleYear
+
     FROM insurance i
+
     INNER JOIN vehicles v
         ON i.VehicleID = v.VehicleID
+
     WHERE i.InsuranceID = ?
+
+    LIMIT 1
 ");
 
 $stmt->execute([
@@ -54,15 +69,18 @@ if (!$insurance) {
 
     header("Location: index.php");
     exit;
-
 }
 
 
 /*
- * Process deletion.
- */
+|--------------------------------------------------------------------------
+| Process Deletion
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    requireValidCSRF();
 
     try {
 
@@ -70,7 +88,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         /*
-         * Delete the insurance record.
+         * Re-check that the record still exists.
+         *
+         * This prevents attempting to delete a record
+         * that may have already been removed.
+         */
+
+        $verifyStmt = $pdo->prepare("
+            SELECT
+                InsuranceID,
+                PolicyNumber,
+                ProviderName,
+                PlateNumber
+            FROM insurance i
+
+            INNER JOIN vehicles v
+                ON i.VehicleID = v.VehicleID
+
+            WHERE i.InsuranceID = ?
+
+            LIMIT 1
+        ");
+
+        $verifyStmt->execute([
+            $insuranceID
+        ]);
+
+        $currentInsurance =
+            $verifyStmt->fetch();
+
+
+        if (!$currentInsurance) {
+
+            throw new Exception(
+                "Insurance record no longer exists."
+            );
+        }
+
+
+        /*
+         * Delete insurance record.
          */
 
         $deleteStmt = $pdo->prepare("
@@ -84,7 +141,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         /*
-         * Create an audit log.
+         * Confirm that the deletion actually occurred.
+         */
+
+        if ($deleteStmt->rowCount() !== 1) {
+
+            throw new Exception(
+                "The insurance record could not be deleted."
+            );
+        }
+
+
+        /*
+         * Create audit log.
+         *
+         * The audit record is created inside the
+         * same transaction so the deletion and its
+         * audit trail remain consistent.
          */
 
         $auditStmt = $pdo->prepare("
@@ -104,9 +177,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["UserID"],
 
             "Deleted insurance policy " .
-            $insurance["PolicyNumber"] .
+            $currentInsurance["PolicyNumber"] .
             " for vehicle " .
-            $insurance["PlateNumber"],
+            $currentInsurance["PlateNumber"],
 
             "insurance",
 
@@ -120,7 +193,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $pdo->commit();
 
 
-        header("Location: index.php");
+        /*
+         * Return to insurance list.
+         */
+
+        header(
+            "Location: index.php?deleted=1"
+        );
+
         exit;
 
 
@@ -129,21 +209,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($pdo->inTransaction()) {
 
             $pdo->rollBack();
-
         }
 
         $error =
             "Unable to delete the insurance record.";
     }
 }
-
-
-/*
- * Page header information.
- */
-
-$pageTitle = "Delete Insurance Record";
-$pageSubtitle = "Confirm removal of this insurance record.";
 
 ?>
 
@@ -165,8 +236,45 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
+
+    <style>
+
+        .delete-warning {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 14px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #fed7aa;
+        }
+
+        .delete-danger-button {
+            background: #991b1b !important;
+            color: #ffffff !important;
+        }
+
+        .delete-danger-button:hover {
+            background: #7f1d1d !important;
+        }
+
+        .record-summary {
+            margin-top: 20px;
+        }
+
+        .record-summary p {
+            margin-bottom: 10px;
+        }
+
+        .delete-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+
+    </style>
 
 </head>
 
@@ -174,15 +282,32 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-        <?php require_once "../includes/header.php"; ?>
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
 
         <div class="content">
+
+            <div class="page-title">
+
+                <div>
+
+                    <h1>
+                        Delete Insurance Record
+                    </h1>
+
+                    <p class="page-subtitle">
+                        Confirm removal of this insurance record.
+                    </p>
+
+                </div>
+
+            </div>
+
 
             <div class="card">
 
@@ -198,7 +323,15 @@ $pageSubtitle = "Confirm removal of this insurance record.";
                         "
                     >
 
-                        <?= htmlspecialchars($error) ?>
+                        <strong>
+                            Unable to Delete Insurance
+                        </strong>
+
+                        <div style="margin-top:5px;">
+
+                            <?= htmlspecialchars($error) ?>
+
+                        </div>
 
                     </div>
 
@@ -210,11 +343,13 @@ $pageSubtitle = "Confirm removal of this insurance record.";
                 </h2>
 
 
-                <div style="margin-top:20px;">
+                <div class="record-summary">
 
                     <p>
 
-                        <strong>Policy Number:</strong>
+                        <strong>
+                            Policy Number:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $insurance["PolicyNumber"]
@@ -225,7 +360,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                     <p>
 
-                        <strong>Provider:</strong>
+                        <strong>
+                            Provider:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $insurance["ProviderName"]
@@ -236,7 +373,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                     <p>
 
-                        <strong>Vehicle:</strong>
+                        <strong>
+                            Vehicle:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $insurance["PlateNumber"]
@@ -252,12 +391,18 @@ $pageSubtitle = "Confirm removal of this insurance record.";
                             $insurance["Model"]
                         ) ?>
 
+                        (<?= htmlspecialchars(
+                            $insurance["VehicleYear"]
+                        ) ?>)
+
                     </p>
 
 
                     <p>
 
-                        <strong>Coverage Type:</strong>
+                        <strong>
+                            Coverage Type:
+                        </strong>
 
                         <?= $insurance["CoverageType"]
                             ? htmlspecialchars(
@@ -271,7 +416,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                     <p>
 
-                        <strong>Start Date:</strong>
+                        <strong>
+                            Start Date:
+                        </strong>
 
                         <?= $insurance["StartDate"]
                             ? htmlspecialchars(
@@ -285,7 +432,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                     <p>
 
-                        <strong>Expiry Date:</strong>
+                        <strong>
+                            Expiry Date:
+                        </strong>
 
                         <?= $insurance["ExpiryDate"]
                             ? htmlspecialchars(
@@ -299,7 +448,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                     <p>
 
-                        <strong>Status:</strong>
+                        <strong>
+                            Status:
+                        </strong>
 
                         <?= htmlspecialchars(
                             $insurance["Status"]
@@ -310,17 +461,11 @@ $pageSubtitle = "Confirm removal of this insurance record.";
                 </div>
 
 
-                <div
-                    style="
-                        background:#fff7ed;
-                        color:#9a3412;
-                        padding:14px;
-                        border-radius:8px;
-                        margin-top:20px;
-                    "
-                >
+                <div class="delete-warning">
 
-                    <strong>Important:</strong>
+                    <strong>
+                        Important:
+                    </strong>
 
                     This action cannot be undone.
                     Deleting this insurance record will permanently
@@ -331,31 +476,35 @@ $pageSubtitle = "Confirm removal of this insurance record.";
 
                 <form
                     method="POST"
-                    style="
-                        display:flex;
-                        gap:10px;
-                        margin-top:25px;
-                    "
+                    class="delete-actions"
                 >
 
                     <input
                         type="hidden"
                         name="InsuranceID"
-                        value="<?= htmlspecialchars($insuranceID) ?>"
+                        value="<?= $insuranceID ?>"
+                    >
+
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
                     >
 
 
                     <button
                         type="submit"
-                        class="button"
-                        style="background:#991b1b;"
+                        class="button delete-danger-button"
                     >
                         Yes, Delete Record
                     </button>
 
 
                     <a
-                        href="view.php?id=<?= htmlspecialchars($insuranceID) ?>"
+                        href="view.php?id=<?= $insuranceID ?>"
                         class="button button-secondary"
                     >
                         Cancel
@@ -366,6 +515,9 @@ $pageSubtitle = "Confirm removal of this insurance record.";
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

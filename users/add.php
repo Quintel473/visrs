@@ -23,6 +23,13 @@ $role = "User";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
+    /*
+     * Verify CSRF token before processing
+     * any database-changing request.
+     */
+
+    requireValidCSRF();
+
     $firstName = trim($_POST["FirstName"] ?? "");
     $lastName = trim($_POST["LastName"] ?? "");
     $email = trim($_POST["Email"] ?? "");
@@ -39,6 +46,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $errors[] = "First name is required.";
 
+    } elseif (strlen($firstName) > 100) {
+
+        $errors[] = "First name cannot exceed 100 characters.";
+
     }
 
 
@@ -49,6 +60,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($lastName === "") {
 
         $errors[] = "Last name is required.";
+
+    } elseif (strlen($lastName) > 100) {
+
+        $errors[] = "Last name cannot exceed 100 characters.";
 
     }
 
@@ -64,6 +79,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
         $errors[] = "Please enter a valid email address.";
+
+    } elseif (strlen($email) > 150) {
+
+        $errors[] = "Email address cannot exceed 150 characters.";
 
     }
 
@@ -146,48 +165,119 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (empty($errors)) {
 
-        /*
-         * Hash the password before storing it.
-         */
+        try {
 
-        $hashedPassword = password_hash(
-            $password,
-            PASSWORD_DEFAULT
-        );
+            /*
+             * Hash the password before storing it.
+             */
 
-
-        $stmt = $pdo->prepare("
-            INSERT INTO users
-            (
-                FirstName,
-                LastName,
-                Email,
-                Password,
-                Role
-            )
-            VALUES
-            (?, ?, ?, ?, ?)
-        ");
+            $hashedPassword = password_hash(
+                $password,
+                PASSWORD_DEFAULT
+            );
 
 
-        $stmt->execute([
-            $firstName,
-            $lastName,
-            $email,
-            $hashedPassword,
-            $role
-        ]);
+            /*
+             * Start database transaction.
+             */
+
+            $pdo->beginTransaction();
 
 
-        /*
-         * Return to User Management.
-         */
+            /*
+             * Insert the new user.
+             */
 
-        header(
-            "Location: index.php?success=created"
-        );
+            $stmt = $pdo->prepare("
+                INSERT INTO users
+                (
+                    FirstName,
+                    LastName,
+                    Email,
+                    Password,
+                    Role
+                )
+                VALUES
+                (?, ?, ?, ?, ?)
+            ");
 
-        exit;
+            $stmt->execute([
+                $firstName,
+                $lastName,
+                $email,
+                $hashedPassword,
+                $role
+            ]);
+
+
+            /*
+             * Get newly created UserID.
+             */
+
+            $newUserID = (int) $pdo->lastInsertId();
+
+
+            /*
+             * Record the action in the audit trail.
+             */
+
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_logs
+                (
+                    UserID,
+                    Action,
+                    TableAffected,
+                    RecordID,
+                    IPAddress
+                )
+                VALUES
+                (?, ?, ?, ?, ?)
+            ");
+
+            $auditStmt->execute([
+                $_SESSION["UserID"],
+                "Created user account",
+                "users",
+                $newUserID,
+                $_SERVER["REMOTE_ADDR"] ?? null
+            ]);
+
+
+            /*
+             * Commit both operations.
+             */
+
+            $pdo->commit();
+
+
+            /*
+             * Return to User Management.
+             */
+
+            header(
+                "Location: index.php?success=created"
+            );
+
+            exit;
+
+        } catch (PDOException $e) {
+
+            /*
+             * Roll back the transaction if anything failed.
+             */
+
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            /*
+             * Do not expose database errors to the user.
+             */
+
+            $errors[] =
+                "The user account could not be created. Please try again.";
+
+        }
 
     }
 
@@ -338,6 +428,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     action=""
                 >
 
+                    <!-- CSRF PROTECTION -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(generateCSRFToken()) ?>"
+                    >
+
 
                     <!-- FIRST NAME -->
 
@@ -353,6 +451,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             name="FirstName"
                             value="<?= htmlspecialchars($firstName) ?>"
                             placeholder="Enter first name"
+                            maxlength="100"
                             required
                             class="auto-focus"
                         >
@@ -374,6 +473,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             name="LastName"
                             value="<?= htmlspecialchars($lastName) ?>"
                             placeholder="Enter last name"
+                            maxlength="100"
                             required
                         >
 
@@ -394,6 +494,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             name="Email"
                             value="<?= htmlspecialchars($email) ?>"
                             placeholder="example@email.com"
+                            maxlength="150"
                             required
                         >
 
@@ -643,6 +744,3 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 include __DIR__ . "/../includes/footer.php";
 
 ?>
-
-</body>
-</html>

@@ -17,6 +17,11 @@ $accidentID = (int) (
     ?? 0
 );
 
+
+/*
+ * Validate accident ID.
+ */
+
 if ($accidentID <= 0) {
 
     header("Location: index.php");
@@ -24,39 +29,56 @@ if ($accidentID <= 0) {
 }
 
 
+$error = "";
+$accident = null;
+
+
 /*
  * Load accident record.
  */
 
-$stmt = $pdo->prepare("
-    SELECT
-        a.AccidentID,
-        a.VehicleID,
-        a.AccidentDate,
-        a.Location,
-        a.Description,
-        a.DamageLevel,
-        a.ReportNumber,
+function loadAccidentRecord($pdo, $accidentID)
+{
+    $stmt = $pdo->prepare("
+        SELECT
+            a.AccidentID,
+            a.VehicleID,
+            a.AccidentDate,
+            a.Location,
+            a.Description,
+            a.DamageLevel,
+            a.ReportNumber,
 
-        v.PlateNumber,
-        v.VIN,
-        v.Make,
-        v.Model,
-        v.VehicleYear
+            v.PlateNumber,
+            v.VIN,
+            v.Make,
+            v.Model,
+            v.VehicleYear
 
-    FROM accidents a
+        FROM accidents a
 
-    INNER JOIN vehicles v
-        ON a.VehicleID = v.VehicleID
+        INNER JOIN vehicles v
+            ON a.VehicleID = v.VehicleID
 
-    WHERE a.AccidentID = ?
-");
+        WHERE a.AccidentID = ?
+    ");
 
-$stmt->execute([
+    $stmt->execute([
+        $accidentID
+    ]);
+
+    return $stmt->fetch();
+}
+
+
+/*
+ * Initial record lookup.
+ */
+
+$accident = loadAccidentRecord(
+    $pdo,
     $accidentID
-]);
-
-$accident = $stmt->fetch();
+);
 
 
 if (!$accident) {
@@ -66,14 +88,38 @@ if (!$accident) {
 }
 
 
-$error = "";
-
-
 /*
- * Delete accident record.
+ * Process deletion.
  */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    /*
+     * Verify CSRF token.
+     */
+
+    requireValidCSRF();
+
+
+    /*
+     * Re-check the record immediately before deletion.
+     *
+     * This prevents deleting a record based on
+     * stale confirmation-page information.
+     */
+
+    $accident = loadAccidentRecord(
+        $pdo,
+        $accidentID
+    );
+
+
+    if (!$accident) {
+
+        header("Location: index.php");
+        exit;
+    }
+
 
     try {
 
@@ -81,8 +127,36 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         /*
-         * Create audit log before deleting
-         * the accident record.
+         * Delete the accident record.
+         */
+
+        $deleteStmt = $pdo->prepare("
+            DELETE FROM accidents
+            WHERE AccidentID = ?
+        ");
+
+        $deleteStmt->execute([
+            $accidentID
+        ]);
+
+
+        /*
+         * Confirm that a record was actually deleted.
+         */
+
+        if ($deleteStmt->rowCount() !== 1) {
+
+            throw new Exception(
+                "Accident record could not be deleted."
+            );
+        }
+
+
+        /*
+         * Create audit log.
+         *
+         * The audit entry is created after the deletion
+         * but before the transaction is committed.
          */
 
         $auditStmt = $pdo->prepare("
@@ -96,7 +170,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             )
             VALUES (?, ?, ?, ?, ?)
         ");
-
 
         $auditStmt->execute([
 
@@ -117,26 +190,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         /*
-         * Delete the accident.
+         * Commit both operations.
          */
-
-        $deleteStmt = $pdo->prepare("
-            DELETE FROM accidents
-            WHERE AccidentID = ?
-        ");
-
-
-        $deleteStmt->execute([
-            $accidentID
-        ]);
-
 
         $pdo->commit();
 
 
-        header("Location: index.php");
+        /*
+         * Redirect to accident list.
+         */
+
+        header(
+            "Location: index.php?deleted=1"
+        );
 
         exit;
+
 
     } catch (Exception $e) {
 
@@ -149,6 +218,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "Unable to delete the accident record.";
     }
 }
+
+
+/*
+ * Generate CSRF token for the confirmation form.
+ */
+
+$csrfToken = generateCSRFToken();
 
 ?>
 
@@ -165,7 +241,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     >
 
     <title>
-        Delete Accident Record - VISRS
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
     </title>
 
     <link
@@ -179,21 +255,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <div class="layout">
 
-
     <?php require_once "../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <div class="content">
 
-
             <div class="card">
-
 
                 <?php if ($error !== ""): ?>
 
@@ -322,6 +394,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </p>
 
 
+                <?php if (
+                    !empty($accident["Description"])
+                ): ?>
+
+                    <p>
+
+                        <strong>
+                            Description:
+                        </strong>
+
+                        <?= htmlspecialchars(
+                            $accident["Description"]
+                        ) ?>
+
+                    </p>
+
+                <?php endif; ?>
+
+
                 <div
                     style="
                         background:#fff7ed;
@@ -347,10 +438,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     style="margin-top:25px;"
                 >
 
+                    <!-- CSRF PROTECTION -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            $csrfToken
+                        ) ?>"
+                    >
+
+
                     <input
                         type="hidden"
                         name="AccidentID"
-                        value="<?= $accidentID ?>"
+                        value="<?= htmlspecialchars(
+                            $accidentID
+                        ) ?>"
                     >
 
 
@@ -364,7 +468,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                     <a
-                        href="view.php?id=<?= $accidentID ?>"
+                        href="view.php?id=<?= htmlspecialchars(
+                            $accidentID
+                        ) ?>"
                         class="button button-secondary"
                     >
                         Cancel
@@ -381,6 +487,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
-</body>
 
+<?php require_once "../includes/footer.php"; ?>
+
+</body>
 </html>

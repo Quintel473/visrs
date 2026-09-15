@@ -1,141 +1,365 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
-
+require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
+
+$pageTitle = "Edit Owner";
+$pageSubtitle = "Update the owner's contact and registration information";
+
 $activePage = "owners";
-
-$ownerID = $_GET["id"] ?? $_POST["OwnerID"] ?? "";
-
-if (!is_numeric($ownerID)) {
-    header("Location: index.php");
-    exit;
-}
-
-
-/* Get existing owner */
-
-$stmt = $pdo->prepare("
-    SELECT *
-    FROM owners
-    WHERE OwnerID = ?
-    LIMIT 1
-");
-
-$stmt->execute([$ownerID]);
-
-$owner = $stmt->fetch();
-
-if (!$owner) {
-
-    http_response_code(404);
-
-    echo "<h1>Owner Not Found</h1>";
-    echo "<p>The requested owner could not be found.</p>";
-    echo '<p><a href="index.php">Return to Owners</a></p>';
-
-    exit;
-}
-
 
 $error = "";
 $success = "";
 
 
-/* Process update */
+/*
+|--------------------------------------------------------------------------
+| Get Owner ID
+|--------------------------------------------------------------------------
+*/
+
+$ownerID = isset($_GET["id"])
+    ? (int) $_GET["id"]
+    : (int) ($_POST["OwnerID"] ?? 0);
+
+if ($ownerID <= 0) {
+    header("Location: index.php");
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Retrieve Existing Owner
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $pdo->prepare("
+    SELECT
+        OwnerID,
+        FirstName,
+        LastName,
+        Address,
+        Phone,
+        Email,
+        CreatedAt
+    FROM owners
+    WHERE OwnerID = ?
+    LIMIT 1
+");
+
+$stmt->execute([
+    $ownerID
+]);
+
+$owner = $stmt->fetch();
+
+
+/*
+|--------------------------------------------------------------------------
+| Owner Does Not Exist
+|--------------------------------------------------------------------------
+*/
+
+if (!$owner) {
+
+    http_response_code(404);
+    ?>
+
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>
+            Owner Not Found - VISRS
+        </title>
+
+        <link
+            rel="stylesheet"
+            href="/visrs/css/style.css"
+        >
+
+    </head>
+
+    <body>
+
+    <div class="layout">
+
+        <main
+            class="main-content"
+            style="margin-left:0;width:100%;"
+        >
+
+            <div
+                class="content"
+                style="max-width:700px;margin:80px auto;"
+            >
+
+                <div class="card">
+
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+
+                        <strong>
+                            Owner Not Found
+                        </strong>
+
+                    </div>
+
+                    <h2>
+                        The requested owner could not be found.
+                    </h2>
+
+                    <p>
+                        The owner may have been removed or the
+                        requested record does not exist.
+                    </p>
+
+                    <a
+                        href="index.php"
+                        class="button"
+                    >
+                        Return to Owners
+                    </a>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    </body>
+
+    </html>
+
+    <?php
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Handle Form Submission
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $firstName = trim($_POST["FirstName"] ?? "");
-    $lastName = trim($_POST["LastName"] ?? "");
-    $address = trim($_POST["Address"] ?? "");
-    $phone = trim($_POST["Phone"] ?? "");
-    $email = trim($_POST["Email"] ?? "");
+    requireValidCSRF();
 
 
-    /* Validation */
+    /*
+    |--------------------------------------------------------------------------
+    | Verify Submitted Owner ID
+    |--------------------------------------------------------------------------
+    */
 
-    if ($firstName === "" || $lastName === "") {
+    $submittedOwnerID = (int) ($_POST["OwnerID"] ?? 0);
 
-        $error = "First name and last name are required.";
+    if ($submittedOwnerID !== $ownerID) {
 
-    } elseif ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
 
-        $error = "Please enter a valid email address.";
+        $error = "Invalid owner record.";
 
     } else {
 
-        try {
+        /*
+        |--------------------------------------------------------------------------
+        | Get Submitted Values
+        |--------------------------------------------------------------------------
+        */
 
-            $stmt = $pdo->prepare("
-                UPDATE owners
-                SET
-                    FirstName = ?,
-                    LastName = ?,
-                    Address = ?,
-                    Phone = ?,
-                    Email = ?
-                WHERE OwnerID = ?
-            ");
-
-            $stmt->execute([
-                $firstName,
-                $lastName,
-                $address !== "" ? $address : null,
-                $phone !== "" ? $phone : null,
-                $email !== "" ? $email : null,
-                $ownerID
-            ]);
+        $firstName = trim($_POST["FirstName"] ?? "");
+        $lastName = trim($_POST["LastName"] ?? "");
+        $address = trim($_POST["Address"] ?? "");
+        $phone = trim($_POST["Phone"] ?? "");
+        $email = trim($_POST["Email"] ?? "");
 
 
-            /* Create audit log */
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
 
-            $audit = $pdo->prepare("
-                INSERT INTO audit_logs
-                (
-                    UserID,
-                    Action,
-                    TableAffected,
-                    RecordID,
-                    IPAddress
-                )
-                VALUES (?, ?, ?, ?, ?)
-            ");
+        if ($firstName === "" || $lastName === "") {
 
-            $audit->execute([
-                $_SESSION["UserID"],
-                "Updated owner",
-                "owners",
-                $ownerID,
-                $_SERVER["REMOTE_ADDR"] ?? null
-            ]);
+            $error = "First name and last name are required.";
+
+        } elseif (strlen($firstName) > 100) {
+
+            $error = "First name cannot exceed 100 characters.";
+
+        } elseif (strlen($lastName) > 100) {
+
+            $error = "Last name cannot exceed 100 characters.";
+
+        } elseif (strlen($address) > 255) {
+
+            $error = "Address cannot exceed 255 characters.";
+
+        } elseif (strlen($phone) > 30) {
+
+            $error = "Phone number cannot exceed 30 characters.";
+
+        } elseif (strlen($email) > 150) {
+
+            $error = "Email address cannot exceed 150 characters.";
+
+        } elseif (
+            $email !== "" &&
+            !filter_var($email, FILTER_VALIDATE_EMAIL)
+        ) {
+
+            $error = "Please enter a valid email address.";
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Update Owner + Audit Log
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+
+                $pdo->beginTransaction();
 
 
-            $success = "Owner information updated successfully.";
+                /*
+                |--------------------------------------------------------------------------
+                | Update Owner
+                |--------------------------------------------------------------------------
+                */
+
+                $updateStmt = $pdo->prepare("
+                    UPDATE owners
+                    SET
+                        FirstName = ?,
+                        LastName = ?,
+                        Address = ?,
+                        Phone = ?,
+                        Email = ?
+                    WHERE OwnerID = ?
+                ");
+
+                $updateStmt->execute([
+                    $firstName,
+                    $lastName,
+                    $address !== "" ? $address : null,
+                    $phone !== "" ? $phone : null,
+                    $email !== "" ? $email : null,
+                    $ownerID
+                ]);
 
 
-            /* Reload updated owner */
+                /*
+                |--------------------------------------------------------------------------
+                | Record Audit Log
+                |--------------------------------------------------------------------------
+                */
 
-            $stmt = $pdo->prepare("
-                SELECT *
-                FROM owners
-                WHERE OwnerID = ?
-                LIMIT 1
-            ");
+                $auditStmt = $pdo->prepare("
+                    INSERT INTO audit_logs (
+                        UserID,
+                        Action,
+                        TableAffected,
+                        RecordID,
+                        IPAddress
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                ");
 
-            $stmt->execute([$ownerID]);
+                $auditStmt->execute([
+                    (int) $_SESSION["UserID"],
+                    "Updated owner",
+                    "owners",
+                    $ownerID,
+                    $_SERVER["REMOTE_ADDR"] ?? null
+                ]);
 
-            $owner = $stmt->fetch();
 
-        } catch (PDOException $e) {
+                /*
+                |--------------------------------------------------------------------------
+                | Commit Transaction
+                |--------------------------------------------------------------------------
+                */
 
-            $error = "Unable to update the owner record.";
+                $pdo->commit();
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Success
+                |--------------------------------------------------------------------------
+                */
+
+                $success =
+                    "Owner information updated successfully.";
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Reload Updated Owner
+                |--------------------------------------------------------------------------
+                */
+
+                $stmt = $pdo->prepare("
+                    SELECT
+                        OwnerID,
+                        FirstName,
+                        LastName,
+                        Address,
+                        Phone,
+                        Email,
+                        CreatedAt
+                    FROM owners
+                    WHERE OwnerID = ?
+                    LIMIT 1
+                ");
+
+                $stmt->execute([
+                    $ownerID
+                ]);
+
+                $owner = $stmt->fetch();
+
+
+            } catch (Throwable $e) {
+
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+
+                $error =
+                    "Unable to update the owner record. Please try again.";
+            }
 
         }
+
     }
+
 }
 
 ?>
@@ -153,12 +377,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     >
 
     <title>
-        VISRS - Edit Owner
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
     </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -167,51 +391,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <div class="layout">
 
+    <?php include __DIR__ . "/../includes/sidebar.php"; ?>
 
-    <!-- SIDEBAR -->
+    <main class="main-content">
 
-    <aside class="sidebar">
+        <?php include __DIR__ . "/../includes/header.php"; ?>
 
-       <?php require_once "../includes/sidebar.php"; ?>
+        <div class="content">
 
-    </aside>
+            <h1 class="page-title">
+                Edit Owner
+            </h1>
 
-
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-
-        <!-- TOP BAR -->
-
-        <?php
-
-            $pageTitle = "Owners";
-
-            include __DIR__ . "/../includes/header.php";
-
-        ?>
-
-
-        <!-- PAGE CONTENT -->
-
-        <main class="content">
-
-
-            <div class="page-title">
-
-                <h1>
-                    Edit Owner
-                </h1>
-
-                <p class="page-subtitle">
-
-                    Update the owner's contact and
-                    registration information.
-
-                </p>
-
-            </div>
+            <p class="page-subtitle">
+                Update the owner's contact and registration information.
+            </p>
 
 
             <!-- SUCCESS MESSAGE -->
@@ -219,12 +413,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php if ($success !== ""): ?>
 
                 <div
+                    class="auto-dismiss"
                     style="
-                        background: #dcfce7;
-                        color: #166534;
-                        padding: 15px;
-                        border-radius: 8px;
-                        margin-bottom: 20px;
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:15px;
+                        border-radius:8px;
+                        margin-bottom:20px;
                     "
                 >
 
@@ -241,11 +436,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <div
                     style="
-                        background: #fee2e2;
-                        color: #991b1b;
-                        padding: 15px;
-                        border-radius: 8px;
-                        margin-bottom: 20px;
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:15px;
+                        border-radius:8px;
+                        margin-bottom:20px;
                     "
                 >
 
@@ -264,17 +459,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Owner Information
                 </h2>
 
-
                 <form
                     method="POST"
                     action=""
-                    style="margin-top: 20px;"
+                    style="margin-top:20px;"
                 >
+
+                    <!-- OWNER ID -->
 
                     <input
                         type="hidden"
                         name="OwnerID"
-                        value="<?= htmlspecialchars($owner["OwnerID"]) ?>"
+                        value="<?= (int) $owner["OwnerID"] ?>"
+                    >
+
+
+                    <!-- CSRF TOKEN -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(generateCSRFToken()) ?>"
                     >
 
 
@@ -291,6 +496,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="FirstName"
                             name="FirstName"
                             value="<?= htmlspecialchars($owner["FirstName"]) ?>"
+                            maxlength="100"
+                            autocomplete="given-name"
                             required
                         >
 
@@ -310,6 +517,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="LastName"
                             name="LastName"
                             value="<?= htmlspecialchars($owner["LastName"]) ?>"
+                            maxlength="100"
+                            autocomplete="family-name"
                             required
                         >
 
@@ -329,6 +538,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="Address"
                             name="Address"
                             value="<?= htmlspecialchars($owner["Address"] ?? "") ?>"
+                            maxlength="255"
+                            autocomplete="street-address"
                         >
 
                     </div>
@@ -343,10 +554,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         </label>
 
                         <input
-                            type="text"
+                            type="tel"
                             id="Phone"
                             name="Phone"
                             value="<?= htmlspecialchars($owner["Phone"] ?? "") ?>"
+                            maxlength="30"
+                            autocomplete="tel"
                         >
 
                     </div>
@@ -365,6 +578,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="Email"
                             name="Email"
                             value="<?= htmlspecialchars($owner["Email"] ?? "") ?>"
+                            maxlength="150"
+                            autocomplete="email"
                         >
 
                     </div>
@@ -374,20 +589,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <div
                         style="
-                            display: flex;
-                            gap: 10px;
-                            margin-top: 20px;
-                            flex-wrap: wrap;
+                            display:flex;
+                            gap:10px;
+                            margin-top:20px;
+                            flex-wrap:wrap;
                         "
                     >
 
                         <a
-                            href="index.php"
+                            href="view.php?id=<?= (int) $ownerID ?>"
                             class="button button-secondary"
                         >
                             Cancel
                         </a>
-
 
                         <button
                             type="submit"
@@ -402,15 +616,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </section>
 
-        </main>
+        </div>
 
-    </div>
+    </main>
 
 </div>
 
-
-<script src="../js/app.js"></script>
-
-</body>
-
-</html>
+<?php include __DIR__ . "/../includes/footer.php"; ?>

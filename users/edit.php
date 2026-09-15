@@ -6,12 +6,19 @@ requireRole(["Admin"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+
 $pageTitle = "Edit User";
 $pageSubtitle = "Update VISRS user account information";
+
+
+/*
+ * Get User ID
+ */
 
 $userID = isset($_GET["id"])
     ? (int) $_GET["id"]
     : 0;
+
 
 if ($userID <= 0) {
 
@@ -65,16 +72,40 @@ $errors = [];
 
 
 /*
- * Process form.
+ * Process form submission.
  */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $firstName = trim($_POST["FirstName"] ?? "");
-    $lastName = trim($_POST["LastName"] ?? "");
-    $email = trim($_POST["Email"] ?? "");
+    /*
+     * Verify CSRF token before processing
+     * any account changes.
+     */
+
+    requireValidCSRF();
+
+
+    /*
+     * Get submitted values.
+     */
+
+    $firstName = trim(
+        $_POST["FirstName"] ?? ""
+    );
+
+    $lastName = trim(
+        $_POST["LastName"] ?? ""
+    );
+
+    $email = trim(
+        $_POST["Email"] ?? ""
+    );
+
     $password = $_POST["Password"] ?? "";
-    $confirmPassword = $_POST["ConfirmPassword"] ?? "";
+
+    $confirmPassword =
+        $_POST["ConfirmPassword"] ?? "";
+
     $role = $_POST["Role"] ?? "User";
 
 
@@ -84,7 +115,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($firstName === "") {
 
-        $errors[] = "First name is required.";
+        $errors[] =
+            "First name is required.";
+
+    } elseif (strlen($firstName) > 100) {
+
+        $errors[] =
+            "First name cannot exceed 100 characters.";
 
     }
 
@@ -95,7 +132,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($lastName === "") {
 
-        $errors[] = "Last name is required.";
+        $errors[] =
+            "Last name is required.";
+
+    } elseif (strlen($lastName) > 100) {
+
+        $errors[] =
+            "Last name cannot exceed 100 characters.";
 
     }
 
@@ -106,11 +149,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($email === "") {
 
-        $errors[] = "Email address is required.";
+        $errors[] =
+            "Email address is required.";
 
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (
+        !filter_var(
+            $email,
+            FILTER_VALIDATE_EMAIL
+        )
+    ) {
 
-        $errors[] = "Please enter a valid email address.";
+        $errors[] =
+            "Please enter a valid email address.";
+
+    } elseif (strlen($email) > 150) {
+
+        $errors[] =
+            "Email address cannot exceed 150 characters.";
 
     }
 
@@ -126,9 +181,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         "User"
     ];
 
-    if (!in_array($role, $validRoles, true)) {
 
-        $errors[] = "Invalid user role selected.";
+    if (
+        !in_array(
+            $role,
+            $validRoles,
+            true
+        )
+    ) {
+
+        $errors[] =
+            "Invalid user role selected.";
 
     }
 
@@ -136,8 +199,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     /*
      * Password is optional when editing.
      *
-     * If the Admin leaves it blank, the existing
-     * password remains unchanged.
+     * If the Admin leaves it blank,
+     * the existing password remains unchanged.
      */
 
     if ($password !== "") {
@@ -149,7 +212,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         }
 
-        if ($password !== $confirmPassword) {
+
+        if (
+            $password !== $confirmPassword
+        ) {
 
             $errors[] =
                 "New passwords do not match.";
@@ -165,7 +231,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if (empty($errors)) {
 
-        $stmt = $pdo->prepare("
+        $emailCheck = $pdo->prepare("
             SELECT UserID
             FROM users
             WHERE Email = ?
@@ -173,12 +239,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             LIMIT 1
         ");
 
-        $stmt->execute([
+        $emailCheck->execute([
             $email,
             $userID
         ]);
 
-        if ($stmt->fetch()) {
+
+        if ($emailCheck->fetch()) {
 
             $errors[] =
                 "Another user already uses this email address.";
@@ -190,11 +257,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     /*
      * Prevent the currently logged-in Admin
-     * from accidentally removing their own Admin role.
+     * from removing their own Admin role.
      */
 
     $currentUserID =
-        (int) ($_SESSION["UserID"] ?? 0);
+        (int) (
+            $_SESSION["UserID"] ?? 0
+        );
+
 
     if (
         $userID === $currentUserID &&
@@ -208,78 +278,146 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /*
-     * Update user.
+     * Update the user.
      */
 
     if (empty($errors)) {
 
-        if ($password !== "") {
+        try {
 
             /*
-             * Update everything including password.
+             * Start transaction.
              */
 
-            $hashedPassword = password_hash(
-                $password,
-                PASSWORD_DEFAULT
+            $pdo->beginTransaction();
+
+
+            /*
+             * Update password only if a new password
+             * was provided.
+             */
+
+            if ($password !== "") {
+
+                $hashedPassword =
+                    password_hash(
+                        $password,
+                        PASSWORD_DEFAULT
+                    );
+
+
+                $stmt = $pdo->prepare("
+                    UPDATE users
+                    SET
+                        FirstName = ?,
+                        LastName = ?,
+                        Email = ?,
+                        Password = ?,
+                        Role = ?
+                    WHERE UserID = ?
+                ");
+
+
+                $stmt->execute([
+                    $firstName,
+                    $lastName,
+                    $email,
+                    $hashedPassword,
+                    $role,
+                    $userID
+                ]);
+
+            } else {
+
+                $stmt = $pdo->prepare("
+                    UPDATE users
+                    SET
+                        FirstName = ?,
+                        LastName = ?,
+                        Email = ?,
+                        Role = ?
+                    WHERE UserID = ?
+                ");
+
+
+                $stmt->execute([
+                    $firstName,
+                    $lastName,
+                    $email,
+                    $role,
+                    $userID
+                ]);
+
+            }
+
+
+            /*
+             * Record the update in the audit trail.
+             */
+
+            $auditStmt = $pdo->prepare("
+                INSERT INTO audit_logs
+                (
+                    UserID,
+                    Action,
+                    TableAffected,
+                    RecordID,
+                    IPAddress
+                )
+                VALUES
+                (?, ?, ?, ?, ?)
+            ");
+
+
+            $auditStmt->execute([
+                $_SESSION["UserID"],
+                "Updated user account",
+                "users",
+                $userID,
+                $_SERVER["REMOTE_ADDR"] ?? null
+            ]);
+
+
+            /*
+             * Commit the update and audit entry.
+             */
+
+            $pdo->commit();
+
+
+            /*
+             * Return to the user details page.
+             */
+
+            header(
+                "Location: view.php?id="
+                . $userID
+                . "&success=updated"
             );
 
-            $stmt = $pdo->prepare("
-                UPDATE users
-                SET
-                    FirstName = ?,
-                    LastName = ?,
-                    Email = ?,
-                    Password = ?,
-                    Role = ?
-                WHERE UserID = ?
-            ");
+            exit;
 
-            $stmt->execute([
-                $firstName,
-                $lastName,
-                $email,
-                $hashedPassword,
-                $role,
-                $userID
-            ]);
-
-        } else {
+        } catch (Throwable $e) {
 
             /*
-             * Update everything except password.
+             * Roll back if anything failed.
              */
 
-            $stmt = $pdo->prepare("
-                UPDATE users
-                SET
-                    FirstName = ?,
-                    LastName = ?,
-                    Email = ?,
-                    Role = ?
-                WHERE UserID = ?
-            ");
+            if ($pdo->inTransaction()) {
 
-            $stmt->execute([
-                $firstName,
-                $lastName,
-                $email,
-                $role,
-                $userID
-            ]);
+                $pdo->rollBack();
+
+            }
+
+
+            /*
+             * Do not expose database errors.
+             */
+
+            $errors[] =
+                "The user account could not be updated. Please try again.";
 
         }
-
-
-        /*
-         * Return to the user details page.
-         */
-
-        header(
-            "Location: view.php?id=" . $userID . "&success=updated"
-        );
-
-        exit;
 
     }
 
@@ -326,12 +464,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <main class="main-content">
 
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php
+
+        include __DIR__ . "/../includes/header.php";
+
+        ?>
 
 
         <div class="content">
 
             <div class="card">
+
 
                 <!-- PAGE HEADER -->
 
@@ -390,13 +533,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             Please correct the following:
                         </strong>
 
+
                         <ul
                             style="
                                 margin:10px 0 0 20px;
                             "
                         >
 
-                            <?php foreach ($errors as $error): ?>
+                            <?php foreach (
+                                $errors
+                                as $error
+                            ): ?>
 
                                 <li>
                                     <?= htmlspecialchars($error) ?>
@@ -418,6 +565,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     action=""
                 >
 
+                    <!-- CSRF TOKEN -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
+                    >
+
 
                     <!-- FIRST NAME -->
 
@@ -431,8 +588,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             type="text"
                             id="FirstName"
                             name="FirstName"
-                            value="<?= htmlspecialchars($firstName) ?>"
+                            value="<?= htmlspecialchars(
+                                $firstName
+                            ) ?>"
                             placeholder="Enter first name"
+                            maxlength="100"
                             required
                             class="auto-focus"
                         >
@@ -452,8 +612,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             type="text"
                             id="LastName"
                             name="LastName"
-                            value="<?= htmlspecialchars($lastName) ?>"
+                            value="<?= htmlspecialchars(
+                                $lastName
+                            ) ?>"
                             placeholder="Enter last name"
+                            maxlength="100"
                             required
                         >
 
@@ -472,8 +635,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             type="email"
                             id="Email"
                             name="Email"
-                            value="<?= htmlspecialchars($email) ?>"
+                            value="<?= htmlspecialchars(
+                                $email
+                            ) ?>"
                             placeholder="example@email.com"
+                            maxlength="150"
                             required
                         >
 
@@ -524,7 +690,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 margin-top:6px;
                             "
                         >
-                            Leave blank if you do not want to change the password.
+                            Leave blank if you do not want
+                            to change the password.
                         </small>
 
                     </div>
@@ -537,6 +704,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <label for="ConfirmPassword">
                             Confirm New Password
                         </label>
+
 
                         <div
                             style="
@@ -607,7 +775,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                                 <option
                                     value="User"
-                                    <?= $role === "User" ? "selected" : "" ?>
+                                    <?= $role === "User"
+                                        ? "selected"
+                                        : "" ?>
                                 >
                                     User
                                 </option>
@@ -615,7 +785,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                                 <option
                                     value="Seller"
-                                    <?= $role === "Seller" ? "selected" : "" ?>
+                                    <?= $role === "Seller"
+                                        ? "selected"
+                                        : "" ?>
                                 >
                                     Seller
                                 </option>
@@ -623,7 +795,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                                 <option
                                     value="Police"
-                                    <?= $role === "Police" ? "selected" : "" ?>
+                                    <?= $role === "Police"
+                                        ? "selected"
+                                        : "" ?>
                                 >
                                     Police
                                 </option>
@@ -631,7 +805,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                                 <option
                                     value="Admin"
-                                    <?= $role === "Admin" ? "selected" : "" ?>
+                                    <?= $role === "Admin"
+                                        ? "selected"
+                                        : "" ?>
                                 >
                                     Administrator
                                 </option>
@@ -664,7 +840,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 margin-top:6px;
                             "
                         >
-                            Choose the permissions this account should have.
+                            Choose the permissions this account
+                            should have.
                         </small>
 
                     </div>
@@ -710,7 +887,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php
 
-</body>
-</html>
+include __DIR__ . "/../includes/footer.php";
+
+?>

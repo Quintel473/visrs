@@ -25,13 +25,16 @@ if ($userID <= 0) {
 
 
 /*
+ * Get the currently logged-in Admin.
+ */
+
+$currentUserID = (int) ($_SESSION["UserID"] ?? 0);
+
+
+/*
  * Prevent the currently logged-in Admin
  * from deleting their own account.
  */
-
-$currentUserID =
-    (int) ($_SESSION["UserID"] ?? 0);
-
 
 if ($userID === $currentUserID) {
 
@@ -78,13 +81,40 @@ if (!$user) {
 
 
 /*
- * Process deletion.
+ * Check whether the user has audit records.
+ *
+ * Audit records must remain intact.
+ */
+
+$auditCheck = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM audit_logs
+    WHERE UserID = ?
+");
+
+$auditCheck->execute([
+    $userID
+]);
+
+$auditCount = (int) $auditCheck->fetchColumn();
+
+
+/*
+ * Process deletion only after the user
+ * confirms on the VISRS confirmation page.
  */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     /*
-     * Verify the confirmation ID.
+     * Verify CSRF token.
+     */
+
+    requireValidCSRF();
+
+
+    /*
+     * Verify the submitted User ID.
      */
 
     $confirmedUserID =
@@ -100,26 +130,157 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /*
-     * Delete the user.
+     * Prevent self-deletion again during POST processing.
      */
 
-    $stmt = $pdo->prepare("
-        DELETE FROM users
-        WHERE UserID = ?
-    ");
+    if ($userID === $currentUserID) {
 
-    $stmt->execute([
-        $userID
-    ]);
+        header("Location: index.php?error=self_delete");
+        exit;
+
+    }
 
 
     /*
-     * Return to User Management.
+     * Re-check the user before deletion.
+     *
+     * This protects against the record changing
+     * between the confirmation page and submission.
      */
 
-    header("Location: index.php?success=deleted");
+    $verifyStmt = $pdo->prepare("
+        SELECT
+            UserID,
+            FirstName,
+            LastName,
+            Email,
+            Role
+        FROM users
+        WHERE UserID = ?
+        LIMIT 1
+    ");
 
-    exit;
+    $verifyStmt->execute([
+        $userID
+    ]);
+
+    $currentUser = $verifyStmt->fetch();
+
+
+    if (!$currentUser) {
+
+        header("Location: index.php?error=not_found");
+        exit;
+
+    }
+
+
+    /*
+     * Re-check audit records immediately before deletion.
+     */
+
+    $auditCheck = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM audit_logs
+        WHERE UserID = ?
+    ");
+
+    $auditCheck->execute([
+        $userID
+    ]);
+
+    $auditCount = (int) $auditCheck->fetchColumn();
+
+
+    /*
+     * Do not delete a user that has audit history.
+     */
+
+    if ($auditCount > 0) {
+
+        header(
+            "Location: index.php?error=has_audit_logs"
+        );
+
+        exit;
+
+    }
+
+
+    /*
+     * Delete the user.
+     */
+
+    try {
+
+        $pdo->beginTransaction();
+
+
+        $deleteStmt = $pdo->prepare("
+            DELETE FROM users
+            WHERE UserID = ?
+        ");
+
+        $deleteStmt->execute([
+            $userID
+        ]);
+
+
+        /*
+         * Confirm that a record was actually deleted.
+         */
+
+        if ($deleteStmt->rowCount() !== 1) {
+
+            throw new RuntimeException(
+                "User deletion did not affect exactly one record."
+            );
+
+        }
+
+
+        /*
+         * Commit the deletion.
+         */
+
+        $pdo->commit();
+
+
+        /*
+         * Return to User Management.
+         */
+
+        header(
+            "Location: index.php?success=deleted"
+        );
+
+        exit;
+
+    } catch (Throwable $e) {
+
+        /*
+         * Roll back if anything failed.
+         */
+
+        if ($pdo->inTransaction()) {
+
+            $pdo->rollBack();
+
+        }
+
+
+        /*
+         * Return to User Management with
+         * a generic error message.
+         */
+
+        header(
+            "Location: index.php?error=delete_failed"
+        );
+
+        exit;
+
+    }
 
 }
 
@@ -164,7 +325,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <main class="main-content">
 
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php
+
+        include __DIR__ . "/../includes/header.php";
+
+        ?>
 
 
         <div class="content">
@@ -172,7 +337,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="card">
 
 
-                <!-- ERROR HEADER -->
+                <!-- WARNING HEADER -->
 
                 <div
                     style="
@@ -224,6 +389,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <p>
                     <strong>Role:</strong>
+
                     <?php
 
                     if ($user["Role"] === "Admin") {
@@ -239,11 +405,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
 
                     ?>
+
                 </p>
 
 
                 <p>
                     <strong>Account Created:</strong>
+
                     <?= htmlspecialchars(
                         date(
                             "F d, Y",
@@ -252,10 +420,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             )
                         )
                     ) ?>
+
                 </p>
 
 
-                <!-- WARNING -->
+                <!-- DELETE WARNING -->
 
                 <div
                     style="
@@ -267,14 +436,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "
                 >
 
-                    <strong>
-                        This action cannot be undone.
-                    </strong>
+                    <?php if ($auditCount > 0): ?>
 
-                    <p style="margin:6px 0 0 0;">
-                        Deleting this account will permanently remove
-                        the user from the VISRS system.
-                    </p>
+                        <strong>
+                            User Cannot Be Deleted
+                        </strong>
+
+                        <p style="margin:6px 0 0 0;">
+                            This account has
+                            <?= $auditCount ?>
+                            existing audit
+                            <?= $auditCount === 1 ? "record" : "records" ?>.
+                            The account cannot be deleted because the
+                            VISRS audit trail must remain intact.
+                        </p>
+
+                    <?php else: ?>
+
+                        <strong>
+                            This action cannot be undone.
+                        </strong>
+
+                        <p style="margin:6px 0 0 0;">
+                            Deleting this account will permanently remove
+                            the user from the VISRS system.
+                        </p>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -292,6 +480,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     "
                 >
 
+                    <!-- CSRF TOKEN -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
+                    >
+
+
+                    <!-- USER ID -->
+
                     <input
                         type="hidden"
                         name="UserID"
@@ -299,15 +500,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     >
 
 
-                    <button
-                        type="submit"
-                        class="button"
-                        style="
-                            background:#991b1b;
-                        "
-                    >
-                        Yes, Delete User
-                    </button>
+                    <?php if ($auditCount === 0): ?>
+
+                        <button
+                            type="submit"
+                            class="button"
+                            style="
+                                background:#991b1b;
+                            "
+                        >
+                            Yes, Delete User
+                        </button>
+
+                    <?php else: ?>
+
+                        <button
+                            type="button"
+                            class="button"
+                            style="
+                                background:#9ca3af;
+                                cursor:not-allowed;
+                            "
+                            disabled
+                        >
+                            User Cannot Be Deleted
+                        </button>
+
+                    <?php endif; ?>
 
 
                     <a
@@ -328,7 +547,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </div>
 
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php
 
-</body>
-</html>
+include __DIR__ . "/../includes/footer.php";
+
+?>

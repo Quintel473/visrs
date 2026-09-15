@@ -1,7 +1,8 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $canManageOwners = in_array(
     $_SESSION["Role"] ?? "",
@@ -9,8 +10,17 @@ $canManageOwners = in_array(
     true
 );
 
-$basePath = "../";
 $activePage = "owners";
+
+$pageTitle = "Owners";
+$pageSubtitle = "View and manage vehicle owner records";
+
+
+/*
+|--------------------------------------------------------------------------
+| Retrieve Owners
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->query("
     SELECT
@@ -27,6 +37,18 @@ $stmt = $pdo->query("
 
 $owners = $stmt->fetchAll();
 
+
+/*
+|--------------------------------------------------------------------------
+| Status Messages
+|--------------------------------------------------------------------------
+*/
+
+$deleted = isset($_GET["deleted"]) &&
+    $_GET["deleted"] === "1";
+
+$error = $_GET["error"] ?? "";
+
 ?>
 
 <!DOCTYPE html>
@@ -41,11 +63,13 @@ $owners = $stmt->fetchAll();
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>VISRS - Owners</title>
+    <title>
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
+    </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -54,33 +78,13 @@ $owners = $stmt->fetchAll();
 
 <div class="layout">
 
-    <!-- SIDEBAR -->
+    <?php include __DIR__ . "/../includes/sidebar.php"; ?>
 
-    <aside class="sidebar">
+    <main class="main-content">
 
-        <?php require_once "../includes/sidebar.php"; ?>
+        <?php include __DIR__ . "/../includes/header.php"; ?>
 
-    </aside>
-
-
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-        <!-- TOP BAR -->
-
-        <?php
-
-            $pageTitle = "Owners";
-
-            include __DIR__ . "/../includes/header.php";
-
-        ?>
-
-
-        <!-- PAGE CONTENT -->
-
-        <main class="content">
+        <div class="content">
 
             <h1 class="page-title">
                 Owner Management
@@ -91,36 +95,88 @@ $owners = $stmt->fetchAll();
             </p>
 
 
+            <!-- SUCCESS MESSAGE -->
+
+            <?php if ($deleted): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:12px;
+                        border-radius:6px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    Owner deleted successfully.
+
+                </div>
+
+            <?php endif; ?>
+
+
+            <!-- ERROR MESSAGE -->
+
+            <?php if ($error === "not_found"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:12px;
+                        border-radius:6px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    The requested owner could not be found.
+
+                </div>
+
+            <?php endif; ?>
+
+
             <!-- HEADER CARD -->
 
             <section class="card">
 
-                <div style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    gap: 15px;
-                    flex-wrap: wrap;
-                ">
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:15px;
+                        flex-wrap:wrap;
+                    "
+                >
 
                     <div>
 
-                        <h2 style="margin-bottom: 5px;">
+                        <h2 style="margin-bottom:5px;">
                             Registered Owners
                         </h2>
 
-                        <p style="color: #6b7280;">
-                            <?= count($owners) ?> owner(s) currently registered.
+                        <p style="color:#6b7280;">
+                            <?= count($owners) ?>
+                            owner(s) currently registered.
                         </p>
 
                     </div>
 
-                    <a
-                        href="add.php"
-                        class="button"
-                    >
-                        + Add Owner
-                    </a>
+
+                    <?php if ($canManageOwners): ?>
+
+                        <a
+                            href="add.php"
+                            class="button"
+                        >
+                            + Add Owner
+                        </a>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -131,70 +187,89 @@ $owners = $stmt->fetchAll();
 
             <section
                 class="card"
-                style="margin-top: 20px;"
+                style="margin-top:20px;"
             >
 
-                <h2>Owner Records</h2>
+                <h2>
+                    Owner Records
+                </h2>
+
 
                 <?php if (count($owners) > 0): ?>
 
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x:auto;">
 
-                        <table style="
-                            width: 100%;
-                            border-collapse: collapse;
-                        ">
+                        <table
+                            style="
+                                width:100%;
+                                border-collapse:collapse;
+                            "
+                        >
 
                             <thead>
 
-                                <tr style="
-                                    border-bottom: 2px solid #e5e7eb;
-                                    text-align: left;
-                                ">
+                                <tr
+                                    style="
+                                        border-bottom:2px solid #e5e7eb;
+                                        text-align:left;
+                                    "
+                                >
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Name
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Phone
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Email
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Address
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Actions
                                     </th>
 
+                                </tr>
+
                             </thead>
+
 
                             <tbody>
 
                                 <?php foreach ($owners as $owner): ?>
 
-                                    <tr style="
-                                        border-bottom: 1px solid #e5e7eb;
-                                    ">
+                                    <tr
+                                        style="
+                                            border-bottom:1px solid #e5e7eb;
+                                        "
+                                    >
 
-                                        <td style="padding: 12px;">
+                                        <!-- NAME -->
+
+                                        <td style="padding:12px;">
 
                                             <strong>
 
                                                 <?= htmlspecialchars(
-                                                    $owner["FirstName"] . " " . $owner["LastName"]
+                                                    $owner["FirstName"]
+                                                    . " "
+                                                    . $owner["LastName"]
                                                 ) ?>
 
                                             </strong>
 
                                         </td>
 
-                                        <td style="padding: 12px;">
+
+                                        <!-- PHONE -->
+
+                                        <td style="padding:12px;">
 
                                             <?= htmlspecialchars(
                                                 $owner["Phone"] ?? ""
@@ -202,7 +277,10 @@ $owners = $stmt->fetchAll();
 
                                         </td>
 
-                                        <td style="padding: 12px;">
+
+                                        <!-- EMAIL -->
+
+                                        <td style="padding:12px;">
 
                                             <?= htmlspecialchars(
                                                 $owner["Email"] ?? ""
@@ -210,7 +288,10 @@ $owners = $stmt->fetchAll();
 
                                         </td>
 
-                                        <td style="padding: 12px;">
+
+                                        <!-- ADDRESS -->
+
+                                        <td style="padding:12px;">
 
                                             <?= htmlspecialchars(
                                                 $owner["Address"] ?? ""
@@ -218,33 +299,65 @@ $owners = $stmt->fetchAll();
 
                                         </td>
 
-                                        <td style="padding: 12px;">
 
-                                        <a
-                                            href="view.php?id=<?= $owner["OwnerID"] ?>"
-                                            class="button button-secondary"
-                                            style="padding: 8px 12px;"
-                                        >
-                                            View
-                                        </a>
+                                        <!-- ACTIONS -->
 
-                                        <a
-                                            href="edit.php?id=<?= $owner["OwnerID"] ?>"
-                                            class="button"
-                                            style="padding: 8px 12px;"
-                                        >
-                                            Edit
-                                        </a>
+                                        <td style="padding:12px;">
 
-                                        <a
-                                            href="delete.php?id=<?= $owner["OwnerID"] ?>"
-                                            class="button"
-                                            style="padding: 8px 12px; background: #991b1b;"
-                                        >
-                                            Delete
-                                        </a>
+                                            <div
+                                                style="
+                                                    display:flex;
+                                                    gap:6px;
+                                                    flex-wrap:wrap;
+                                                "
+                                            >
 
-                                    </td>
+                                                <!-- VIEW -->
+
+                                                <a
+                                                    href="view.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                    class="button button-secondary"
+                                                    style="
+                                                        padding:8px 12px;
+                                                    "
+                                                >
+                                                    View
+                                                </a>
+
+
+                                                <?php if ($canManageOwners): ?>
+
+                                                    <!-- EDIT -->
+
+                                                    <a
+                                                        href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                        class="button"
+                                                        style="
+                                                            padding:8px 12px;
+                                                        "
+                                                    >
+                                                        Edit
+                                                    </a>
+
+
+                                                    <!-- DELETE -->
+
+                                                    <a
+                                                        href="delete.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                        class="button"
+                                                        style="
+                                                            padding:8px 12px;
+                                                            background:#991b1b;
+                                                        "
+                                                    >
+                                                        Delete
+                                                    </a>
+
+                                                <?php endif; ?>
+
+                                            </div>
+
+                                        </td>
 
                                     </tr>
 
@@ -256,28 +369,38 @@ $owners = $stmt->fetchAll();
 
                     </div>
 
+
                 <?php else: ?>
 
-                    <div style="
-                        padding: 30px;
-                        text-align: center;
-                        color: #6b7280;
-                    ">
+                    <!-- EMPTY STATE -->
+
+                    <div
+                        style="
+                            padding:30px;
+                            text-align:center;
+                            color:#6b7280;
+                        "
+                    >
 
                         <p>
                             No owner records have been added yet.
                         </p>
 
-                        <p style="margin-top: 10px;">
 
-                            <a
-                                href="add.php"
-                                class="button"
-                            >
-                                Add Your First Owner
-                            </a>
+                        <?php if ($canManageOwners): ?>
 
-                        </p>
+                            <p style="margin-top:10px;">
+
+                                <a
+                                    href="add.php"
+                                    class="button"
+                                >
+                                    Add Your First Owner
+                                </a>
+
+                            </p>
+
+                        <?php endif; ?>
 
                     </div>
 
@@ -285,14 +408,10 @@ $owners = $stmt->fetchAll();
 
             </section>
 
-        </main>
+        </div>
 
-    </div>
+    </main>
 
 </div>
 
-<script src="../js/app.js"></script>
-
-</body>
-
-</html>
+<?php include __DIR__ . "/../includes/footer.php"; ?>

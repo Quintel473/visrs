@@ -1,30 +1,96 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
-
-$basePath = "../";
-$activePage = "audit_logs";
-
+require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin"]);
 
+require_once __DIR__ . "/../includes/database.php";
+
+$activePage = "audit_logs";
+$pageTitle = "Audit Trail";
+
 
 /*
- * Pagination settings.
+ * Search
  */
 
-$recordsPerPage = 15;
-
-$currentPage = max(
-    1,
-    (int) ($_GET["page"] ?? 1)
-);
-
-$offset = ($currentPage - 1) * $recordsPerPage;
+$search = trim($_GET["search"] ?? "");
 
 
 /*
- * Get total number of audit records.
+ * Build audit log query.
+ *
+ * We join the users table so the administrator
+ * can see which user performed each action.
+ */
+
+if ($search !== "") {
+
+    $stmt = $pdo->prepare("
+        SELECT
+            a.LogID,
+            a.UserID,
+            a.Action,
+            a.TableAffected,
+            a.RecordID,
+            a.IPAddress,
+            a.CreatedAt,
+            u.FirstName,
+            u.LastName,
+            u.Email,
+            u.Role
+        FROM audit_logs a
+        LEFT JOIN users u
+            ON a.UserID = u.UserID
+        WHERE
+            a.Action LIKE ?
+            OR a.TableAffected LIKE ?
+            OR a.IPAddress LIKE ?
+            OR u.FirstName LIKE ?
+            OR u.LastName LIKE ?
+            OR u.Email LIKE ?
+        ORDER BY a.CreatedAt DESC, a.LogID DESC
+    ");
+
+    $searchValue = "%" . $search . "%";
+
+    $stmt->execute([
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue
+    ]);
+
+} else {
+
+    $stmt = $pdo->query("
+        SELECT
+            a.LogID,
+            a.UserID,
+            a.Action,
+            a.TableAffected,
+            a.RecordID,
+            a.IPAddress,
+            a.CreatedAt,
+            u.FirstName,
+            u.LastName,
+            u.Email,
+            u.Role
+        FROM audit_logs a
+        LEFT JOIN users u
+            ON a.UserID = u.UserID
+        ORDER BY a.CreatedAt DESC, a.LogID DESC
+    ");
+
+}
+
+
+$logs = $stmt->fetchAll();
+
+
+/*
+ * Count total logs.
  */
 
 $countStmt = $pdo->query("
@@ -32,77 +98,39 @@ $countStmt = $pdo->query("
     FROM audit_logs
 ");
 
-$totalRecords = (int) $countStmt->fetchColumn();
-
-$totalPages = max(
-    1,
-    (int) ceil(
-        $totalRecords / $recordsPerPage
-    )
-);
+$totalLogs = (int) $countStmt->fetchColumn();
 
 
 /*
- * Make sure requested page exists.
+ * Count today's logs.
  */
 
-if ($currentPage > $totalPages) {
-
-    $currentPage = $totalPages;
-
-    $offset = ($currentPage - 1) * $recordsPerPage;
-
-}
-
-
-/*
- * Load audit records with user information.
- */
-
-$stmt = $pdo->prepare("
-    SELECT
-        a.LogID,
-        a.UserID,
-        a.Action,
-        a.TableAffected,
-        a.RecordID,
-        a.IPAddress,
-        a.CreatedAt,
-
-        u.FirstName,
-        u.LastName,
-        u.Email,
-        u.Role
-
-    FROM audit_logs a
-
-    LEFT JOIN users u
-        ON a.UserID = u.UserID
-
-    ORDER BY a.CreatedAt DESC
-
-    LIMIT ? OFFSET ?
+$todayStmt = $pdo->query("
+    SELECT COUNT(*)
+    FROM audit_logs
+    WHERE DATE(CreatedAt) = CURDATE()
 ");
 
-$stmt->bindValue(
-    1,
-    $recordsPerPage,
-    PDO::PARAM_INT
-);
+$todayLogs = (int) $todayStmt->fetchColumn();
 
-$stmt->bindValue(
-    2,
-    $offset,
-    PDO::PARAM_INT
-);
 
-$stmt->execute();
+/*
+ * Count distinct users who have performed
+ * logged actions.
+ */
 
-$logs = $stmt->fetchAll();
+$usersStmt = $pdo->query("
+    SELECT COUNT(DISTINCT UserID)
+    FROM audit_logs
+    WHERE UserID IS NOT NULL
+");
+
+$activeUsers = (int) $usersStmt->fetchColumn();
 
 ?>
 
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -114,271 +142,254 @@ $logs = $stmt->fetchAll();
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Audit Trail - VISRS</title>
+    <title>
+        Audit Trail - VISRS
+    </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
-
-    <style>
-
-        .audit-summary {
-            margin-bottom: 20px;
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-        .audit-table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        .audit-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 900px;
-        }
-
-        .audit-table th {
-            padding: 13px 14px;
-            text-align: left;
-            background: #f8fafc;
-            border-bottom: 1px solid #e5e7eb;
-            color: #374151;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .audit-table td {
-            padding: 14px;
-            border-bottom: 1px solid #e5e7eb;
-            color: #4b5563;
-            font-size: 13px;
-            vertical-align: middle;
-        }
-
-        .audit-table tr:hover {
-            background: #fafafa;
-        }
-
-        .user-name {
-            color: #1f2937;
-            font-weight: 600;
-        }
-
-        .user-email {
-            margin-top: 3px;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 6px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .action-text {
-            color: #1f2937;
-            font-weight: 500;
-        }
-
-        .table-badge {
-            display: inline-block;
-            padding: 5px 9px;
-            border-radius: 6px;
-            background: #f3f4f6;
-            color: #374151;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .ip-address {
-            font-family: monospace;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .empty-state {
-            padding: 50px 20px;
-            text-align: center;
-            color: #6b7280;
-        }
-
-        .empty-state h3 {
-            margin-bottom: 8px;
-            color: #374151;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            margin-top: 25px;
-        }
-
-        .pagination a,
-        .pagination span {
-            min-width: 36px;
-            padding: 9px 12px;
-            box-sizing: border-box;
-            text-align: center;
-            border: 1px solid #d1d5db;
-            border-radius: 7px;
-            color: #374151;
-            background: #ffffff;
-            text-decoration: none;
-            font-size: 13px;
-        }
-
-        .pagination a:hover {
-            background: #f8fafc;
-        }
-
-        .pagination .active {
-            background: #2563eb;
-            border-color: #2563eb;
-            color: #ffffff;
-        }
-
-        .pagination .disabled {
-            color: #9ca3af;
-            background: #f9fafb;
-            cursor: not-allowed;
-        }
-
-        @media (max-width: 700px) {
-
-            .pagination {
-                flex-wrap: wrap;
-            }
-
-        }
-
-    </style>
 
 </head>
 
+
 <body>
+
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+
+    <?php
+
+    include __DIR__ . "/../includes/sidebar.php";
+
+    ?>
+
 
     <main class="main-content">
 
-        <div class="topbar">
 
-            <div>
+        <?php
 
-                <h1>Audit Trail</h1>
+        include __DIR__ . "/../includes/header.php";
 
-                <p>
-                    Monitor changes and activities performed in VISRS.
-                </p>
-
-            </div>
-
-
-            <div class="user-info">
-
-                <div class="user-avatar">
-
-                    <?= strtoupper(
-                        substr(
-                            $_SESSION["FirstName"] ?? "U",
-                            0,
-                            1
-                        )
-                    ) ?>
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["FirstName"] ?? ""
-                        ) ?>
-
-                        <?= htmlspecialchars(
-                            $_SESSION["LastName"] ?? ""
-                        ) ?>
-
-                    </strong>
-
-
-                </div>
-
-            </div>
-
-        </div>
+        ?>
 
 
         <div class="content">
 
-            <div class="card">
 
-                <h2>
-                    System Activity
-                </h2>
+            <!-- PAGE INTRODUCTION -->
 
+            <div
+                style="
+                    margin-bottom:20px;
+                "
+            >
 
-                <p class="audit-summary">
+                <h1
+                    class="page-title"
+                    style="
+                        margin-bottom:6px;
+                    "
+                >
+                    Audit Trail
+                </h1>
 
-                    <?= number_format($totalRecords) ?>
-
-                    audit record<?= $totalRecords === 1 ? "" : "s" ?>
-
-                    recorded in the system.
-
+                <p
+                    class="page-subtitle"
+                    style="
+                        margin:0;
+                    "
+                >
+                    Monitor and review activity performed within the VISRS system.
                 </p>
 
+            </div>
 
-                <?php if (empty($logs)): ?>
 
-                    <div class="empty-state">
+            <!-- STATISTICS -->
 
-                        <h3>
-                            No audit records found
-                        </h3>
+            <div class="stats-grid">
 
-                        <p>
-                            System activity will appear here when
-                            records are created, updated, or deleted.
+
+                <div class="stat-card">
+
+                    <h3>
+                        Total Activities
+                    </h3>
+
+                    <div class="stat-number">
+                        <?= $totalLogs ?>
+                    </div>
+
+                    <p>
+                        Recorded system activities
+                    </p>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <h3>
+                        Today's Activities
+                    </h3>
+
+                    <div class="stat-number">
+                        <?= $todayLogs ?>
+                    </div>
+
+                    <p>
+                        Activities recorded today
+                    </p>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <h3>
+                        Active Users
+                    </h3>
+
+                    <div class="stat-number">
+                        <?= $activeUsers ?>
+                    </div>
+
+                    <p>
+                        Users with recorded activity
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- AUDIT LOG CARD -->
+
+            <div
+                class="card"
+                style="
+                    margin-top:20px;
+                "
+            >
+
+
+                <!-- CARD HEADER -->
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:15px;
+                        flex-wrap:wrap;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <div>
+
+                        <h2
+                            style="
+                                margin:0 0 5px 0;
+                            "
+                        >
+                            System Activity
+                        </h2>
+
+                        <p
+                            style="
+                                margin:0;
+                                color:#6b7280;
+                            "
+                        >
+                            Review actions performed by VISRS users.
                         </p>
 
                     </div>
 
-                <?php else: ?>
+
+                    <?php if ($search !== ""): ?>
+
+                        <a
+                            href="/visrs/audit_logs/"
+                            class="button button-secondary"
+                        >
+                            Clear Search
+                        </a>
+
+                    <?php endif; ?>
 
 
-                    <div class="audit-table-wrapper">
+                </div>
 
-                        <table class="audit-table">
+
+                <!-- SEARCH -->
+
+                <form
+                    method="GET"
+                    action=""
+                    style="
+                        display:flex;
+                        gap:12px;
+                        margin-bottom:25px;
+                        flex-wrap:wrap;
+                    "
+                >
+
+                    <input
+                        type="text"
+                        name="search"
+                        value="<?= htmlspecialchars($search) ?>"
+                        placeholder="Search activity, user, table or IP address..."
+                        style="
+                            flex:1;
+                            min-width:250px;
+                        "
+                    >
+
+
+                    <button
+                        type="submit"
+                        class="button"
+                    >
+                        Search
+                    </button>
+
+                </form>
+
+
+                <!-- TABLE -->
+
+                <?php if (count($logs) > 0): ?>
+
+                    <div
+                        style="
+                            overflow-x:auto;
+                        "
+                    >
+
+                        <table
+                            class="data-table"
+                            style="
+                                width:100%;
+                            "
+                        >
 
                             <thead>
 
                                 <tr>
 
                                     <th>
-                                        Date & Time
+                                        ID
                                     </th>
 
                                     <th>
                                         User
-                                    </th>
-
-                                    <th>
-                                        Role
                                     </th>
 
                                     <th>
@@ -397,6 +408,10 @@ $logs = $stmt->fetchAll();
                                         IP Address
                                     </th>
 
+                                    <th>
+                                        Date & Time
+                                    </th>
+
                                 </tr>
 
                             </thead>
@@ -408,49 +423,51 @@ $logs = $stmt->fetchAll();
 
                                     <tr>
 
+
+                                        <!-- LOG ID -->
+
                                         <td>
 
-                                            <?= htmlspecialchars(
-                                                date(
-                                                    "M j, Y g:i A",
-                                                    strtotime(
-                                                        $log["CreatedAt"]
-                                                    )
-                                                )
-                                            ) ?>
+                                            <strong>
+                                                #<?= (int) $log["LogID"] ?>
+                                            </strong>
 
                                         </td>
 
 
+                                        <!-- USER -->
+
                                         <td>
 
-                                            <?php if (
-                                                $log["FirstName"] !== null
-                                            ): ?>
+                                            <?php if ($log["FirstName"] !== null): ?>
 
-                                                <div class="user-name">
-
+                                                <strong>
                                                     <?= htmlspecialchars(
-                                                        $log["FirstName"]
-                                                    ) ?>
-
-                                                    <?= htmlspecialchars(
+                                                        $log["FirstName"] .
+                                                        " " .
                                                         $log["LastName"]
                                                     ) ?>
+                                                </strong>
 
-                                                </div>
+                                                <br>
 
-                                                <div class="user-email">
-
+                                                <small
+                                                    style="
+                                                        color:#6b7280;
+                                                    "
+                                                >
                                                     <?= htmlspecialchars(
-                                                        $log["Email"]
+                                                        $log["Role"] ?? ""
                                                     ) ?>
-
-                                                </div>
+                                                </small>
 
                                             <?php else: ?>
 
-                                                <span>
+                                                <span
+                                                    style="
+                                                        color:#6b7280;
+                                                    "
+                                                >
                                                     Unknown User
                                                 </span>
 
@@ -459,23 +476,46 @@ $logs = $stmt->fetchAll();
                                         </td>
 
 
+                                        <!-- ACTION -->
+
                                         <td>
 
-                                            <?php if (
-                                                $log["Role"] !== null
-                                            ): ?>
+                                            <?= htmlspecialchars(
+                                                $log["Action"]
+                                            ) ?>
 
-                                                <span class="role-badge">
+                                        </td>
 
+
+                                        <!-- TABLE -->
+
+                                        <td>
+
+                                            <?php if (!empty($log["TableAffected"])): ?>
+
+                                                <span
+                                                    style="
+                                                        display:inline-block;
+                                                        padding:5px 9px;
+                                                        border-radius:6px;
+                                                        background:#f3f4f6;
+                                                        color:#374151;
+                                                        font-size:13px;
+                                                        font-weight:600;
+                                                    "
+                                                >
                                                     <?= htmlspecialchars(
-                                                        $log["Role"]
+                                                        $log["TableAffected"]
                                                     ) ?>
-
                                                 </span>
 
                                             <?php else: ?>
 
-                                                <span>
+                                                <span
+                                                    style="
+                                                        color:#9ca3af;
+                                                    "
+                                                >
                                                     —
                                                 </span>
 
@@ -484,58 +524,75 @@ $logs = $stmt->fetchAll();
                                         </td>
 
 
+                                        <!-- RECORD ID -->
+
                                         <td>
 
-                                            <span class="action-text">
+                                            <?php if ($log["RecordID"] !== null): ?>
 
+                                                <?= (int) $log["RecordID"] ?>
+
+                                            <?php else: ?>
+
+                                                <span
+                                                    style="
+                                                        color:#9ca3af;
+                                                    "
+                                                >
+                                                    —
+
+                                                </span>
+
+                                            <?php endif; ?>
+
+                                        </td>
+
+
+                                        <!-- IP ADDRESS -->
+
+                                        <td>
+
+                                            <?= htmlspecialchars(
+                                                $log["IPAddress"] ?? "—"
+                                            ) ?>
+
+                                        </td>
+
+
+                                        <!-- DATE -->
+
+                                        <td>
+
+                                            <strong>
                                                 <?= htmlspecialchars(
-                                                    $log["Action"]
-                                                ) ?>
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <span class="table-badge">
-
-                                                <?= htmlspecialchars(
-                                                    $log["TableAffected"]
-                                                ) ?>
-
-                                            </span>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <?= $log["RecordID"] !== null
-                                                ? htmlspecialchars(
-                                                    $log["RecordID"]
-                                                )
-                                                : "—"
-                                            ?>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <span class="ip-address">
-
-                                                <?= $log["IPAddress"]
-                                                    ? htmlspecialchars(
-                                                        $log["IPAddress"]
+                                                    date(
+                                                        "M d, Y",
+                                                        strtotime(
+                                                            $log["CreatedAt"]
+                                                        )
                                                     )
-                                                    : "—"
-                                                ?>
+                                                ) ?>
+                                            </strong>
 
-                                            </span>
+                                            <br>
+
+                                            <small
+                                                style="
+                                                    color:#6b7280;
+                                                "
+                                            >
+                                                <?= htmlspecialchars(
+                                                    date(
+                                                        "h:i A",
+                                                        strtotime(
+                                                            $log["CreatedAt"]
+                                                        )
+                                                    )
+                                                ) ?>
+                                            </small>
 
                                         </td>
+
 
                                     </tr>
 
@@ -548,91 +605,55 @@ $logs = $stmt->fetchAll();
                     </div>
 
 
-                    <?php if ($totalPages > 1): ?>
-
-                        <div class="pagination">
+                <?php else: ?>
 
 
-                            <?php if ($currentPage > 1): ?>
+                    <!-- EMPTY STATE -->
 
-                                <a
-                                    href="?page=<?= $currentPage - 1 ?>"
-                                >
-                                    Previous
-                                </a>
+                    <div
+                        style="
+                            text-align:center;
+                            padding:50px 20px;
+                            color:#6b7280;
+                        "
+                    >
 
-                            <?php else: ?>
-
-                                <span class="disabled">
-                                    Previous
-                                </span>
-
-                            <?php endif; ?>
-
-
-                            <?php
-
-                            $startPage = max(
-                                1,
-                                $currentPage - 2
-                            );
-
-                            $endPage = min(
-                                $totalPages,
-                                $currentPage + 2
-                            );
-
-                            for (
-                                $page = $startPage;
-                                $page <= $endPage;
-                                $page++
-                            ):
-
-                            ?>
-
-                                <?php if (
-                                    $page === $currentPage
-                                ): ?>
-
-                                    <span class="active">
-                                        <?= $page ?>
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <a
-                                        href="?page=<?= $page ?>"
-                                    >
-                                        <?= $page ?>
-                                    </a>
-
-                                <?php endif; ?>
-
-                            <?php endfor; ?>
-
-
-                            <?php if (
-                                $currentPage < $totalPages
-                            ): ?>
-
-                                <a
-                                    href="?page=<?= $currentPage + 1 ?>"
-                                >
-                                    Next
-                                </a>
-
-                            <?php else: ?>
-
-                                <span class="disabled">
-                                    Next
-                                </span>
-
-                            <?php endif; ?>
-
-
+                        <div
+                            style="
+                                font-size:42px;
+                                margin-bottom:15px;
+                            "
+                        >
+                            📊
                         </div>
 
-                    <?php endif; ?>
+                        <h3
+                            style="
+                                margin:0 0 8px 0;
+                                color:#374151;
+                            "
+                        >
+                            No Audit Records Found
+                        </h3>
+
+                        <p
+                            style="
+                                margin:0;
+                            "
+                        >
+                            <?php if ($search !== ""): ?>
+
+                                No activity records matched your search.
+
+                            <?php else: ?>
+
+                                No system activity has been recorded yet.
+
+                            <?php endif; ?>
+
+                        </p>
+
+                    </div>
 
 
                 <?php endif; ?>
@@ -640,11 +661,22 @@ $logs = $stmt->fetchAll();
 
             </div>
 
+
         </div>
+
 
     </main>
 
+
 </div>
+
+
+<?php
+
+include __DIR__ . "/../includes/footer.php";
+
+?>
+
 
 </body>
 

@@ -9,6 +9,19 @@ require_once __DIR__ . "/../includes/functions.php";
 $pageTitle = "User Management";
 $pageSubtitle = "Manage VISRS system users and account roles";
 
+
+/*
+ * Handle success and error messages.
+ */
+
+$success = $_GET["success"] ?? "";
+$error = $_GET["error"] ?? "";
+
+
+/*
+ * Retrieve all users.
+ */
+
 $stmt = $pdo->query("
     SELECT
         UserID,
@@ -22,6 +35,14 @@ $stmt = $pdo->query("
 ");
 
 $users = $stmt->fetchAll();
+
+
+/*
+ * Current logged-in user.
+ */
+
+$currentUserID =
+    (int) ($_SESSION["UserID"] ?? 0);
 
 ?>
 
@@ -46,6 +67,66 @@ $users = $stmt->fetchAll();
         href="/visrs/css/style.css"
     >
 
+    <style>
+
+        /*
+        |--------------------------------------------------------------------------
+        | VISRS User Role Badges
+        |--------------------------------------------------------------------------
+        */
+
+        .user-role {
+
+            display:inline-block;
+
+            padding:6px 10px;
+
+            border-radius:999px;
+
+            font-size:12px;
+
+            font-weight:600;
+
+        }
+
+
+        .user-role-default {
+
+            background:#f3f4f6;
+
+            color:#374151;
+
+        }
+
+
+        .user-role-admin {
+
+            background:#dbeafe;
+
+            color:#1d4ed8;
+
+        }
+
+
+        .user-role-police {
+
+            background:#dcfce7;
+
+            color:#166534;
+
+        }
+
+
+        .user-role-seller {
+
+            background:#fef3c7;
+
+            color:#92400e;
+
+        }
+
+    </style>
+
 </head>
 
 
@@ -64,10 +145,17 @@ $users = $stmt->fetchAll();
 
     <main class="main-content">
 
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php
+
+        include __DIR__ . "/../includes/header.php";
+
+        ?>
 
 
         <div class="content">
+
+
+            <!-- PAGE HEADER -->
 
             <div
                 style="
@@ -106,6 +194,188 @@ $users = $stmt->fetchAll();
             </div>
 
 
+            <!-- SUCCESS MESSAGE -->
+
+            <?php if ($success === "created"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        User created successfully.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        The new user account has been added to VISRS.
+                    </p>
+
+                </div>
+
+
+            <?php elseif ($success === "deleted"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        User deleted successfully.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        The user account has been removed from VISRS.
+                    </p>
+
+                </div>
+
+            <?php endif; ?>
+
+
+            <!-- ERROR MESSAGES -->
+
+            <?php if ($error === "self_delete"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        Account cannot be deleted.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        You cannot delete the account you are currently
+                        using.
+                    </p>
+
+                </div>
+
+
+            <?php elseif ($error === "not_found"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        User not found.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        The requested user account could not be found.
+                    </p>
+
+                </div>
+
+
+            <?php elseif ($error === "invalid_request"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        Invalid request.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        The requested operation could not be completed.
+                    </p>
+
+                </div>
+
+
+            <?php elseif ($error === "has_audit_logs"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        User cannot be deleted.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        This user has existing audit records.
+                        The account cannot be deleted because
+                        the VISRS audit trail must remain intact.
+                    </p>
+
+                </div>
+
+
+            <?php elseif ($error === "delete_failed"): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <strong>
+                        User could not be deleted.
+                    </strong>
+
+                    <p style="margin:6px 0 0 0;">
+                        The system could not complete the deletion.
+                        Please try again.
+                    </p>
+
+                </div>
+
+            <?php endif; ?>
+
+
+            <!-- USERS CARD -->
+
             <div class="card">
 
                 <div
@@ -135,6 +405,8 @@ $users = $stmt->fetchAll();
                     </div>
 
 
+                    <!-- SEARCH -->
+
                     <input
                         type="text"
                         data-table-search="usersTable"
@@ -154,6 +426,8 @@ $users = $stmt->fetchAll();
 
                 <?php if (empty($users)): ?>
 
+                    <!-- NO USERS -->
+
                     <div
                         style="
                             background:#f3f4f6;
@@ -169,12 +443,16 @@ $users = $stmt->fetchAll();
                         </strong>
 
                         <p style="margin:8px 0 0 0;">
-                            There are currently no registered users in the system.
+                            There are currently no registered users
+                            in the system.
                         </p>
 
                     </div>
 
                 <?php else: ?>
+
+
+                    <!-- USERS TABLE -->
 
                     <div style="overflow-x:auto;">
 
@@ -198,6 +476,7 @@ $users = $stmt->fetchAll();
                                         Name
                                     </th>
 
+
                                     <th style="
                                         text-align:left;
                                         padding:14px;
@@ -205,6 +484,7 @@ $users = $stmt->fetchAll();
                                     ">
                                         Email
                                     </th>
+
 
                                     <th style="
                                         text-align:left;
@@ -214,6 +494,7 @@ $users = $stmt->fetchAll();
                                         Role
                                     </th>
 
+
                                     <th style="
                                         text-align:left;
                                         padding:14px;
@@ -221,6 +502,7 @@ $users = $stmt->fetchAll();
                                     ">
                                         Created
                                     </th>
+
 
                                     <th style="
                                         text-align:right;
@@ -241,24 +523,37 @@ $users = $stmt->fetchAll();
 
                                     <?php
 
-                                    $roleClass = "user-role user-role-default";
+                                    /*
+                                     * Determine role badge.
+                                     */
 
-                                    if ($user["Role"] === "Admin") {
+                                    $roleClass =
+                                        "user-role user-role-default";
 
-                                        $roleClass = "user-role user-role-admin";
 
-                                    } elseif ($user["Role"] === "Police") {
+                                    if (
+                                        $user["Role"] === "Admin"
+                                    ) {
 
-                                        $roleClass = "user-role user-role-police";
+                                        $roleClass =
+                                            "user-role user-role-admin";
 
-                                    } elseif ($user["Role"] === "Seller") {
+                                    } elseif (
+                                        $user["Role"] === "Police"
+                                    ) {
 
-                                        $roleClass = "user-role user-role-seller";
+                                        $roleClass =
+                                            "user-role user-role-police";
+
+                                    } elseif (
+                                        $user["Role"] === "Seller"
+                                    ) {
+
+                                        $roleClass =
+                                            "user-role user-role-seller";
 
                                     }
 
-                                    $currentUserID =
-                                        (int) ($_SESSION["UserID"] ?? 0);
 
                                     $listedUserID =
                                         (int) $user["UserID"];
@@ -267,6 +562,9 @@ $users = $stmt->fetchAll();
 
 
                                     <tr>
+
+
+                                        <!-- NAME -->
 
                                         <td style="
                                             padding:14px;
@@ -284,6 +582,8 @@ $users = $stmt->fetchAll();
                                         </td>
 
 
+                                        <!-- EMAIL -->
+
                                         <td style="
                                             padding:14px;
                                             border-bottom:1px solid #f1f5f9;
@@ -296,19 +596,41 @@ $users = $stmt->fetchAll();
                                         </td>
 
 
+                                        <!-- ROLE -->
+
                                         <td style="
                                             padding:14px;
                                             border-bottom:1px solid #f1f5f9;
                                         ">
 
-                                            <span class="<?= $roleClass ?>">
-                                                <?= htmlspecialchars(
-                                                    $user["Role"]
-                                                ) ?>
+                                            <span
+                                                class="<?= htmlspecialchars($roleClass) ?>"
+                                            >
+
+                                                <?php
+
+                                                if (
+                                                    $user["Role"] === "Admin"
+                                                ) {
+
+                                                    echo "Administrator";
+
+                                                } else {
+
+                                                    echo htmlspecialchars(
+                                                        $user["Role"]
+                                                    );
+
+                                                }
+
+                                                ?>
+
                                             </span>
 
                                         </td>
 
+
+                                        <!-- CREATED -->
 
                                         <td style="
                                             padding:14px;
@@ -327,12 +649,17 @@ $users = $stmt->fetchAll();
                                         </td>
 
 
+                                        <!-- ACTIONS -->
+
                                         <td style="
                                             padding:14px;
                                             border-bottom:1px solid #f1f5f9;
                                             text-align:right;
                                             white-space:nowrap;
                                         ">
+
+
+                                            <!-- VIEW -->
 
                                             <a
                                                 href="view.php?id=<?= $listedUserID ?>"
@@ -345,6 +672,8 @@ $users = $stmt->fetchAll();
                                                 View
                                             </a>
 
+
+                                            <!-- EDIT -->
 
                                             <a
                                                 href="edit.php?id=<?= $listedUserID ?>"
@@ -359,13 +688,15 @@ $users = $stmt->fetchAll();
 
 
                                             <?php if (
-                                                $listedUserID !== $currentUserID
+                                                $listedUserID !==
+                                                $currentUserID
                                             ): ?>
+
+                                                <!-- DELETE -->
 
                                                 <a
                                                     href="delete.php?id=<?= $listedUserID ?>"
-                                                    class="button confirm-action"
-                                                    data-confirm-message="Are you sure you want to delete this user?"
+                                                    class="button"
                                                     style="
                                                         padding:8px 12px;
                                                         font-size:13px;
@@ -376,6 +707,7 @@ $users = $stmt->fetchAll();
                                                 </a>
 
                                             <?php endif; ?>
+
 
                                         </td>
 
@@ -400,37 +732,8 @@ $users = $stmt->fetchAll();
 </div>
 
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php
 
+include __DIR__ . "/../includes/footer.php";
 
-<style>
-
-.user-role {
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.user-role-default {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-.user-role-admin {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-
-.user-role-police {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.user-role-seller {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-</style>
+?>

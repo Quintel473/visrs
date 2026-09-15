@@ -17,6 +17,11 @@ $accidentID = (int) (
     ?? 0
 );
 
+
+/*
+ * Validate accident ID.
+ */
+
 if ($accidentID <= 0) {
 
     header("Location: index.php");
@@ -78,12 +83,25 @@ $reportNumber =
 
 $error = "";
 
+$vehicle = null;
+
 
 /*
  * Process form submission.
  */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    /*
+     * Verify CSRF token.
+     */
+
+    requireValidCSRF();
+
+
+    /*
+     * Get submitted values.
+     */
 
     $vehicleID = (int) (
         $_POST["VehicleID"] ?? 0
@@ -118,6 +136,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error =
             "Please select a vehicle.";
+
     }
 
 
@@ -159,8 +178,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $error =
                     "Please enter a valid accident date.";
+
             }
+
         }
+
+    }
+
+
+    /*
+     * Validate field lengths.
+     */
+
+    if (
+        $error === "" &&
+        strlen($location) > 255
+    ) {
+
+        $error =
+            "Location cannot exceed 255 characters.";
+
+    }
+
+
+    if (
+        $error === "" &&
+        strlen($description) > 2000
+    ) {
+
+        $error =
+            "Accident description cannot exceed 2000 characters.";
+
+    }
+
+
+    if (
+        $error === "" &&
+        strlen($reportNumber) > 100
+    ) {
+
+        $error =
+            "Report number cannot exceed 100 characters.";
+
     }
 
 
@@ -188,26 +247,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "Invalid damage level.";
+
         }
+
     }
 
 
     /*
-     * Validate description length.
-     */
-
-    if (
-        $error === "" &&
-        strlen($description) > 2000
-    ) {
-
-        $error =
-            "Accident description cannot exceed 2000 characters.";
-    }
-
-
-    /*
-     * Validate selected vehicle.
+     * Confirm selected vehicle exists.
      */
 
     if ($error === "") {
@@ -236,7 +283,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "The selected vehicle does not exist.";
+
         }
+
     }
 
 
@@ -250,6 +299,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $pdo->beginTransaction();
 
+
+            /*
+             * Re-check that the accident still exists.
+             */
+
+            $currentStmt = $pdo->prepare("
+                SELECT
+                    AccidentID
+                FROM accidents
+                WHERE AccidentID = ?
+                FOR UPDATE
+            ");
+
+            $currentStmt->execute([
+                $accidentID
+            ]);
+
+            $currentAccident =
+                $currentStmt->fetch();
+
+
+            if (!$currentAccident) {
+
+                throw new Exception(
+                    "The accident record no longer exists."
+                );
+            }
+
+
+            /*
+             * Update accident record.
+             */
 
             $updateStmt = $pdo->prepare("
                 UPDATE accidents
@@ -324,8 +405,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ]);
 
 
+            /*
+             * Commit transaction.
+             */
+
             $pdo->commit();
 
+
+            /*
+             * Return to accident details.
+             */
 
             header(
                 "Location: view.php?id=" .
@@ -334,22 +423,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             exit;
 
+
         } catch (Exception $e) {
 
             if ($pdo->inTransaction()) {
 
                 $pdo->rollBack();
+
             }
+
 
             $error =
                 "Unable to update the accident record.";
+
         }
+
     }
+
 }
 
 
 /*
- * Load vehicles for the dropdown.
+ * Load vehicles for dropdown.
  */
 
 $vehiclesStmt = $pdo->query("
@@ -367,6 +462,14 @@ $vehiclesStmt = $pdo->query("
 $vehicles =
     $vehiclesStmt->fetchAll();
 
+
+/*
+ * Generate CSRF token.
+ */
+
+$csrfToken =
+    generateCSRFToken();
+
 ?>
 
 <!DOCTYPE html>
@@ -382,13 +485,14 @@ $vehicles =
     >
 
     <title>
-        Edit Accident Record - VISRS
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
     </title>
 
     <link
         rel="stylesheet"
         href="../css/style.css"
     >
+
 
     <style>
 
@@ -397,33 +501,24 @@ $vehicles =
            ========================================= */
 
         .select-wrapper {
-
             position: relative;
             width: 100%;
         }
 
 
         .visrs-select {
-
             width: 100%;
-
             appearance: none;
             -webkit-appearance: none;
-
             padding: 13px 45px 13px 15px;
-
             border: 1px solid #d1d5db;
             border-radius: 8px;
-
             background: #ffffff;
             color: #1f2937;
-
             font-size: 14px;
             font-family: inherit;
-
             cursor: pointer;
             outline: none;
-
             transition:
                 border-color 0.2s ease,
                 box-shadow 0.2s ease;
@@ -431,15 +526,12 @@ $vehicles =
 
 
         .visrs-select:hover {
-
             border-color: #9ca3af;
         }
 
 
         .visrs-select:focus {
-
             border-color: #2563eb;
-
             box-shadow:
                 0 0 0 3px
                 rgba(37, 99, 235, 0.10);
@@ -447,27 +539,19 @@ $vehicles =
 
 
         .select-arrow {
-
             position: absolute;
-
             right: 15px;
             top: 50%;
-
             transform: translateY(-50%);
-
             color: #6b7280;
             font-size: 18px;
-
             pointer-events: none;
         }
 
 
         .form-help {
-
             display: block;
-
             margin-top: 7px;
-
             color: #6b7280;
             font-size: 12px;
         }
@@ -476,35 +560,25 @@ $vehicles =
         /* Description */
 
         .textarea-wrapper {
-
             position: relative;
         }
 
 
         .visrs-textarea {
-
             display: block;
-
             width: 100%;
             min-height: 140px;
-
             padding: 14px 15px;
-
             border: 1px solid #d1d5db;
             border-radius: 8px;
-
             background: #ffffff;
             color: #1f2937;
-
             font-family: inherit;
             font-size: 14px;
             line-height: 1.6;
-
             resize: vertical;
             outline: none;
-
             box-sizing: border-box;
-
             transition:
                 border-color 0.2s ease,
                 box-shadow 0.2s ease;
@@ -512,21 +586,17 @@ $vehicles =
 
 
         .visrs-textarea::placeholder {
-
             color: #9ca3af;
         }
 
 
         .visrs-textarea:hover {
-
             border-color: #9ca3af;
         }
 
 
         .visrs-textarea:focus {
-
             border-color: #2563eb;
-
             box-shadow:
                 0 0 0 3px
                 rgba(37, 99, 235, 0.10);
@@ -534,21 +604,16 @@ $vehicles =
 
 
         .textarea-footer {
-
             display: flex;
-
             justify-content: space-between;
             align-items: center;
-
             margin-top: 7px;
-
             color: #6b7280;
             font-size: 12px;
         }
 
 
         #descriptionCount {
-
             font-weight: 500;
         }
 
@@ -556,54 +621,37 @@ $vehicles =
         /* Damage Level */
 
         .damage-options {
-
             display: grid;
-
             grid-template-columns:
                 repeat(2, 1fr);
-
             gap: 12px;
-
             margin-top: 8px;
         }
 
 
         .damage-option {
-
             position: relative;
-
             display: block;
-
             cursor: pointer;
         }
 
 
         .damage-option input {
-
             position: absolute;
-
             opacity: 0;
             pointer-events: none;
         }
 
 
         .damage-option-content {
-
             display: flex;
-
             flex-direction: column;
-
             gap: 5px;
-
             min-height: 72px;
-
             padding: 14px 16px;
-
             border: 1px solid #d1d5db;
             border-radius: 8px;
-
             background: #ffffff;
-
             transition:
                 border-color 0.2s ease,
                 background 0.2s ease,
@@ -613,16 +661,13 @@ $vehicles =
 
 
         .damage-option-content strong {
-
             color: #1f2937;
             font-size: 14px;
         }
 
 
         .damage-option-content small {
-
             color: #6b7280;
-
             font-size: 12px;
             line-height: 1.4;
         }
@@ -630,21 +675,15 @@ $vehicles =
 
         .damage-option:hover
         .damage-option-content {
-
             border-color: #9ca3af;
-
-            transform:
-                translateY(-1px);
+            transform: translateY(-1px);
         }
 
 
         .damage-option input:checked
         + .damage-option-content {
-
             border-color: #2563eb;
-
             background: #f8fbff;
-
             box-shadow:
                 0 0 0 3px
                 rgba(37, 99, 235, 0.08);
@@ -653,7 +692,6 @@ $vehicles =
 
         .damage-option input:checked
         + .damage-option-content strong {
-
             color: #2563eb;
         }
 
@@ -663,19 +701,16 @@ $vehicles =
         @media (max-width: 700px) {
 
             .damage-options {
-
                 grid-template-columns: 1fr;
             }
 
 
             .textarea-footer {
-
                 gap: 10px;
-
                 flex-direction: column;
-
                 align-items: flex-start;
             }
+
         }
 
     </style>
@@ -687,21 +722,17 @@ $vehicles =
 
 <div class="layout">
 
-
     <?php require_once "../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-
-        <?php include __DIR__ . "/../includes/header.php"; ?>
+        <?php require_once "../includes/header.php"; ?>
 
 
         <div class="content">
 
-
             <div class="card">
-
 
                 <?php if ($error !== ""): ?>
 
@@ -732,11 +763,25 @@ $vehicles =
                     style="margin-top:20px;"
                 >
 
+                    <!-- CSRF TOKEN -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            $csrfToken
+                        ) ?>"
+                    >
+
+
+                    <!-- ACCIDENT ID -->
 
                     <input
                         type="hidden"
                         name="AccidentID"
-                        value="<?= $accidentID ?>"
+                        value="<?= htmlspecialchars(
+                            $accidentID
+                        ) ?>"
                     >
 
 
@@ -745,9 +790,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label for="VehicleID">
-
                             Vehicle *
-
                         </label>
 
 
@@ -761,44 +804,44 @@ $vehicles =
                             >
 
                                 <option value="">
-
                                     Select a vehicle
-
                                 </option>
 
 
                                 <?php foreach (
                                     $vehicles
-                                    as $vehicle
+                                    as $vehicleOption
                                 ): ?>
 
                                     <option
-                                        value="<?= $vehicle["VehicleID"] ?>"
+                                        value="<?= htmlspecialchars(
+                                            $vehicleOption["VehicleID"]
+                                        ) ?>"
                                         <?= (string) $vehicleID ===
-                                            (string) $vehicle["VehicleID"]
+                                            (string) $vehicleOption["VehicleID"]
                                             ? "selected"
                                             : ""
                                         ?>
                                     >
 
                                         <?= htmlspecialchars(
-                                            $vehicle["PlateNumber"]
+                                            $vehicleOption["PlateNumber"]
                                         ) ?>
 
                                         —
 
                                         <?= htmlspecialchars(
-                                            $vehicle["Make"]
+                                            $vehicleOption["Make"]
                                         ) ?>
 
                                         <?= htmlspecialchars(
-                                            $vehicle["Model"]
+                                            $vehicleOption["Model"]
                                         ) ?>
 
                                         ·
 
                                         <?= htmlspecialchars(
-                                            $vehicle["VehicleYear"]
+                                            $vehicleOption["VehicleYear"]
                                         ) ?>
 
                                     </option>
@@ -809,19 +852,15 @@ $vehicles =
 
 
                             <span class="select-arrow">
-
                                 ⌄
-
                             </span>
 
                         </div>
 
 
                         <small class="form-help">
-
                             Select the vehicle involved
                             in the accident.
-
                         </small>
 
                     </div>
@@ -832,9 +871,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label for="AccidentDate">
-
                             Accident Date *
-
                         </label>
 
 
@@ -856,9 +893,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label for="Location">
-
                             Location
-
                         </label>
 
 
@@ -866,6 +901,7 @@ $vehicles =
                             type="text"
                             name="Location"
                             id="Location"
+                            maxlength="255"
                             value="<?= htmlspecialchars(
                                 $location
                             ) ?>"
@@ -880,9 +916,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label for="Description">
-
                             Accident Description
-
                         </label>
 
 
@@ -903,16 +937,15 @@ $vehicles =
                             <div class="textarea-footer">
 
                                 <span>
-
                                     Provide relevant details
                                     about the accident.
-
                                 </span>
 
 
                                 <span id="descriptionCount">
 
                                     <?= strlen($description) ?>
+
                                     / 2000
 
                                 </span>
@@ -929,9 +962,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label>
-
                             Damage Level *
-
                         </label>
 
 
@@ -1074,9 +1105,7 @@ $vehicles =
                     <div class="form-group">
 
                         <label for="ReportNumber">
-
                             Report Number
-
                         </label>
 
 
@@ -1084,6 +1113,7 @@ $vehicles =
                             type="text"
                             name="ReportNumber"
                             id="ReportNumber"
+                            maxlength="100"
                             value="<?= htmlspecialchars(
                                 $reportNumber
                             ) ?>"
@@ -1100,6 +1130,7 @@ $vehicles =
                             display:flex;
                             gap:10px;
                             margin-top:25px;
+                            flex-wrap:wrap;
                         "
                     >
 
@@ -1107,23 +1138,20 @@ $vehicles =
                             type="submit"
                             class="button"
                         >
-
                             Save Changes
-
                         </button>
 
 
                         <a
-                            href="view.php?id=<?= $accidentID ?>"
+                            href="view.php?id=<?= htmlspecialchars(
+                                $accidentID
+                            ) ?>"
                             class="button button-secondary"
                         >
-
                             Cancel
-
                         </a>
 
                     </div>
-
 
                 </form>
 
@@ -1136,36 +1164,46 @@ $vehicles =
 </div>
 
 
+<?php require_once "../includes/footer.php"; ?>
+
+
 <script>
 
-const description =
-    document.getElementById("Description");
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
 
-const descriptionCount =
-    document.getElementById("descriptionCount");
+        const description =
+            document.getElementById("Description");
+
+        const descriptionCount =
+            document.getElementById(
+                "descriptionCount"
+            );
 
 
-if (
-    description &&
-    descriptionCount
-) {
+        if (
+            description &&
+            descriptionCount
+        ) {
 
-    description.addEventListener(
-        "input",
-        function () {
+            description.addEventListener(
+                "input",
+                function () {
 
-            descriptionCount.textContent =
-                this.value.length +
-                " / 2000";
+                    descriptionCount.textContent =
+                        this.value.length +
+                        " / 2000";
+
+                }
+            );
 
         }
-    );
 
-}
+    }
+);
 
 </script>
 
-
 </body>
-
 </html>

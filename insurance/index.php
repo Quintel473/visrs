@@ -1,17 +1,38 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
-$basePath = "../";
 $activePage = "insurance";
+
+$error = "";
+$success = "";
 
 
 /*
- * Get all insurance records.
- *
- * Each insurance record is connected to a vehicle.
- */
+|--------------------------------------------------------------------------
+| Success Message
+|--------------------------------------------------------------------------
+*/
+
+if (
+    isset($_GET["deleted"]) &&
+    $_GET["deleted"] === "1"
+) {
+
+    $success =
+        "Insurance record deleted successfully.";
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Get All Insurance Records
+|--------------------------------------------------------------------------
+|
+| Each insurance record is connected to a vehicle.
+|
+*/
 
 $stmt = $pdo->query("
     SELECT
@@ -35,18 +56,23 @@ $stmt = $pdo->query("
     INNER JOIN vehicles v
         ON i.VehicleID = v.VehicleID
 
-    ORDER BY i.ExpiryDate ASC, i.InsuranceID DESC
+    ORDER BY
+        i.ExpiryDate ASC,
+        i.InsuranceID DESC
 ");
 
 $insuranceRecords = $stmt->fetchAll();
 
 
 /*
- * Page header information.
- */
+|--------------------------------------------------------------------------
+| Page Header Information
+|--------------------------------------------------------------------------
+*/
 
 $pageTitle = "Insurance";
-$pageSubtitle = "Manage vehicle insurance records and policies.";
+$pageSubtitle =
+    "Manage vehicle insurance records and policies.";
 
 ?>
 
@@ -68,7 +94,7 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -77,15 +103,13 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-        <?php require_once "../includes/header.php"; ?>
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
-
-        <!-- PAGE CONTENT -->
 
         <div class="content">
 
@@ -129,6 +153,50 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
                 <?php endif; ?>
 
             </div>
+
+
+            <!-- SUCCESS MESSAGE -->
+
+            <?php if ($success !== ""): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <?= htmlspecialchars($success) ?>
+
+                </div>
+
+            <?php endif; ?>
+
+
+            <!-- ERROR MESSAGE -->
+
+            <?php if ($error !== ""): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#fee2e2;
+                        color:#991b1b;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <?= htmlspecialchars($error) ?>
+
+                </div>
+
+            <?php endif; ?>
 
 
             <!-- INSURANCE TABLE -->
@@ -324,10 +392,12 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
                                             "
                                         >
 
-                                            <?= htmlspecialchars(
-                                                $insurance["CoverageType"]
-                                                    ?? "Not specified"
-                                            ) ?>
+                                            <?= $insurance["CoverageType"]
+                                                ? htmlspecialchars(
+                                                    $insurance["CoverageType"]
+                                                )
+                                                : "Not specified"
+                                            ?>
 
                                         </td>
 
@@ -367,30 +437,45 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
 
                                             <?php
 
-                                            $status = $insurance["Status"];
+                                            $status =
+                                                $insurance["Status"];
 
-                                            $statusBackground = "#e5e7eb";
-                                            $statusColor = "#374151";
+                                            $statusBackground =
+                                                "#e5e7eb";
 
-                                            if ($status === "Active") {
+                                            $statusColor =
+                                                "#374151";
 
-                                                $statusBackground = "#dcfce7";
-                                                $statusColor = "#166534";
+
+                                            if (
+                                                $status === "Active"
+                                            ) {
+
+                                                $statusBackground =
+                                                    "#dcfce7";
+
+                                                $statusColor =
+                                                    "#166534";
 
                                             } elseif (
                                                 $status === "Expired"
                                             ) {
 
-                                                $statusBackground = "#fee2e2";
-                                                $statusColor = "#991b1b";
+                                                $statusBackground =
+                                                    "#fee2e2";
+
+                                                $statusColor =
+                                                    "#991b1b";
 
                                             } elseif (
                                                 $status === "Cancelled"
                                             ) {
 
-                                                $statusBackground = "#fef3c7";
-                                                $statusColor = "#92400e";
+                                                $statusBackground =
+                                                    "#fef3c7";
 
+                                                $statusColor =
+                                                    "#92400e";
                                             }
 
                                             ?>
@@ -427,7 +512,7 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
                                         >
 
                                             <a
-                                                href="view.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                                                href="view.php?id=<?= (int) $insurance["InsuranceID"] ?>"
                                                 class="button button-secondary"
                                                 style="
                                                     padding:8px 12px;
@@ -438,10 +523,12 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
                                             </a>
 
 
-                                            <?php if (canManageInsurance()): ?>
+                                            <?php if (
+                                                canManageInsurance()
+                                            ): ?>
 
                                                 <a
-                                                    href="edit.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                                                    href="edit.php?id=<?= (int) $insurance["InsuranceID"] ?>"
                                                     class="button"
                                                     style="
                                                         padding:8px 12px;
@@ -453,7 +540,7 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
 
 
                                                 <a
-                                                    href="delete.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                                                    href="delete.php?id=<?= (int) $insurance["InsuranceID"] ?>"
                                                     class="button"
                                                     style="
                                                         padding:8px 12px;
@@ -514,7 +601,9 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
                         </p>
 
 
-                        <?php if (canManageInsurance()): ?>
+                        <?php if (
+                            canManageInsurance()
+                        ): ?>
 
                             <a
                                 href="add.php"
@@ -532,6 +621,9 @@ $pageSubtitle = "Manage vehicle insurance records and policies.";
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

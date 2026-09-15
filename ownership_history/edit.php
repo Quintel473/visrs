@@ -1,14 +1,20 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
-
+require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
-$activePage = "ownership_history";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
 
-$ownershipID = (int) ($_GET["id"] ?? $_POST["OwnershipID"] ?? 0);
+$activePage = "ownership_history";
+$pageTitle = "Edit Ownership Record";
+$pageSubtitle = "Update ownership information.";
+
+$ownershipID = (int) (
+    $_GET["id"] ??
+    $_POST["OwnershipID"] ??
+    0
+);
 
 if ($ownershipID <= 0) {
     header("Location: index.php");
@@ -19,8 +25,10 @@ $error = "";
 
 
 /*
- * Load the existing ownership record.
- */
+|--------------------------------------------------------------------------
+| Load Existing Ownership Record
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -34,9 +42,12 @@ $stmt = $pdo->prepare("
     INNER JOIN vehicles v
         ON oh.VehicleID = v.VehicleID
     WHERE oh.OwnershipID = ?
+    LIMIT 1
 ");
 
-$stmt->execute([$ownershipID]);
+$stmt->execute([
+    $ownershipID
+]);
 
 $record = $stmt->fetch();
 
@@ -47,42 +58,119 @@ if (!$record) {
 
 
 /*
- * Process update.
- */
+|--------------------------------------------------------------------------
+| Process Update
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $vehicleID = (int) ($_POST["VehicleID"] ?? 0);
-    $ownerID = (int) ($_POST["OwnerID"] ?? 0);
-    $startDate = trim($_POST["StartDate"] ?? "");
-    $endDate = trim($_POST["EndDate"] ?? "");
-    $transferReason = trim($_POST["TransferReason"] ?? "");
+    requireValidCSRF();
+
+    $vehicleID = (int) (
+        $_POST["VehicleID"] ?? 0
+    );
+
+    $ownerID = (int) (
+        $_POST["OwnerID"] ?? 0
+    );
+
+    $startDate = trim(
+        $_POST["StartDate"] ?? ""
+    );
+
+    $endDate = trim(
+        $_POST["EndDate"] ?? ""
+    );
+
+    $transferReason = trim(
+        $_POST["TransferReason"] ?? ""
+    );
+
 
     /*
      * Basic validation.
      */
 
-    if ($vehicleID <= 0 || $ownerID <= 0 || $startDate === "") {
+    if (
+        $vehicleID <= 0 ||
+        $ownerID <= 0 ||
+        $startDate === ""
+    ) {
 
-        $error = "Vehicle, owner, and start date are required.";
+        $error =
+            "Vehicle, owner, and start date are required.";
 
-    } elseif ($endDate !== "" && $endDate < $startDate) {
+    } elseif (
+        !DateTime::createFromFormat(
+            "Y-m-d",
+            $startDate
+        ) ||
+        DateTime::createFromFormat(
+            "Y-m-d",
+            $startDate
+        )->format("Y-m-d") !== $startDate
+    ) {
 
-        $error = "End date cannot be earlier than the start date.";
+        $error =
+            "Please enter a valid start date.";
+
+    } elseif (
+        $endDate !== "" &&
+        (
+            !DateTime::createFromFormat(
+                "Y-m-d",
+                $endDate
+            ) ||
+            DateTime::createFromFormat(
+                "Y-m-d",
+                $endDate
+            )->format("Y-m-d") !== $endDate
+        )
+    ) {
+
+        $error =
+            "Please enter a valid end date.";
+
+    } elseif (
+        $endDate !== "" &&
+        $endDate < $startDate
+    ) {
+
+        $error =
+            "End date cannot be earlier than the start date.";
+
+    } elseif (
+        strlen($transferReason) > 255
+    ) {
+
+        $error =
+            "Transfer reason cannot exceed 255 characters.";
 
     } else {
+
 
         /*
          * Verify vehicle.
          */
 
         $vehicleStmt = $pdo->prepare("
-            SELECT *
+            SELECT
+                VehicleID,
+                PlateNumber,
+                VIN,
+                OwnerID,
+                Make,
+                Model,
+                VehicleYear
             FROM vehicles
             WHERE VehicleID = ?
+            LIMIT 1
         ");
 
-        $vehicleStmt->execute([$vehicleID]);
+        $vehicleStmt->execute([
+            $vehicleID
+        ]);
 
         $vehicle = $vehicleStmt->fetch();
 
@@ -92,25 +180,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
          */
 
         $ownerStmt = $pdo->prepare("
-            SELECT *
+            SELECT
+                OwnerID,
+                FirstName,
+                LastName
             FROM owners
             WHERE OwnerID = ?
+            LIMIT 1
         ");
 
-        $ownerStmt->execute([$ownerID]);
+        $ownerStmt->execute([
+            $ownerID
+        ]);
 
         $owner = $ownerStmt->fetch();
 
 
         if (!$vehicle) {
 
-            $error = "The selected vehicle does not exist.";
+            $error =
+                "The selected vehicle does not exist.";
 
         } elseif (!$owner) {
 
-            $error = "The selected owner does not exist.";
+            $error =
+                "The selected owner does not exist.";
 
         } else {
+
 
             /*
              * Check ownership-period overlap.
@@ -119,37 +216,49 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
              */
 
             $overlapStmt = $pdo->prepare("
-                SELECT OwnershipID
+                SELECT
+                    OwnershipID
                 FROM ownership_history
                 WHERE VehicleID = ?
                 AND OwnershipID <> ?
                 AND StartDate <= ?
                 AND (
                     EndDate IS NULL
-                    OR ? = ''
                     OR EndDate >= ?
                 )
                 LIMIT 1
             ");
 
+            /*
+             * For a current record, use a far-future
+             * comparison date.
+             */
+
+            $comparisonEndDate =
+                $endDate !== ""
+                    ? $endDate
+                    : "9999-12-31";
+
             $overlapStmt->execute([
                 $vehicleID,
                 $ownershipID,
-                $endDate !== "" ? $endDate : "9999-12-31",
-                $endDate,
+                $comparisonEndDate,
                 $startDate
             ]);
 
-            $overlap = $overlapStmt->fetch();
+            $overlap =
+                $overlapStmt->fetch();
 
 
             if ($overlap) {
 
-                $error = "The selected ownership dates overlap another ownership record for this vehicle.";
+                $error =
+                    "The selected ownership dates overlap another ownership record for this vehicle.";
 
             } else {
 
-                $isCurrent = ($endDate === "");
+                $isCurrent =
+                    ($endDate === "");
 
 
                 /*
@@ -161,7 +270,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 if ($isCurrent) {
 
                     $currentStmt = $pdo->prepare("
-                        SELECT OwnershipID
+                        SELECT
+                            OwnershipID
                         FROM ownership_history
                         WHERE VehicleID = ?
                         AND EndDate IS NULL
@@ -174,14 +284,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $ownershipID
                     ]);
 
-                    $otherCurrent = $currentStmt->fetch();
+                    $otherCurrent =
+                        $currentStmt->fetch();
+
 
                     if ($otherCurrent) {
 
-                        $error = "This vehicle already has another current ownership record.";
-
+                        $error =
+                            "This vehicle already has another current ownership record.";
                     }
-
                 }
 
 
@@ -193,12 +304,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                         /*
-                         * Remember the original vehicle.
+                         * Remember the original vehicle
+                         * and whether the original record
+                         * was current.
                          */
 
-                        $originalVehicleID = (int) $record["VehicleID"];
+                        $originalVehicleID =
+                            (int) $record["VehicleID"];
 
-                        $originalWasCurrent = empty($record["EndDate"]);
+                        $originalWasCurrent =
+                            empty($record["EndDate"]);
 
 
                         /*
@@ -220,15 +335,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             $vehicleID,
                             $ownerID,
                             $startDate,
-                            $endDate !== "" ? $endDate : null,
-                            $transferReason !== "" ? $transferReason : null,
+                            $endDate !== ""
+                                ? $endDate
+                                : null,
+                            $transferReason !== ""
+                                ? $transferReason
+                                : null,
                             $ownershipID
                         ]);
 
 
                         /*
                          * If the edited record is CURRENT,
-                         * update the selected vehicle's OwnerID.
+                         * update the selected vehicle's
+                         * current OwnerID.
                          */
 
                         if ($isCurrent) {
@@ -252,15 +372,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                              * original vehicle.
                              */
 
-                            if ($originalVehicleID !== $vehicleID) {
+                            if (
+                                $originalVehicleID !==
+                                $vehicleID
+                            ) {
 
                                 $previousCurrentStmt = $pdo->prepare("
-                                    SELECT OwnerID
+                                    SELECT
+                                        OwnerID
                                     FROM ownership_history
                                     WHERE VehicleID = ?
                                     AND EndDate IS NULL
                                     AND OwnershipID <> ?
-                                    ORDER BY StartDate DESC, OwnershipID DESC
+                                    ORDER BY
+                                        StartDate DESC,
+                                        OwnershipID DESC
                                     LIMIT 1
                                 ");
 
@@ -269,7 +395,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     $ownershipID
                                 ]);
 
-                                $previousCurrent = $previousCurrentStmt->fetch();
+                                $previousCurrent =
+                                    $previousCurrentStmt->fetch();
 
 
                                 if ($previousCurrent) {
@@ -292,21 +419,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         } elseif ($originalWasCurrent) {
 
                             /*
-                             * The record was changed from CURRENT
-                             * to HISTORICAL.
+                             * The record was changed from
+                             * CURRENT to HISTORICAL.
                              *
-                             * Find another current record for
-                             * the vehicle and make that owner
-                             * the vehicle's current OwnerID.
+                             * Find another current record
+                             * for the vehicle.
                              */
 
                             $replacementStmt = $pdo->prepare("
-                                SELECT OwnerID
+                                SELECT
+                                    OwnerID
                                 FROM ownership_history
                                 WHERE VehicleID = ?
                                 AND EndDate IS NULL
                                 AND OwnershipID <> ?
-                                ORDER BY StartDate DESC, OwnershipID DESC
+                                ORDER BY
+                                    StartDate DESC,
+                                    OwnershipID DESC
                                 LIMIT 1
                             ");
 
@@ -315,7 +444,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 $ownershipID
                             ]);
 
-                            $replacement = $replacementStmt->fetch();
+                            $replacement =
+                                $replacementStmt->fetch();
 
 
                             if ($replacement) {
@@ -331,8 +461,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     $vehicleID
                                 ]);
 
-                            }
+                            } else {
 
+                                /*
+                                 * No current ownership record
+                                 * remains for the vehicle.
+                                 *
+                                 * Keep the vehicle OwnerID
+                                 * synchronized with the
+                                 * selected historical owner
+                                 * rather than leaving it pointing
+                                 * to an invalid current record.
+                                 */
+
+                                $updateVehicleStmt = $pdo->prepare("
+                                    UPDATE vehicles
+                                    SET OwnerID = ?
+                                    WHERE VehicleID = ?
+                                ");
+
+                                $updateVehicleStmt->execute([
+                                    $ownerID,
+                                    $vehicleID
+                                ]);
+                            }
                         }
 
 
@@ -354,7 +506,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                         $auditStmt->execute([
                             $_SESSION["UserID"],
-                            "Updated ownership record for vehicle " . $vehicle["PlateNumber"],
+                            "Updated ownership record for vehicle " .
+                            $vehicle["PlateNumber"],
                             "ownership_history",
                             $ownershipID,
                             $_SERVER["REMOTE_ADDR"] ?? null
@@ -364,33 +517,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $pdo->commit();
 
 
-                        header("Location: view.php?id=" . $ownershipID);
+                        header(
+                            "Location: view.php?id=" .
+                            $ownershipID
+                        );
+
                         exit;
 
 
                     } catch (Exception $e) {
 
-                        if ($pdo->inTransaction()) {
+                        if (
+                            $pdo->inTransaction()
+                        ) {
                             $pdo->rollBack();
                         }
 
-                        $error = "Unable to update the ownership record.";
+                        $error =
+                            "Unable to update the ownership record.";
                     }
-
                 }
-
             }
-
         }
-
     }
-
 }
 
 
 /*
- * Load vehicles.
- */
+|--------------------------------------------------------------------------
+| Load Vehicles
+|--------------------------------------------------------------------------
+*/
 
 $vehiclesStmt = $pdo->query("
     SELECT
@@ -408,8 +565,10 @@ $vehicles = $vehiclesStmt->fetchAll();
 
 
 /*
- * Load owners.
- */
+|--------------------------------------------------------------------------
+| Load Owners
+|--------------------------------------------------------------------------
+*/
 
 $ownersStmt = $pdo->query("
     SELECT
@@ -431,11 +590,19 @@ $owners = $ownersStmt->fetchAll();
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>Edit Ownership Record - VISRS</title>
+    <title>
+        Edit Ownership Record - VISRS
+    </title>
 
-    <link rel="stylesheet" href="../css/style.css">
+    <link
+        rel="stylesheet"
+        href="/visrs/css/style.css"
+    >
 
 </head>
 
@@ -443,21 +610,29 @@ $owners = $ownersStmt->fetchAll();
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
     <main class="main-content">
 
         <?php
-
-        $pageTitle = "Edit Ownership Record";
-        $pageSubtitle = "Update ownership information.";
-
         include __DIR__ . "/../includes/header.php";
-
         ?>
 
 
         <div class="content">
+
+            <div class="page-title">
+
+                <h1>
+                    Edit Ownership Record
+                </h1>
+
+                <p class="page-subtitle">
+                    Update ownership information.
+                </p>
+
+            </div>
+
 
             <div class="card">
 
@@ -472,7 +647,17 @@ $owners = $ownersStmt->fetchAll();
                             margin-bottom:20px;
                         "
                     >
-                        <?= htmlspecialchars($error) ?>
+
+                        <strong>
+                            Unable to Save Changes
+                        </strong>
+
+                        <div style="margin-top:5px;">
+
+                            <?= htmlspecialchars($error) ?>
+
+                        </div>
+
                     </div>
 
                 <?php endif; ?>
@@ -486,6 +671,16 @@ $owners = $ownersStmt->fetchAll();
                         value="<?= $ownershipID ?>"
                     >
 
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
+                    >
+
+
+                    <!-- VEHICLE -->
 
                     <div style="margin-bottom:20px;">
 
@@ -506,23 +701,41 @@ $owners = $ownersStmt->fetchAll();
                             "
                         >
 
-                            <?php foreach ($vehicles as $vehicle): ?>
+                            <?php foreach (
+                                $vehicles
+                                as $vehicle
+                            ): ?>
 
                                 <option
-                                    value="<?= $vehicle["VehicleID"] ?>"
+                                    value="<?= (int) $vehicle["VehicleID"] ?>"
                                     <?= (
                                         (
                                             $_POST["VehicleID"]
                                             ?? $record["VehicleID"]
                                         ) == $vehicle["VehicleID"]
-                                    ) ? "selected" : "" ?>
+                                    )
+                                        ? "selected"
+                                        : ""
+                                    ?>
                                 >
 
-                                    <?= htmlspecialchars($vehicle["PlateNumber"]) ?>
+                                    <?= htmlspecialchars(
+                                        $vehicle["PlateNumber"]
+                                    ) ?>
+
                                     -
-                                    <?= htmlspecialchars($vehicle["Make"]) ?>
-                                    <?= htmlspecialchars($vehicle["Model"]) ?>
-                                    (<?= htmlspecialchars($vehicle["VehicleYear"]) ?>)
+
+                                    <?= htmlspecialchars(
+                                        $vehicle["Make"]
+                                    ) ?>
+
+                                    <?= htmlspecialchars(
+                                        $vehicle["Model"]
+                                    ) ?>
+
+                                    (<?= htmlspecialchars(
+                                        $vehicle["VehicleYear"]
+                                    ) ?>)
 
                                 </option>
 
@@ -532,6 +745,8 @@ $owners = $ownersStmt->fetchAll();
 
                     </div>
 
+
+                    <!-- OWNER -->
 
                     <div style="margin-bottom:20px;">
 
@@ -552,20 +767,31 @@ $owners = $ownersStmt->fetchAll();
                             "
                         >
 
-                            <?php foreach ($owners as $owner): ?>
+                            <?php foreach (
+                                $owners
+                                as $owner
+                            ): ?>
 
                                 <option
-                                    value="<?= $owner["OwnerID"] ?>"
+                                    value="<?= (int) $owner["OwnerID"] ?>"
                                     <?= (
                                         (
                                             $_POST["OwnerID"]
                                             ?? $record["OwnerID"]
                                         ) == $owner["OwnerID"]
-                                    ) ? "selected" : "" ?>
+                                    )
+                                        ? "selected"
+                                        : ""
+                                    ?>
                                 >
 
-                                    <?= htmlspecialchars($owner["FirstName"]) ?>
-                                    <?= htmlspecialchars($owner["LastName"]) ?>
+                                    <?= htmlspecialchars(
+                                        $owner["FirstName"]
+                                    ) ?>
+
+                                    <?= htmlspecialchars(
+                                        $owner["LastName"]
+                                    ) ?>
 
                                 </option>
 
@@ -575,6 +801,8 @@ $owners = $ownersStmt->fetchAll();
 
                     </div>
 
+
+                    <!-- START DATE -->
 
                     <div style="margin-bottom:20px;">
 
@@ -602,6 +830,8 @@ $owners = $ownersStmt->fetchAll();
                     </div>
 
 
+                    <!-- END DATE -->
+
                     <div style="margin-bottom:20px;">
 
                         <label for="EndDate">
@@ -614,7 +844,10 @@ $owners = $ownersStmt->fetchAll();
                             id="EndDate"
                             value="<?= htmlspecialchars(
                                 $_POST["EndDate"]
-                                ?? ($record["EndDate"] ?? "")
+                                ?? (
+                                    $record["EndDate"]
+                                    ?? ""
+                                )
                             ) ?>"
                             style="
                                 width:100%;
@@ -624,12 +857,20 @@ $owners = $ownersStmt->fetchAll();
                             "
                         >
 
-                        <small>
+                        <small
+                            style="
+                                display:block;
+                                margin-top:6px;
+                                color:#6b7280;
+                            "
+                        >
                             Leave blank if this is the current owner.
                         </small>
 
                     </div>
 
+
+                    <!-- TRANSFER REASON -->
 
                     <div style="margin-bottom:20px;">
 
@@ -644,8 +885,12 @@ $owners = $ownersStmt->fetchAll();
                             maxlength="255"
                             value="<?= htmlspecialchars(
                                 $_POST["TransferReason"]
-                                ?? ($record["TransferReason"] ?? "")
+                                ?? (
+                                    $record["TransferReason"]
+                                    ?? ""
+                                )
                             ) ?>"
+                            placeholder="Example: Sale of vehicle"
                             style="
                                 width:100%;
                                 min-height:46px;
@@ -657,7 +902,15 @@ $owners = $ownersStmt->fetchAll();
                     </div>
 
 
-                    <div style="display:flex; gap:10px;">
+                    <!-- ACTIONS -->
+
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                        "
+                    >
 
                         <button
                             type="submit"
@@ -665,6 +918,7 @@ $owners = $ownersStmt->fetchAll();
                         >
                             Save Changes
                         </button>
+
 
                         <a
                             href="view.php?id=<?= $ownershipID ?>"
@@ -680,6 +934,9 @@ $owners = $ownersStmt->fetchAll();
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

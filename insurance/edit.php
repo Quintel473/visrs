@@ -1,11 +1,10 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
 $activePage = "insurance";
 
 $error = "";
@@ -20,13 +19,14 @@ if ($insuranceID <= 0) {
 
     header("Location: index.php");
     exit;
-
 }
 
 
 /*
- * Load the existing insurance record.
- */
+|--------------------------------------------------------------------------
+| Load Existing Insurance Record
+|--------------------------------------------------------------------------
+*/
 
 $insuranceStmt = $pdo->prepare("
     SELECT
@@ -40,6 +40,7 @@ $insuranceStmt = $pdo->prepare("
         Status
     FROM insurance
     WHERE InsuranceID = ?
+    LIMIT 1
 ");
 
 $insuranceStmt->execute([
@@ -53,17 +54,28 @@ if (!$insurance) {
 
     header("Location: index.php");
     exit;
-
 }
 
 
 /*
- * Process the form.
- */
+|--------------------------------------------------------------------------
+| Process Form
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $vehicleID = (int) ($_POST["VehicleID"] ?? 0);
+    /*
+     * Validate CSRF token before processing
+     * any submitted information.
+     */
+
+    requireValidCSRF();
+
+
+    $vehicleID = (int) (
+        $_POST["VehicleID"] ?? 0
+    );
 
     $providerName = trim(
         $_POST["ProviderName"] ?? ""
@@ -109,24 +121,64 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($vehicleID <= 0) {
 
-        $error = "Please select a vehicle.";
+        $error =
+            "Please select a vehicle.";
 
     } elseif ($providerName === "") {
 
-        $error = "Insurance provider is required.";
+        $error =
+            "Insurance provider is required.";
+
+    } elseif (mb_strlen($providerName) > 150) {
+
+        $error =
+            "Insurance provider cannot exceed 150 characters.";
 
     } elseif ($policyNumber === "") {
 
-        $error = "Policy number is required.";
+        $error =
+            "Policy number is required.";
+
+    } elseif (mb_strlen($policyNumber) > 100) {
+
+        $error =
+            "Policy number cannot exceed 100 characters.";
 
     } elseif ($startDate === "") {
 
-        $error = "Policy start date is required.";
+        $error =
+            "Policy start date is required.";
 
     } elseif ($status === "") {
 
-        $error = "Insurance status is required.";
+        $error =
+            "Insurance status is required.";
+    }
 
+
+    /*
+     * Validate coverage type.
+     */
+
+    if ($error === "") {
+
+        $allowedCoverageTypes = [
+            "",
+            "Third Party",
+            "Comprehensive",
+            "Collision",
+            "Liability"
+        ];
+
+        if (!in_array(
+            $coverageType,
+            $allowedCoverageTypes,
+            true
+        )) {
+
+            $error =
+                "Invalid insurance coverage type.";
+        }
     }
 
 
@@ -143,7 +195,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $startDate
         );
 
-        $startDateErrors = DateTime::getLastErrors();
+        $startDateErrors =
+            DateTime::getLastErrors();
 
         if (
             !$startDateObject ||
@@ -159,7 +212,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "Please enter a valid policy start date.";
-
         }
     }
 
@@ -168,18 +220,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
      * Validate expiry date.
      *
      * Expiry date is optional.
-     * If supplied, it must be a valid date
-     * and cannot be before the start date.
      */
 
-    if ($error === "" && $expiryDate !== "") {
+    $expiryDateObject = null;
 
-        $expiryDateObject = DateTime::createFromFormat(
-            "Y-m-d",
-            $expiryDate
-        );
+    if (
+        $error === "" &&
+        $expiryDate !== ""
+    ) {
 
-        $expiryDateErrors = DateTime::getLastErrors();
+        $expiryDateObject =
+            DateTime::createFromFormat(
+                "Y-m-d",
+                $expiryDate
+            );
+
+        $expiryDateErrors =
+            DateTime::getLastErrors();
 
         if (
             !$expiryDateObject ||
@@ -196,11 +253,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error =
                 "Please enter a valid policy expiry date.";
 
-        } elseif ($expiryDateObject < $startDateObject) {
+        } elseif (
+            $startDateObject &&
+            $expiryDateObject < $startDateObject
+        ) {
 
             $error =
                 "Expiry date cannot be earlier than the start date.";
-
         }
     }
 
@@ -225,14 +284,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "Invalid insurance status.";
-
         }
     }
 
 
     /*
-     * Verify the vehicle exists.
+     * Verify selected vehicle exists.
      */
+
+    $vehicle = null;
 
     if ($error === "") {
 
@@ -245,6 +305,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 VehicleYear
             FROM vehicles
             WHERE VehicleID = ?
+            LIMIT 1
         ");
 
         $vehicleStmt->execute([
@@ -258,7 +319,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $error =
                 "The selected vehicle does not exist.";
-
         }
     }
 
@@ -282,14 +342,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $insuranceID
         ]);
 
-        $duplicate = $duplicateStmt->fetch();
+        $duplicate =
+            $duplicateStmt->fetch();
 
 
         if ($duplicate) {
 
             $error =
                 "Another insurance record already uses this policy number.";
-
         }
     }
 
@@ -305,6 +365,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $pdo->beginTransaction();
 
 
+            /*
+             * Re-check that the insurance record
+             * still exists before updating it.
+             */
+
+            $verifyStmt = $pdo->prepare("
+                SELECT InsuranceID
+                FROM insurance
+                WHERE InsuranceID = ?
+                LIMIT 1
+            ");
+
+            $verifyStmt->execute([
+                $insuranceID
+            ]);
+
+            if (!$verifyStmt->fetch()) {
+
+                throw new Exception(
+                    "The insurance record no longer exists."
+                );
+            }
+
+
+            /*
+             * Update insurance record.
+             */
+
             $updateStmt = $pdo->prepare("
                 UPDATE insurance
                 SET
@@ -317,7 +405,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Status = ?
                 WHERE InsuranceID = ?
             ");
-
 
             $updateStmt->execute([
 
@@ -360,7 +447,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 VALUES (?, ?, ?, ?, ?)
             ");
 
-
             $auditStmt->execute([
 
                 $_SESSION["UserID"],
@@ -399,20 +485,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ($pdo->inTransaction()) {
 
                 $pdo->rollBack();
-
             }
 
             $error =
                 "Unable to update the insurance record.";
-
         }
     }
 }
 
 
 /*
- * Load vehicles for the dropdown.
- */
+|--------------------------------------------------------------------------
+| Load Vehicles
+|--------------------------------------------------------------------------
+*/
 
 $vehiclesStmt = $pdo->query("
     SELECT
@@ -430,11 +516,14 @@ $vehicles = $vehiclesStmt->fetchAll();
 
 
 /*
- * Page header information.
- */
+|--------------------------------------------------------------------------
+| Page Header
+|--------------------------------------------------------------------------
+*/
 
 $pageTitle = "Edit Insurance";
-$pageSubtitle = "Update the insurance policy information.";
+$pageSubtitle =
+    "Update the insurance policy information.";
 
 ?>
 
@@ -456,7 +545,7 @@ $pageSubtitle = "Update the insurance policy information.";
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -465,15 +554,13 @@ $pageSubtitle = "Update the insurance policy information.";
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-        <?php require_once "../includes/header.php"; ?>
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
-
-        <!-- CONTENT -->
 
         <div class="content">
 
@@ -503,7 +590,18 @@ $pageSubtitle = "Update the insurance policy information.";
                     <input
                         type="hidden"
                         name="InsuranceID"
-                        value="<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                        value="<?= htmlspecialchars(
+                            $insurance["InsuranceID"]
+                        ) ?>"
+                    >
+
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(
+                            generateCSRFToken()
+                        ) ?>"
                     >
 
 
@@ -544,7 +642,9 @@ $pageSubtitle = "Update the insurance policy information.";
                             ): ?>
 
                                 <option
-                                    value="<?= htmlspecialchars($vehicleOption["VehicleID"]) ?>"
+                                    value="<?= htmlspecialchars(
+                                        $vehicleOption["VehicleID"]
+                                    ) ?>"
                                     <?= (
                                         (int) $insurance["VehicleID"]
                                         ===
@@ -899,7 +999,9 @@ $pageSubtitle = "Update the insurance policy information.";
 
 
                         <a
-                            href="view.php?id=<?= htmlspecialchars($insurance["InsuranceID"]) ?>"
+                            href="view.php?id=<?= htmlspecialchars(
+                                $insurance["InsuranceID"]
+                            ) ?>"
                             class="button button-secondary"
                         >
                             Cancel
@@ -912,6 +1014,9 @@ $pageSubtitle = "Update the insurance policy information.";
             </div>
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

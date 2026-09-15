@@ -1,15 +1,25 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
-
+require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin", "Police"]);
 
-$basePath = "../";
+require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
+
+$pageTitle = "Add Owner";
+$pageSubtitle = "Register a new vehicle owner";
+
 $activePage = "owners";
 
 $error = "";
 $success = "";
+
+$firstName = "";
+$lastName = "";
+$address = "";
+$phone = "";
+$email = "";
+
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +28,8 @@ $success = "";
 */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    requireValidCSRF();
 
     $firstName = trim($_POST["first_name"] ?? "");
     $lastName = trim($_POST["last_name"] ?? "");
@@ -36,7 +48,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $error = "First name and last name are required.";
 
-    } elseif ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (strlen($firstName) > 100) {
+
+        $error = "First name cannot exceed 100 characters.";
+
+    } elseif (strlen($lastName) > 100) {
+
+        $error = "Last name cannot exceed 100 characters.";
+
+    } elseif (strlen($address) > 255) {
+
+        $error = "Address cannot exceed 255 characters.";
+
+    } elseif (strlen($phone) > 30) {
+
+        $error = "Phone number cannot exceed 30 characters.";
+
+    } elseif (strlen($email) > 150) {
+
+        $error = "Email address cannot exceed 150 characters.";
+
+    } elseif (
+        $email !== "" &&
+        !filter_var($email, FILTER_VALIDATE_EMAIL)
+    ) {
 
         $error = "Please enter a valid email address.";
 
@@ -44,11 +79,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         /*
         |--------------------------------------------------------------------------
-        | Insert Owner
+        | Insert Owner + Audit Log
         |--------------------------------------------------------------------------
         */
 
         try {
+
+            $pdo->beginTransaction();
+
 
             $stmt = $pdo->prepare("
                 INSERT INTO owners (
@@ -76,7 +114,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             |--------------------------------------------------------------------------
             */
 
-            $ownerID = $pdo->lastInsertId();
+            $ownerID = (int) $pdo->lastInsertId();
 
 
             /*
@@ -97,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ");
 
             $logStmt->execute([
-                $_SESSION["UserID"],
+                (int) $_SESSION["UserID"],
                 "Added owner",
                 "owners",
                 $ownerID,
@@ -105,14 +143,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ]);
 
 
-            $success = "Owner added successfully.";
+            $pdo->commit();
 
 
             /*
             |--------------------------------------------------------------------------
-            | Clear Form
+            | Success
             |--------------------------------------------------------------------------
             */
+
+            $success = "Owner added successfully.";
 
             $firstName = "";
             $lastName = "";
@@ -120,7 +160,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $phone = "";
             $email = "";
 
+
         } catch (PDOException $e) {
+
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
 
             $error = "Unable to add the owner. Please try again.";
 
@@ -144,11 +189,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>VISRS - Add Owner</title>
+    <title>
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
+    </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -157,33 +204,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <div class="layout">
 
-    <!-- SIDEBAR -->
+    <?php include __DIR__ . "/../includes/sidebar.php"; ?>
 
-    <aside class="sidebar">
+    <main class="main-content">
 
-        <?php require_once "../includes/sidebar.php"; ?>
+        <?php include __DIR__ . "/../includes/header.php"; ?>
 
-    </aside>
-
-
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-        <!-- TOP BAR -->
-
-        <?php
-
-            $pageTitle = "Owners";
-
-            include __DIR__ . "/../includes/header.php";
-
-        ?>
-
-
-        <!-- PAGE CONTENT -->
-
-        <main class="content">
+        <div class="content">
 
             <h1 class="page-title">
                 Add Owner
@@ -207,13 +234,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <?php if ($success !== ""): ?>
 
-                <div style="
-                    background: #dcfce7;
-                    color: #166534;
-                    padding: 12px;
-                    border-radius: 6px;
-                    margin-bottom: 20px;
-                ">
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:12px;
+                        border-radius:6px;
+                        margin-bottom:20px;
+                    "
+                >
 
                     <?= htmlspecialchars($success) ?>
 
@@ -222,7 +252,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php endif; ?>
 
 
-            <!-- FORM -->
+            <!-- OWNER FORM -->
 
             <section class="card">
 
@@ -230,7 +260,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Owner Information
                 </h2>
 
-                <form method="POST" action="">
+                <form
+                    method="POST"
+                    action=""
+                >
+
+                    <!-- CSRF PROTECTION -->
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= htmlspecialchars(generateCSRFToken()) ?>"
+                    >
 
 
                     <!-- FIRST NAME -->
@@ -246,8 +287,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="first_name"
                             name="first_name"
                             placeholder="Enter first name"
-                            value="<?= htmlspecialchars($firstName ?? "") ?>"
+                            value="<?= htmlspecialchars($firstName) ?>"
                             maxlength="100"
+                            autocomplete="given-name"
                             required
                         >
 
@@ -267,8 +309,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="last_name"
                             name="last_name"
                             placeholder="Enter last name"
-                            value="<?= htmlspecialchars($lastName ?? "") ?>"
+                            value="<?= htmlspecialchars($lastName) ?>"
                             maxlength="100"
+                            autocomplete="family-name"
                             required
                         >
 
@@ -288,8 +331,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="address"
                             name="address"
                             placeholder="Enter residential address"
-                            value="<?= htmlspecialchars($address ?? "") ?>"
+                            value="<?= htmlspecialchars($address) ?>"
                             maxlength="255"
+                            autocomplete="street-address"
                         >
 
                     </div>
@@ -308,8 +352,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="phone"
                             name="phone"
                             placeholder="e.g. 473-555-1234"
-                            value="<?= htmlspecialchars($phone ?? "") ?>"
+                            value="<?= htmlspecialchars($phone) ?>"
                             maxlength="30"
+                            autocomplete="tel"
                         >
 
                     </div>
@@ -328,8 +373,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             id="email"
                             name="email"
                             placeholder="e.g. john@example.com"
-                            value="<?= htmlspecialchars($email ?? "") ?>"
+                            value="<?= htmlspecialchars($email) ?>"
                             maxlength="150"
+                            autocomplete="email"
                         >
 
                     </div>
@@ -337,11 +383,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     <!-- BUTTONS -->
 
-                    <div style="
-                        display: flex;
-                        gap: 10px;
-                        margin-top: 25px;
-                    ">
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            margin-top:25px;
+                            flex-wrap:wrap;
+                        "
+                    >
 
                         <button
                             type="submit"
@@ -363,14 +412,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             </section>
 
-        </main>
+        </div>
 
-    </div>
+    </main>
 
 </div>
 
-<script src="../js/app.js"></script>
-
-</body>
-
-</html>
+<?php include __DIR__ . "/../includes/footer.php"; ?>

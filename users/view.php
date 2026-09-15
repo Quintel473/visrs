@@ -9,21 +9,30 @@ require_once __DIR__ . "/../includes/functions.php";
 $pageTitle = "View User";
 $pageSubtitle = "View VISRS user account information";
 
+$activePage = "users";
+
+
+/*
+|--------------------------------------------------------------------------
+| Get User ID
+|--------------------------------------------------------------------------
+*/
+
 $userID = isset($_GET["id"])
     ? (int) $_GET["id"]
     : 0;
 
 if ($userID <= 0) {
-
     header("Location: index.php");
     exit;
-
 }
 
 
 /*
- * Retrieve user
- */
+|--------------------------------------------------------------------------
+| Retrieve User
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -46,20 +55,22 @@ $user = $stmt->fetch();
 
 
 /*
- * User does not exist
- */
+|--------------------------------------------------------------------------
+| User Does Not Exist
+|--------------------------------------------------------------------------
+*/
 
 if (!$user) {
-
-    header("Location: index.php");
+    header("Location: index.php?error=not_found");
     exit;
-
 }
 
 
 /*
- * Determine role badge class
- */
+|--------------------------------------------------------------------------
+| Determine Role Badge
+|--------------------------------------------------------------------------
+*/
 
 $roleClass = "user-role user-role-default";
 
@@ -74,21 +85,32 @@ if ($user["Role"] === "Admin") {
 } elseif ($user["Role"] === "Seller") {
 
     $roleClass = "user-role user-role-seller";
-
 }
 
 
 /*
- * Display-friendly role name
- */
+|--------------------------------------------------------------------------
+| Display-Friendly Role Name
+|--------------------------------------------------------------------------
+*/
 
 $displayRole = $user["Role"];
 
 if ($user["Role"] === "Admin") {
-
     $displayRole = "Administrator";
-
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| Determine Whether This Is the Current User
+|--------------------------------------------------------------------------
+*/
+
+$currentUserID = (int) ($_SESSION["UserID"] ?? 0);
+
+$isCurrentUser =
+    ((int) $user["UserID"] === $currentUserID);
 
 ?>
 
@@ -115,68 +137,88 @@ if ($user["Role"] === "Admin") {
 
     <style>
 
+        /*
+        |--------------------------------------------------------------------------
+        | User Role Badges
+        |--------------------------------------------------------------------------
+        */
+
         .user-role {
-            display:inline-block;
-            padding:6px 10px;
-            border-radius:999px;
-            font-size:12px;
-            font-weight:600;
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .user-role-default {
-            background:#f3f4f6;
-            color:#374151;
+            background: #f3f4f6;
+            color: #374151;
         }
 
         .user-role-admin {
-            background:#dbeafe;
-            color:#1d4ed8;
+            background: #dbeafe;
+            color: #1d4ed8;
         }
 
         .user-role-police {
-            background:#dcfce7;
-            color:#166534;
+            background: #dcfce7;
+            color: #166534;
         }
 
         .user-role-seller {
-            background:#fef3c7;
-            color:#92400e;
+            background: #fef3c7;
+            color: #92400e;
         }
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Detail Rows
+        |--------------------------------------------------------------------------
+        */
+
         .user-detail-row {
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            gap:20px;
-            padding:16px 0;
-            border-bottom:1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
         }
 
         .user-detail-row:last-child {
-            border-bottom:none;
+            border-bottom: none;
         }
 
         .user-detail-label {
-            color:#6b7280;
-            font-size:14px;
+            color: #6b7280;
+            font-size: 14px;
         }
 
         .user-detail-value {
-            color:#111827;
-            font-size:15px;
-            font-weight:500;
-            text-align:right;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 500;
+            text-align: right;
         }
 
-        @media (max-width:600px) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mobile Layout
+        |--------------------------------------------------------------------------
+        */
+
+        @media (max-width: 600px) {
 
             .user-detail-row {
-                display:block;
+                display: block;
             }
 
             .user-detail-value {
-                text-align:left;
-                margin-top:5px;
+                text-align: left;
+                margin-top: 5px;
             }
 
         }
@@ -185,24 +227,15 @@ if ($user["Role"] === "Admin") {
 
 </head>
 
-
 <body>
 
 <div class="layout">
 
-    <?php
-
-    $activePage = "users";
-
-    include __DIR__ . "/../includes/sidebar.php";
-
-    ?>
-
+    <?php include __DIR__ . "/../includes/sidebar.php"; ?>
 
     <main class="main-content">
 
         <?php include __DIR__ . "/../includes/header.php"; ?>
-
 
         <div class="content">
 
@@ -236,7 +269,6 @@ if ($user["Role"] === "Admin") {
 
                     </div>
 
-
                     <a
                         href="index.php"
                         class="button button-secondary"
@@ -257,6 +289,8 @@ if ($user["Role"] === "Admin") {
                     "
                 >
 
+                    <!-- USER ID -->
+
                     <div class="user-detail-row">
 
                         <div class="user-detail-label">
@@ -270,6 +304,8 @@ if ($user["Role"] === "Admin") {
                     </div>
 
 
+                    <!-- FULL NAME -->
+
                     <div class="user-detail-row">
 
                         <div class="user-detail-label">
@@ -277,15 +313,19 @@ if ($user["Role"] === "Admin") {
                         </div>
 
                         <div class="user-detail-value">
+
                             <?= htmlspecialchars(
                                 $user["FirstName"]
                                 . " "
                                 . $user["LastName"]
                             ) ?>
+
                         </div>
 
                     </div>
 
+
+                    <!-- EMAIL -->
 
                     <div class="user-detail-row">
 
@@ -294,13 +334,17 @@ if ($user["Role"] === "Admin") {
                         </div>
 
                         <div class="user-detail-value">
+
                             <?= htmlspecialchars(
                                 $user["Email"]
                             ) ?>
+
                         </div>
 
                     </div>
 
+
+                    <!-- ROLE -->
 
                     <div class="user-detail-row">
 
@@ -310,14 +354,20 @@ if ($user["Role"] === "Admin") {
 
                         <div class="user-detail-value">
 
-                            <span class="<?= $roleClass ?>">
-                                <?= htmlspecialchars($displayRole) ?>
+                            <span class="<?= htmlspecialchars($roleClass) ?>">
+
+                                <?= htmlspecialchars(
+                                    $displayRole
+                                ) ?>
+
                             </span>
 
                         </div>
 
                     </div>
 
+
+                    <!-- ACCOUNT CREATED DATE -->
 
                     <div class="user-detail-row">
 
@@ -340,6 +390,8 @@ if ($user["Role"] === "Admin") {
 
                     </div>
 
+
+                    <!-- ACCOUNT CREATED TIME -->
 
                     <div class="user-detail-row">
 
@@ -376,6 +428,8 @@ if ($user["Role"] === "Admin") {
                     "
                 >
 
+                    <!-- EDIT USER -->
+
                     <a
                         href="edit.php?id=<?= (int) $user["UserID"] ?>"
                         class="button"
@@ -384,23 +438,31 @@ if ($user["Role"] === "Admin") {
                     </a>
 
 
-                    <?php if (
-                        (int) $user["UserID"]
-                        !==
-                        (int) ($_SESSION["UserID"] ?? 0)
-                    ): ?>
+                    <?php if (!$isCurrentUser): ?>
+
+                        <!--
+                        IMPORTANT:
+                        This link intentionally does NOT use
+                        .confirm-action or JavaScript confirmation.
+
+                        The dedicated delete.php page provides
+                        the VISRS confirmation screen.
+                        -->
 
                         <a
                             href="delete.php?id=<?= (int) $user["UserID"] ?>"
-                            class="button confirm-action"
-                            data-confirm-message="Are you sure you want to delete this user?"
-                            style="background:#991b1b;"
+                            class="button"
+                            style="
+                                background:#991b1b;
+                            "
                         >
                             Delete User
                         </a>
 
                     <?php endif; ?>
 
+
+                    <!-- BACK -->
 
                     <a
                         href="index.php"
@@ -419,8 +481,4 @@ if ($user["Role"] === "Admin") {
 
 </div>
 
-
 <?php include __DIR__ . "/../includes/footer.php"; ?>
-
-</body>
-</html>

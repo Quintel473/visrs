@@ -1,28 +1,37 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
-$basePath = "../";
 $activePage = "insurance";
 
 $pageTitle = "Insurance Details";
-$pageSubtitle = "View insurance policy information and associated vehicle details.";
+$pageSubtitle =
+    "View insurance policy information and associated vehicle details.";
 
-include __DIR__ . "/../includes/header.php";
 
+/*
+|--------------------------------------------------------------------------
+| Get Insurance ID
+|--------------------------------------------------------------------------
+*/
 
-$insuranceID = (int) ($_GET["id"] ?? 0);
+$insuranceID = (int) (
+    $_GET["id"] ?? 0
+);
 
 if ($insuranceID <= 0) {
+
     header("Location: index.php");
     exit;
 }
 
 
 /*
- * Get the insurance record and related vehicle.
- */
+|--------------------------------------------------------------------------
+| Get Insurance Record and Related Vehicle
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->prepare("
     SELECT
@@ -53,6 +62,8 @@ $stmt = $pdo->prepare("
         ON i.VehicleID = v.VehicleID
 
     WHERE i.InsuranceID = ?
+
+    LIMIT 1
 ");
 
 $stmt->execute([
@@ -62,26 +73,171 @@ $stmt->execute([
 $insurance = $stmt->fetch();
 
 
+/*
+|--------------------------------------------------------------------------
+| Insurance Record Not Found
+|--------------------------------------------------------------------------
+*/
+
 if (!$insurance) {
-    header("Location: index.php");
+
+    http_response_code(404);
+
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>
+            Insurance Not Found - VISRS
+        </title>
+
+        <link
+            rel="stylesheet"
+            href="/visrs/css/style.css"
+        >
+
+    </head>
+
+    <body>
+
+    <div class="layout">
+
+        <main
+            class="main-content"
+            style="
+                margin-left:0;
+                width:100%;
+            "
+        >
+
+            <div
+                class="content"
+                style="
+                    max-width:700px;
+                    margin:80px auto;
+                "
+            >
+
+                <div class="card">
+
+                    <div
+                        style="
+                            background:#fee2e2;
+                            color:#991b1b;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+
+                        <strong>
+                            Insurance Record Not Found
+                        </strong>
+
+                    </div>
+
+
+                    <h2>
+                        The requested insurance record could not be found.
+                    </h2>
+
+
+                    <p>
+                        The insurance record may have been deleted
+                        or the requested ID is invalid.
+                    </p>
+
+
+                    <div style="margin-top:20px;">
+
+                        <a
+                            href="index.php"
+                            class="button"
+                        >
+                            Back to Insurance
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+    </body>
+
+    </html>
+    <?php
+
     exit;
 }
 
 
 /*
- * Format dates for display.
- */
+|--------------------------------------------------------------------------
+| Date Formatting Helper
+|--------------------------------------------------------------------------
+*/
 
 function formatInsuranceDate($date)
 {
     if (!$date) {
+
+        return "Not specified";
+    }
+
+    $timestamp = strtotime($date);
+
+    if ($timestamp === false) {
+
         return "Not specified";
     }
 
     return date(
         "F j, Y",
-        strtotime($date)
+        $timestamp
     );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Status Styling
+|--------------------------------------------------------------------------
+*/
+
+$status = $insurance["Status"];
+
+$statusBackground = "#e5e7eb";
+$statusColor = "#374151";
+
+
+if ($status === "Active") {
+
+    $statusBackground = "#dcfce7";
+    $statusColor = "#166534";
+
+} elseif ($status === "Expired") {
+
+    $statusBackground = "#fee2e2";
+    $statusColor = "#991b1b";
+
+} elseif ($status === "Cancelled") {
+
+    $statusBackground = "#fef3c7";
+    $statusColor = "#92400e";
 }
 
 ?>
@@ -99,12 +255,12 @@ function formatInsuranceDate($date)
     >
 
     <title>
-        Insurance Details - VISRS
+        <?= htmlspecialchars($pageTitle) ?> - VISRS
     </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -113,12 +269,13 @@ function formatInsuranceDate($date)
 
 <div class="layout">
 
-    <?php require_once "../includes/sidebar.php"; ?>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
     <main class="main-content">
 
-        <!-- CONTENT -->
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
+
 
         <div class="content">
 
@@ -156,7 +313,7 @@ function formatInsuranceDate($date)
                     <?php if (canManageInsurance()): ?>
 
                         <a
-                            href="edit.php?id=<?= $insurance["InsuranceID"] ?>"
+                            href="edit.php?id=<?= (int) $insurance["InsuranceID"] ?>"
                             class="button"
                         >
                             Edit Insurance
@@ -164,7 +321,7 @@ function formatInsuranceDate($date)
 
 
                         <a
-                            href="delete.php?id=<?= $insurance["InsuranceID"] ?>"
+                            href="delete.php?id=<?= (int) $insurance["InsuranceID"] ?>"
                             class="button"
                             style="
                                 background:#991b1b;
@@ -218,51 +375,6 @@ function formatInsuranceDate($date)
                         </p>
 
                     </div>
-
-
-                    <?php
-
-                    $status =
-                        $insurance["Status"];
-
-                    $statusBackground =
-                        "#e5e7eb";
-
-                    $statusColor =
-                        "#374151";
-
-
-                    if ($status === "Active") {
-
-                        $statusBackground =
-                            "#dcfce7";
-
-                        $statusColor =
-                            "#166534";
-
-                    } elseif (
-                        $status === "Expired"
-                    ) {
-
-                        $statusBackground =
-                            "#fee2e2";
-
-                        $statusColor =
-                            "#991b1b";
-
-                    } elseif (
-                        $status === "Cancelled"
-                    ) {
-
-                        $statusBackground =
-                            "#fef3c7";
-
-                        $statusColor =
-                            "#92400e";
-
-                    }
-
-                    ?>
 
 
                     <span
@@ -583,12 +695,102 @@ function formatInsuranceDate($date)
 
                     <div
                         style="
+                            margin-top:18px;
+                        "
+                    >
+
+                        <p>
+                            <strong>
+                                Vehicle Type
+                            </strong>
+                        </p>
+
+                        <p>
+                            <?= $insurance["VehicleType"]
+                                ? htmlspecialchars(
+                                    $insurance["VehicleType"]
+                                )
+                                : "Not specified"
+                            ?>
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        style="
+                            margin-top:18px;
+                        "
+                    >
+
+                        <p>
+                            <strong>
+                                Engine Number
+                            </strong>
+                        </p>
+
+                        <p>
+                            <?= $insurance["EngineNumber"]
+                                ? htmlspecialchars(
+                                    $insurance["EngineNumber"]
+                                )
+                                : "Not specified"
+                            ?>
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        style="
+                            margin-top:18px;
+                        "
+                    >
+
+                        <p>
+                            <strong>
+                                Registration Date
+                            </strong>
+                        </p>
+
+                        <p>
+                            <?= formatInsuranceDate(
+                                $insurance["RegistrationDate"]
+                            ) ?>
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        style="
+                            margin-top:18px;
+                        "
+                    >
+
+                        <p>
+                            <strong>
+                                Vehicle Status
+                            </strong>
+                        </p>
+
+                        <p>
+                            <?= htmlspecialchars(
+                                $insurance["VehicleStatus"]
+                            ) ?>
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        style="
                             margin-top:25px;
                         "
                     >
 
                         <a
-                            href="../vehicles/view.php?id=<?= $insurance["VehicleID"] ?>"
+                            href="../vehicles/view.php?id=<?= (int) $insurance["VehicleID"] ?>"
                             class="button"
                         >
                             View Vehicle
@@ -684,6 +886,9 @@ function formatInsuranceDate($date)
 
 
         </div>
+
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 

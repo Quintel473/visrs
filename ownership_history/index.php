@@ -1,12 +1,25 @@
 <?php
 
-require_once "../includes/auth.php";
-require_once "../includes/database.php";
+require_once __DIR__ . "/../includes/auth.php";
+require_once __DIR__ . "/../includes/database.php";
 
-$basePath = "../";
 $activePage = "ownership_history";
 
-/* Get all ownership history records */
+$canManage =
+    isset($_SESSION["Role"]) &&
+    in_array(
+        $_SESSION["Role"],
+        ["Admin", "Police"],
+        true
+    );
+
+
+/*
+|--------------------------------------------------------------------------
+| Load Ownership History
+|--------------------------------------------------------------------------
+*/
+
 $stmt = $pdo->query("
     SELECT
         oh.OwnershipID,
@@ -33,7 +46,9 @@ $stmt = $pdo->query("
     INNER JOIN owners o
         ON oh.OwnerID = o.OwnerID
 
-    ORDER BY oh.StartDate DESC
+    ORDER BY
+        oh.StartDate DESC,
+        oh.OwnershipID DESC
 ");
 
 $history = $stmt->fetchAll();
@@ -52,11 +67,13 @@ $history = $stmt->fetchAll();
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>VISRS - Ownership History</title>
+    <title>
+        VISRS - Ownership History
+    </title>
 
     <link
         rel="stylesheet"
-        href="../css/style.css"
+        href="/visrs/css/style.css"
     >
 
 </head>
@@ -65,33 +82,23 @@ $history = $stmt->fetchAll();
 
 <div class="layout">
 
-    <!-- SIDEBAR -->
-
-    <aside class="sidebar">
-
-       <?php require_once "../includes/sidebar.php"; ?>
-
-    </aside>
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
 
-    <!-- MAIN CONTENT -->
-
-    <div class="main-content">
-
-        <!-- TOPBAR -->
+    <main class="main-content">
 
         <?php
 
-            $pageTitle = "Ownership History";
+        $pageTitle = "Ownership History";
+        $pageSubtitle =
+            "View the ownership records associated with vehicles in VISRS.";
 
-            include __DIR__ . "/../includes/header.php";
+        include __DIR__ . "/../includes/header.php";
 
         ?>
 
 
-        <!-- PAGE CONTENT -->
-
-        <main class="content">
+        <div class="content">
 
             <div class="page-title">
 
@@ -107,18 +114,48 @@ $history = $stmt->fetchAll();
 
                 </div>
 
-                <div>
 
-                    <a
-                        href="add.php"
-                        class="button"
-                    >
-                        Add Ownership Record
-                    </a>
+                <?php if ($canManage): ?>
+
+                    <div>
+
+                        <a
+                            href="add.php"
+                            class="button"
+                        >
+                            Add Ownership Record
+                        </a>
+
+                    </div>
+
+                <?php endif; ?>
+
+            </div>
+
+
+            <!-- SUCCESS MESSAGE -->
+
+            <?php if (
+                isset($_GET["deleted"]) &&
+                $_GET["deleted"] === "1"
+            ): ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:#dcfce7;
+                        color:#166534;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    Ownership record deleted successfully.
 
                 </div>
 
-            </div>
+            <?php endif; ?>
 
 
             <!-- OWNERSHIP HISTORY TABLE -->
@@ -127,40 +164,57 @@ $history = $stmt->fetchAll();
 
                 <?php if (count($history) === 0): ?>
 
-                    <div style="padding: 30px; text-align: center;">
+                    <div
+                        style="
+                            padding:30px;
+                            text-align:center;
+                        "
+                    >
 
                         <h2>
                             No Ownership History
                         </h2>
 
-                        <p style="margin-top: 10px;">
-
+                        <p
+                            style="
+                                margin-top:10px;
+                                color:#6b7280;
+                            "
+                        >
                             No ownership history records have been
                             added to the system yet.
-
                         </p>
 
-                        <div style="margin-top: 20px;">
 
-                            <a
-                                href="add.php"
-                                class="button"
-                            >
-                                Add First Record
-                            </a>
+                        <?php if ($canManage): ?>
 
-                        </div>
+                            <div style="margin-top:20px;">
+
+                                <a
+                                    href="add.php"
+                                    class="button"
+                                >
+                                    Add First Record
+                                </a>
+
+                            </div>
+
+                        <?php endif; ?>
 
                     </div>
 
                 <?php else: ?>
 
-                    <div style="overflow-x: auto;">
+                    <div
+                        style="
+                            overflow-x:auto;
+                        "
+                    >
 
                         <table
                             style="
-                                width: 100%;
-                                border-collapse: collapse;
+                                width:100%;
+                                border-collapse:collapse;
                             "
                         >
 
@@ -168,36 +222,36 @@ $history = $stmt->fetchAll();
 
                                 <tr
                                     style="
-                                        border-bottom: 1px solid #e5e7eb;
-                                        text-align: left;
+                                        border-bottom:1px solid #e5e7eb;
+                                        text-align:left;
                                     "
                                 >
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Vehicle
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         VIN
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Owner
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Start Date
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         End Date
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Transfer Reason
                                     </th>
 
-                                    <th style="padding: 12px;">
+                                    <th style="padding:12px;">
                                         Actions
                                     </th>
 
@@ -205,17 +259,23 @@ $history = $stmt->fetchAll();
 
                             </thead>
 
+
                             <tbody>
 
-                                <?php foreach ($history as $record): ?>
+                                <?php foreach (
+                                    $history
+                                    as $record
+                                ): ?>
 
                                     <tr
                                         style="
-                                            border-bottom: 1px solid #f1f5f9;
+                                            border-bottom:1px solid #f1f5f9;
                                         "
                                     >
 
-                                        <td style="padding: 12px;">
+                                        <!-- VEHICLE -->
+
+                                        <td style="padding:12px;">
 
                                             <strong>
 
@@ -227,7 +287,11 @@ $history = $stmt->fetchAll();
 
                                             <br>
 
-                                            <small>
+                                            <small
+                                                style="
+                                                    color:#6b7280;
+                                                "
+                                            >
 
                                                 <?= htmlspecialchars(
                                                     $record["Make"]
@@ -246,16 +310,26 @@ $history = $stmt->fetchAll();
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- VIN -->
 
-                                            <?= htmlspecialchars(
-                                                $record["VIN"]
-                                            ) ?>
+                                        <td style="padding:12px;">
+
+                                            <span
+                                                style="
+                                                    font-family:monospace;
+                                                "
+                                            >
+                                                <?= htmlspecialchars(
+                                                    $record["VIN"]
+                                                ) ?>
+                                            </span>
 
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- OWNER -->
+
+                                        <td style="padding:12px;">
 
                                             <?= htmlspecialchars(
                                                 $record["FirstName"]
@@ -268,7 +342,9 @@ $history = $stmt->fetchAll();
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- START DATE -->
+
+                                        <td style="padding:12px;">
 
                                             <?= htmlspecialchars(
                                                 $record["StartDate"]
@@ -277,7 +353,9 @@ $history = $stmt->fetchAll();
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- END DATE -->
+
+                                        <td style="padding:12px;">
 
                                             <?php if (
                                                 $record["EndDate"] === null ||
@@ -286,8 +364,8 @@ $history = $stmt->fetchAll();
 
                                                 <span
                                                     style="
-                                                        color: #166534;
-                                                        font-weight: 600;
+                                                        color:#166534;
+                                                        font-weight:600;
                                                     "
                                                 >
                                                     Current Owner
@@ -304,26 +382,81 @@ $history = $stmt->fetchAll();
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- TRANSFER REASON -->
 
-                                            <?= htmlspecialchars(
-                                                $record["TransferReason"] ?? ""
-                                            ) ?>
+                                        <td style="padding:12px;">
+
+                                            <?php if (
+                                                !empty(
+                                                    $record["TransferReason"]
+                                                )
+                                            ): ?>
+
+                                                <?= htmlspecialchars(
+                                                    $record["TransferReason"]
+                                                ) ?>
+
+                                            <?php else: ?>
+
+                                                <span
+                                                    style="
+                                                        color:#9ca3af;
+                                                    "
+                                                >
+                                                    —
+                                                </span>
+
+                                            <?php endif; ?>
 
                                         </td>
 
 
-                                        <td style="padding: 12px;">
+                                        <!-- ACTIONS -->
+
+                                        <td
+                                            style="
+                                                padding:12px;
+                                                white-space:nowrap;
+                                            "
+                                        >
 
                                             <a
-                                                href="view.php?id=<?= $record["OwnershipID"] ?>"
+                                                href="view.php?id=<?= (int) $record["OwnershipID"] ?>"
                                                 class="button button-secondary"
                                                 style="
-                                                    padding: 8px 12px;
+                                                    padding:8px 12px;
                                                 "
                                             >
                                                 View
                                             </a>
+
+
+                                            <?php if ($canManage): ?>
+
+                                                <a
+                                                    href="edit.php?id=<?= (int) $record["OwnershipID"] ?>"
+                                                    class="button"
+                                                    style="
+                                                        padding:8px 12px;
+                                                        margin-left:5px;
+                                                    "
+                                                >
+                                                    Edit
+                                                </a>
+
+
+                                                <a
+                                                    href="delete.php?id=<?= (int) $record["OwnershipID"] ?>"
+                                                    class="button button-danger"
+                                                    style="
+                                                        padding:8px 12px;
+                                                        margin-left:5px;
+                                                    "
+                                                >
+                                                    Delete
+                                                </a>
+
+                                            <?php endif; ?>
 
                                         </td>
 
@@ -341,14 +474,14 @@ $history = $stmt->fetchAll();
 
             </section>
 
-        </main>
+        </div>
 
-    </div>
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
+
+    </main>
 
 </div>
-
-
-<script src="../js/app.js"></script>
 
 </body>
 
