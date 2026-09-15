@@ -844,6 +844,13 @@ $totalListings =
                             + List Vehicle for Sale
                         </a>
 
+                        <a
+                            href="/visrs/marketplace/inquiries.php"
+                            class="button button-secondary"
+                        >
+                            View All Inquiries
+                        </a>
+
                     </div>
 
                 <?php endif; ?>

@@ -11,6 +11,10 @@ $pageSubtitle = "Register a new vehicle in the VISRS system";
 
 $activePage = "vehicles";
 
+// For Seller accounts, the vehicle is automatically associated with the
+// currently authenticated seller. Admin/Police-created vehicles remain unassigned.
+$currentSellerId = hasRole(["Seller"]) ? (int) currentUserId() : null;
+
 $error = "";
 $success = "";
 
@@ -456,6 +460,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     PlateNumber,
                     VIN,
                     OwnerID,
+                    SellerID,
                     Make,
                     Model,
                     VehicleYear,
@@ -465,7 +470,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     RegistrationDate,
                     Status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
 
@@ -476,6 +481,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $vin,
 
                 (int) $ownerID,
+
+                $currentSellerId,
 
                 $make,
 
@@ -534,7 +541,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $logStmt->execute([
 
-                (int) $_SESSION["UserID"],
+                (int) currentUserId(),
 
                 "Added vehicle",
 
