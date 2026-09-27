@@ -9,9 +9,6 @@ require_once __DIR__ . "/../includes/functions.php";
 $pageTitle = "Create Vehicle Listing";
 $activePage = "marketplace";
 
-// Always derive the marketplace seller from the authenticated account.
-$currentSellerId = (int) currentUserId();
-
 $error = "";
 $success = "";
 
@@ -90,7 +87,7 @@ if (isAdmin()) {
     ");
 
     $vehicleStmt->execute([
-        (int) currentUserId()
+        (int) $_SESSION["UserID"]
     ]);
 }
 
@@ -254,7 +251,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $vehicleCheck->execute([
                 (int) $vehicleID,
-                $currentSellerId
+                (int) $_SESSION["UserID"]
             ]);
         }
 
@@ -544,9 +541,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 /*
                 | SellerID is always the currently authenticated user.
-                | It is never accepted from the submitted form.
                 */
-                $currentSellerId,
+                (int) $_SESSION["UserID"],
 
                 number_format(
                     (float) $price,
@@ -733,7 +729,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
             $logStmt->execute([
-                (int) currentUserId(),
+                (int) $_SESSION["UserID"],
 
                 "Created vehicle marketplace listing",
 

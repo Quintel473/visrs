@@ -86,6 +86,11 @@ $sql = "
         v.Make,
         v.Model,
         v.VehicleYear,
+        v.Mileage,
+        v.LastServiceDate,
+        v.OilChangeIntervalKm,
+        v.LastOilChangeDate,
+        v.LastOilChangeMileage,
         v.Color,
         v.VehicleType,
         v.EngineNumber,
@@ -826,6 +831,58 @@ $vehicleStatusClass =
         }
 
 
+        .vehicle-maintenance-grid {
+
+            display:grid;
+
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+
+            border-top:1px solid #e5e7eb;
+
+            border-left:1px solid #e5e7eb;
+
+        }
+
+
+        .vehicle-maintenance-grid .vehicle-spec {
+
+            border-right:1px solid #e5e7eb;
+
+            border-bottom:1px solid #e5e7eb;
+
+        }
+
+
+        .maintenance-value {
+
+            color:#111827;
+
+            font-size:14px;
+
+            font-weight:700;
+
+        }
+
+
+        .maintenance-note {
+
+            margin-top:14px;
+
+            padding:12px 14px;
+
+            border-radius:7px;
+
+            background:#f8fafc;
+
+            color:#64748b;
+
+            font-size:12px;
+
+            line-height:1.6;
+
+        }
+
+
         .vehicle-spec-value {
 
             color:#111827;
@@ -1219,6 +1276,14 @@ $vehicleStatusClass =
 
 
         @media (max-width:600px) {
+
+            .vehicle-maintenance-grid {
+
+                grid-template-columns:1fr;
+
+            }
+
+
 
             .vehicle-primary-image {
 
@@ -1977,6 +2042,85 @@ $vehicleStatusClass =
                             </div>
 
 
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 MAINTENANCE & SERVICE
+                 ================================================= -->
+
+            <div class="vehicle-section">
+
+                <div class="vehicle-detail-card">
+
+                    <div class="vehicle-detail-card-content">
+
+                        <div class="vehicle-section-header">
+
+                            <h2>Maintenance &amp; Service</h2>
+
+                        </div>
+
+                        <div class="vehicle-maintenance-grid">
+
+                            <div class="vehicle-spec">
+                                <div class="vehicle-spec-label">Current Mileage</div>
+                                <div class="vehicle-spec-value maintenance-value">
+                                    <?php if ($listing["Mileage"] !== null && $listing["Mileage"] !== ""): ?>
+                                        <?= number_format((int) $listing["Mileage"]) ?> km
+                                    <?php else: ?>
+                                        —
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="vehicle-spec">
+                                <div class="vehicle-spec-label">Last Service</div>
+                                <div class="vehicle-spec-value">
+                                    <?= formatDate($listing["LastServiceDate"]) ?>
+                                </div>
+                            </div>
+
+                            <div class="vehicle-spec">
+                                <div class="vehicle-spec-label">Oil Change Interval</div>
+                                <div class="vehicle-spec-value">
+                                    <?php if ($listing["OilChangeIntervalKm"] !== null && $listing["OilChangeIntervalKm"] !== ""): ?>
+                                        Every <?= number_format((int) $listing["OilChangeIntervalKm"]) ?> km
+                                    <?php else: ?>
+                                        —
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="vehicle-spec">
+                                <div class="vehicle-spec-label">Last Oil Change</div>
+                                <div class="vehicle-spec-value">
+                                    <?= formatDate($listing["LastOilChangeDate"]) ?>
+                                </div>
+                            </div>
+
+                            <div class="vehicle-spec">
+                                <div class="vehicle-spec-label">Mileage at Last Oil Change</div>
+                                <div class="vehicle-spec-value">
+                                    <?php if ($listing["LastOilChangeMileage"] !== null && $listing["LastOilChangeMileage"] !== ""): ?>
+                                        <?= number_format((int) $listing["LastOilChangeMileage"]) ?> km
+                                    <?php else: ?>
+                                        —
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="maintenance-note">
+                            <strong>Maintenance information:</strong>
+                            Mileage and service information is provided as recorded in the VISRS vehicle record. Buyers should verify maintenance history with the seller and appropriate service documentation.
                         </div>
 
                     </div>
