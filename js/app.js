@@ -1,22 +1,21 @@
-/*
- * VISRS Global JavaScript
- *
- * Shared JavaScript functionality used throughout
- * the Vehicle Information Search & Retrieval System.
- */
-
 document.addEventListener("DOMContentLoaded", function () {
 
     /*
-     * Prevent forms from being submitted multiple times.
-     *
-     * Once a form is submitted, the submit button is disabled
-     * so the user cannot accidentally create duplicate records.
-     */
+    |--------------------------------------------------------------------------
+    | VISRS GLOBAL JAVASCRIPT
+    |--------------------------------------------------------------------------
+    */
 
-    const forms = document.querySelectorAll("form");
+    console.log("VISRS JavaScript loaded successfully.");
 
-    forms.forEach(function (form) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORM SUBMISSION PROTECTION
+    |--------------------------------------------------------------------------
+    */
+
+    document.querySelectorAll("form").forEach(function (form) {
 
         form.addEventListener("submit", function () {
 
@@ -26,29 +25,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
             submitButtons.forEach(function (button) {
 
-                if (!button.disabled) {
+                button.disabled = true;
 
-                    button.disabled = true;
+                /*
+                 * Do not change delete button text because
+                 * VISRS uses dedicated delete confirmation pages.
+                 */
+                const buttonText = (
+                    button.textContent ||
+                    button.value ||
+                    ""
+                ).trim().toLowerCase();
 
-                    /*
-                     * Keep the original button text available
-                     * so it can be restored if necessary.
-                     */
+                if (
+                    !buttonText.includes("delete") &&
+                    !buttonText.includes("remove")
+                ) {
 
-                    if (!button.dataset.originalText) {
-                        button.dataset.originalText = button.innerHTML;
-                    }
-
-                    /*
-                     * Do not change delete button wording.
-                     * Keep the existing VISRS design.
-                     */
-
-                    if (
-                        !button.classList.contains("delete-button") &&
-                        !button.textContent.toLowerCase().includes("delete")
-                    ) {
-                        button.innerHTML = "Processing...";
+                    if (button.tagName.toLowerCase() === "button") {
+                        button.textContent = "Processing...";
+                    } else {
+                        button.value = "Processing...";
                     }
 
                 }
@@ -61,15 +58,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /*
-     * Automatically remove temporary alert messages.
-     *
-     * Any element using the .auto-dismiss class will
-     * disappear after a few seconds.
-     */
+    |--------------------------------------------------------------------------
+    | AUTO DISMISS ALERTS
+    |--------------------------------------------------------------------------
+    */
 
-    const alerts = document.querySelectorAll(".auto-dismiss");
-
-    alerts.forEach(function (alert) {
+    document.querySelectorAll(".auto-dismiss").forEach(function (alert) {
 
         setTimeout(function () {
 
@@ -77,7 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             setTimeout(function () {
                 alert.remove();
-            }, 300);
+            }, 400);
 
         }, 4000);
 
@@ -85,25 +79,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /*
-     * Confirmation buttons.
-     *
-     * Any link or button with the class .confirm-action
-     * will ask the user for confirmation before continuing.
-     */
+    |--------------------------------------------------------------------------
+    | CONFIRM ACTIONS
+    |--------------------------------------------------------------------------
+    */
 
-    const confirmationElements = document.querySelectorAll(
-        ".confirm-action"
-    );
-
-    confirmationElements.forEach(function (element) {
+    document.querySelectorAll(".confirm-action").forEach(function (element) {
 
         element.addEventListener("click", function (event) {
 
             const message =
-                element.dataset.confirmMessage ||
+                element.getAttribute("data-confirm") ||
                 "Are you sure you want to continue?";
 
-            if (!confirm(message)) {
+            if (!window.confirm(message)) {
                 event.preventDefault();
             }
 
@@ -113,224 +102,565 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /*
-     * Automatically focus the first field marked
-     * with the .auto-focus class.
-     */
+    |--------------------------------------------------------------------------
+    | AUTO FOCUS
+    |--------------------------------------------------------------------------
+    */
 
-    const autoFocusElement =
-        document.querySelector(".auto-focus");
+    const autofocusElement =
+        document.querySelector("[data-autofocus]");
 
-    if (autoFocusElement) {
-        autoFocusElement.focus();
+    if (autofocusElement) {
+        autofocusElement.focus();
     }
 
 
     /*
-     * Password visibility toggle.
-     *
-     * Any button using:
-     *
-     * data-toggle-password="input-id"
-     *
-     * can show/hide the corresponding password field.
-     */
+    |--------------------------------------------------------------------------
+    | PASSWORD VISIBILITY TOGGLE
+    |--------------------------------------------------------------------------
+    */
 
-    const passwordToggles = document.querySelectorAll(
-        "[data-toggle-password]"
-    );
+    document.querySelectorAll("[data-password-toggle]").forEach(
+        function (button) {
 
-    passwordToggles.forEach(function (button) {
+            button.addEventListener("click", function () {
 
-        button.addEventListener("click", function () {
+                const targetId =
+                    button.getAttribute("data-password-toggle");
 
-            const inputId =
-                button.getAttribute("data-toggle-password");
+                const input =
+                    document.getElementById(targetId);
 
-            const passwordInput =
-                document.getElementById(inputId);
+                if (!input) {
+                    return;
+                }
 
-            if (!passwordInput) {
-                return;
-            }
+                if (input.type === "password") {
 
-            if (passwordInput.type === "password") {
-
-                passwordInput.type = "text";
-
-                button.textContent = "Hide";
-
-            } else {
-
-                passwordInput.type = "password";
-
-                button.textContent = "Show";
-
-            }
-
-        });
-
-    });
-
-
-    /*
-     * Character counter.
-     *
-     * Any textarea using:
-     *
-     * data-character-count
-     *
-     * will display its current character count.
-     */
-
-    const characterCountFields =
-        document.querySelectorAll("[data-character-count]");
-
-    characterCountFields.forEach(function (field) {
-
-        const counterId =
-            field.getAttribute("data-character-count");
-
-        const counter =
-            document.getElementById(counterId);
-
-        if (!counter) {
-            return;
-        }
-
-        function updateCounter() {
-
-            counter.textContent =
-                field.value.length + " characters";
-
-        }
-
-        field.addEventListener("input", updateCounter);
-
-        updateCounter();
-
-    });
-
-
-    /*
-     * Allow elements to be hidden/shown based on
-     * another field's value.
-     *
-     * Example:
-     *
-     * data-toggle-target="insurance-fields"
-     *
-     * data-toggle-value="Active"
-     *
-     * This will be useful for future dynamic forms.
-     */
-
-    const toggleElements =
-        document.querySelectorAll("[data-toggle-target]");
-
-    toggleElements.forEach(function (element) {
-
-        const targetId =
-            element.getAttribute("data-toggle-target");
-
-        const target =
-            document.getElementById(targetId);
-
-        if (!target) {
-            return;
-        }
-
-        function updateVisibility() {
-
-            const expectedValue =
-                element.getAttribute("data-toggle-value");
-
-            if (
-                expectedValue === null ||
-                element.value === expectedValue
-            ) {
-
-                target.style.display = "";
-
-            } else {
-
-                target.style.display = "none";
-
-            }
-
-        }
-
-        element.addEventListener(
-            "change",
-            updateVisibility
-        );
-
-        updateVisibility();
-
-    });
-
-
-    /*
-     * Basic table search.
-     *
-     * Tables using the .searchable-table class can be
-     * filtered by an input using:
-     *
-     * data-table-search="table-id"
-     */
-
-    const tableSearchInputs =
-        document.querySelectorAll("[data-table-search]");
-
-    tableSearchInputs.forEach(function (input) {
-
-        const tableId =
-            input.getAttribute("data-table-search");
-
-        const table =
-            document.getElementById(tableId);
-
-        if (!table) {
-            return;
-        }
-
-        input.addEventListener("input", function () {
-
-            const searchValue =
-                input.value.toLowerCase().trim();
-
-            const rows =
-                table.querySelectorAll("tbody tr");
-
-            rows.forEach(function (row) {
-
-                const rowText =
-                    row.textContent.toLowerCase();
-
-                if (rowText.includes(searchValue)) {
-
-                    row.style.display = "";
+                    input.type = "text";
+                    button.textContent = "Hide";
 
                 } else {
 
-                    row.style.display = "none";
+                    input.type = "password";
+                    button.textContent = "Show";
 
                 }
 
             });
 
-        });
-
-    });
+        }
+    );
 
 
     /*
-     * Add a small timestamp to the browser console.
-     *
-     * This is useful during development and testing.
-     */
+    |--------------------------------------------------------------------------
+    | CHARACTER COUNTERS
+    |--------------------------------------------------------------------------
+    */
+
+    document.querySelectorAll("[data-character-counter]").forEach(
+        function (counter) {
+
+            const targetId =
+                counter.getAttribute("data-character-counter");
+
+            const input =
+                document.getElementById(targetId);
+
+            if (!input) {
+                return;
+            }
+
+            function updateCounter() {
+
+                const currentLength =
+                    input.value.length;
+
+                const maxLength =
+                    input.getAttribute("maxlength");
+
+                if (maxLength) {
+
+                    counter.textContent =
+                        currentLength + " / " + maxLength;
+
+                } else {
+
+                    counter.textContent =
+                        currentLength + " characters";
+
+                }
+
+            }
+
+            input.addEventListener(
+                "input",
+                updateCounter
+            );
+
+            updateCounter();
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SHOW / HIDE TOGGLE TARGET
+    |--------------------------------------------------------------------------
+    */
+
+    document.querySelectorAll("[data-toggle-target]").forEach(
+        function (toggle) {
+
+            toggle.addEventListener("click", function () {
+
+                const targetId =
+                    toggle.getAttribute("data-toggle-target");
+
+                const target =
+                    document.getElementById(targetId);
+
+                if (!target) {
+                    return;
+                }
+
+                if (
+                    target.style.display === "none" ||
+                    getComputedStyle(target).display === "none"
+                ) {
+
+                    target.style.display = "";
+
+                } else {
+
+                    target.style.display = "none";
+
+                }
+
+            });
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLE SEARCH
+    |--------------------------------------------------------------------------
+    */
+
+    document.querySelectorAll("[data-table-search]").forEach(
+        function (searchInput) {
+
+            const tableId =
+                searchInput.getAttribute("data-table-search");
+
+            const table =
+                document.getElementById(tableId);
+
+            if (!table) {
+                return;
+            }
+
+            const rows =
+                table.querySelectorAll("tbody tr");
+
+            searchInput.addEventListener("input", function () {
+
+                const searchTerm =
+                    searchInput.value
+                        .toLowerCase()
+                        .trim();
+
+                rows.forEach(function (row) {
+
+                    const rowText =
+                        row.textContent.toLowerCase();
+
+                    if (rowText.includes(searchTerm)) {
+
+                        row.style.display = "";
+
+                    } else {
+
+                        row.style.display = "none";
+
+                    }
+
+                });
+
+            });
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VISRS ACCESSIBILITY
+    |--------------------------------------------------------------------------
+    */
+
+    const accessibilityToggle =
+        document.getElementById(
+            "visrsAccessibilityToggle"
+        );
+
+    const accessibilityPanel =
+        document.getElementById(
+            "visrsAccessibilityPanel"
+        );
+
+    const dyslexiaToggle =
+        document.getElementById(
+            "visrsDyslexiaToggle"
+        );
+
+    const dyslexiaStatus =
+        document.getElementById(
+            "visrsDyslexiaStatus"
+        );
+
+    const accessibilityReset =
+        document.getElementById(
+            "visrsAccessibilityReset"
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSIBILITY STORAGE KEYS
+    |--------------------------------------------------------------------------
+    */
+
+    const DYSLEXIA_STORAGE_KEY =
+        "visrs_accessibility_dyslexia";
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE DYSLEXIA MODE
+    |--------------------------------------------------------------------------
+    */
+
+    function updateDyslexiaMode(
+        enabled,
+        savePreference = true
+    ) {
+
+        document.documentElement.classList.toggle(
+            "visrs-dyslexia",
+            enabled
+        );
+
+
+        /*
+         * Update button state
+         */
+        if (dyslexiaToggle) {
+
+            dyslexiaToggle.setAttribute(
+                "aria-pressed",
+                enabled ? "true" : "false"
+            );
+
+            dyslexiaToggle.classList.toggle(
+                "is-active",
+                enabled
+            );
+
+        }
+
+
+        /*
+         * Update status text
+         */
+        if (dyslexiaStatus) {
+
+            dyslexiaStatus.textContent =
+                enabled ? "On" : "Off";
+
+        }
+
+
+        /*
+         * Save preference
+         */
+        if (savePreference) {
+
+            try {
+
+                localStorage.setItem(
+                    DYSLEXIA_STORAGE_KEY,
+                    enabled ? "on" : "off"
+                );
+
+            } catch (error) {
+
+                console.warn(
+                    "VISRS could not save accessibility preference.",
+                    error
+                );
+
+            }
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD SAVED DYSLEXIA PREFERENCE
+    |--------------------------------------------------------------------------
+    */
+
+    let savedDyslexiaPreference = "off";
+
+    try {
+
+        savedDyslexiaPreference =
+            localStorage.getItem(
+                DYSLEXIA_STORAGE_KEY
+            ) || "off";
+
+    } catch (error) {
+
+        console.warn(
+            "VISRS could not read accessibility preference.",
+            error
+        );
+
+    }
+
+
+    updateDyslexiaMode(
+        savedDyslexiaPreference === "on",
+        false
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OPEN / CLOSE ACCESSIBILITY PANEL
+    |--------------------------------------------------------------------------
+    */
+
+    function openAccessibilityPanel() {
+
+        if (!accessibilityPanel) {
+            return;
+        }
+
+        accessibilityPanel.classList.add(
+            "is-open"
+        );
+
+        accessibilityPanel.setAttribute(
+            "aria-hidden",
+            "false"
+        );
+
+        if (accessibilityToggle) {
+
+            accessibilityToggle.setAttribute(
+                "aria-expanded",
+                "true"
+            );
+
+            accessibilityToggle.setAttribute(
+                "aria-label",
+                "Close accessibility options"
+            );
+
+        }
+
+    }
+
+
+    function closeAccessibilityPanel() {
+
+        if (!accessibilityPanel) {
+            return;
+        }
+
+        accessibilityPanel.classList.remove(
+            "is-open"
+        );
+
+        accessibilityPanel.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        if (accessibilityToggle) {
+
+            accessibilityToggle.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            accessibilityToggle.setAttribute(
+                "aria-label",
+                "Open accessibility options"
+            );
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSIBILITY BUTTON
+    |--------------------------------------------------------------------------
+    */
+
+    if (accessibilityToggle) {
+
+        accessibilityToggle.addEventListener(
+            "click",
+            function (event) {
+
+                event.stopPropagation();
+
+                if (
+                    accessibilityPanel &&
+                    accessibilityPanel.classList.contains("is-open")
+                ) {
+
+                    closeAccessibilityPanel();
+
+                } else {
+
+                    openAccessibilityPanel();
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DYSLEXIA TOGGLE
+    |--------------------------------------------------------------------------
+    */
+
+    if (dyslexiaToggle) {
+
+        dyslexiaToggle.addEventListener(
+            "click",
+            function () {
+
+                const currentlyEnabled =
+                    document.documentElement.classList.contains(
+                        "visrs-dyslexia"
+                    );
+
+                updateDyslexiaMode(
+                    !currentlyEnabled,
+                    true
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESET ACCESSIBILITY
+    |--------------------------------------------------------------------------
+    */
+
+    if (accessibilityReset) {
+
+        accessibilityReset.addEventListener(
+            "click",
+            function () {
+
+                updateDyslexiaMode(
+                    false,
+                    true
+                );
+
+            }
+        );
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CLOSE ACCESSIBILITY PANEL WHEN CLICKING OUTSIDE
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            if (!accessibilityPanel) {
+                return;
+            }
+
+            if (!accessibilityPanel.classList.contains("is-open")) {
+                return;
+            }
+
+            const accessibilityContainer =
+                document.querySelector(
+                    ".visrs-accessibility"
+                );
+
+            if (
+                accessibilityContainer &&
+                !accessibilityContainer.contains(event.target)
+            ) {
+
+                closeAccessibilityPanel();
+
+            }
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ESCAPE KEY
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (event.key === "Escape") {
+
+                closeAccessibilityPanel();
+
+            }
+
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSIBILITY READY
+    |--------------------------------------------------------------------------
+    */
 
     console.log(
-        "VISRS JavaScript loaded successfully."
+        "VISRS accessibility features loaded."
     );
 
 });
