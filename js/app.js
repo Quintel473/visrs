@@ -300,367 +300,567 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /*
     |--------------------------------------------------------------------------
-    | VISRS ACCESSIBILITY
+    | VISRS LANGUAGE CHANGER
     |--------------------------------------------------------------------------
     */
 
-    const accessibilityToggle =
-        document.getElementById(
-            "visrsAccessibilityToggle"
-        );
-
-    const accessibilityPanel =
-        document.getElementById(
-            "visrsAccessibilityPanel"
-        );
-
-    const dyslexiaToggle =
-        document.getElementById(
-            "visrsDyslexiaToggle"
-        );
-
-    const dyslexiaStatus =
-        document.getElementById(
-            "visrsDyslexiaStatus"
-        );
-
-    const accessibilityReset =
-        document.getElementById(
-            "visrsAccessibilityReset"
-        );
+    const LANGUAGE_STORAGE_KEY =
+        "visrs_language";
 
 
     /*
     |--------------------------------------------------------------------------
-    | ACCESSIBILITY STORAGE KEYS
+    | LANGUAGE TRANSLATIONS
+    |--------------------------------------------------------------------------
+    |
+    | These translations are intentionally limited to the VISRS
+    | interface. Database information such as:
+    |
+    | - Vehicle names
+    | - Owner names
+    | - VIN numbers
+    | - Plate numbers
+    | - Accident descriptions
+    | - Insurance information
+    |
+    | will NOT be translated.
+    |
     |--------------------------------------------------------------------------
     */
 
-    const DYSLEXIA_STORAGE_KEY =
-        "visrs_accessibility_dyslexia";
+    const translations = {
+
+        en: {
+            languageName: "English",
+
+            vehicle_information_system: "Vehicle Information System",
+
+            dashboard: "Dashboard",
+            vehicle_search: "Vehicle Search",
+            vehicles: "Vehicles",
+            owners: "Owners",
+            ownership_history: "Ownership History",
+            insurance: "Insurance",
+            accidents: "Accidents",
+            marketplace: "Marketplace",
+            user_management: "User Management",
+            audit_trail: "Audit Trail",
+            logout: "Logout",
+
+            login: "Login",
+
+            search: "Search",
+            add: "Add",
+            edit: "Edit",
+            delete: "Delete",
+            view: "View",
+            save: "Save",
+            cancel: "Cancel",
+            update: "Update",
+            submit: "Submit",
+            back: "Back",
+
+            actions: "Actions",
+            details: "Details",
+            status: "Status",
+            date: "Date",
+            name: "Name",
+            email: "Email",
+            phone: "Phone",
+            address: "Address",
+
+            vehicle: "Vehicle",
+            vehiclesTitle: "Vehicles",
+            owner: "Owner",
+            ownersTitle: "Owners",
+
+            processing: "Processing...",
+
+            language: "Language",
+            selectLanguage: "Select Language",
+
+            yes: "Yes",
+            no: "No",
+
+            active: "Active",
+            inactive: "Inactive",
+            sold: "Sold",
+            stolen: "Stolen",
+
+            insuranceTitle: "Insurance",
+            accidentsTitle: "Accidents",
+
+            accidentDate: "Accident Date",
+            location: "Location",
+            description: "Description",
+            damageLevel: "Damage Level",
+            reportNumber: "Report Number",
+
+            providerName: "Provider Name",
+            policyNumber: "Policy Number",
+            coverageType: "Coverage Type",
+            startDate: "Start Date",
+            expiryDate: "Expiry Date",
+
+            firstName: "First Name",
+            lastName: "Last Name",
+            role: "Role",
+
+            plateNumber: "Plate Number",
+            vin: "VIN",
+            make: "Make",
+            model: "Model",
+            year: "Year",
+            color: "Color",
+
+            confirmDelete:
+                "Are you sure you want to delete this record?",
+
+            noRecords:
+                "No records found.",
+
+            allRightsReserved:
+                "All rights reserved."
+        },
+
+
+        fr: {
+            languageName: "Français",
+
+            vehicle_information_system: "Système d'information sur les véhicules",
+
+            dashboard: "Tableau de bord",
+            vehicle_search: "Recherche de véhicules",
+            vehicles: "Véhicules",
+            owners: "Propriétaires",
+            ownership_history: "Historique de propriété",
+            insurance: "Assurance",
+            accidents: "Accidents",
+            marketplace: "Marché",
+            user_management: "Gestion des utilisateurs",
+            audit_trail: "Piste d'audit",
+            logout: "Déconnexion",
+
+            login: "Connexion",
+
+            search: "Rechercher",
+            add: "Ajouter",
+            edit: "Modifier",
+            delete: "Supprimer",
+            view: "Voir",
+            save: "Enregistrer",
+            cancel: "Annuler",
+            update: "Mettre à jour",
+            submit: "Soumettre",
+            back: "Retour",
+
+            actions: "Actions",
+            details: "Détails",
+            status: "Statut",
+            date: "Date",
+            name: "Nom",
+            email: "E-mail",
+            phone: "Téléphone",
+            address: "Adresse",
+
+            vehicle: "Véhicule",
+            vehiclesTitle: "Véhicules",
+            owner: "Propriétaire",
+            ownersTitle: "Propriétaires",
+
+            processing: "Traitement...",
+
+            language: "Langue",
+            selectLanguage: "Sélectionner la langue",
+
+            yes: "Oui",
+            no: "Non",
+
+            active: "Actif",
+            inactive: "Inactif",
+            sold: "Vendu",
+            stolen: "Volé",
+
+            insuranceTitle: "Assurance",
+            accidentsTitle: "Accidents",
+
+            accidentDate: "Date de l'accident",
+            location: "Lieu",
+            description: "Description",
+            damageLevel: "Niveau de dommages",
+            reportNumber: "Numéro de rapport",
+
+            providerName: "Nom du fournisseur",
+            policyNumber: "Numéro de police",
+            coverageType: "Type de couverture",
+            startDate: "Date de début",
+            expiryDate: "Date d'expiration",
+
+            firstName: "Prénom",
+            lastName: "Nom de famille",
+            role: "Rôle",
+
+            plateNumber: "Numéro d'immatriculation",
+            vin: "VIN",
+            make: "Marque",
+            model: "Modèle",
+            year: "Année",
+            color: "Couleur",
+
+            confirmDelete:
+                "Êtes-vous sûr de vouloir supprimer cet enregistrement ?",
+
+            noRecords:
+                "Aucun enregistrement trouvé.",
+
+            allRightsReserved:
+                "Tous droits réservés."
+        },
+
+
+        es: {
+            languageName: "Español",
+
+            vehicle_information_system: "Sistema de Información de Vehículos",
+
+            dashboard: "Panel",
+            vehicle_search: "Búsqueda de vehículos",
+            vehicles: "Vehículos",
+            owners: "Propietarios",
+            ownership_history: "Historial de propiedad",
+            insurance: "Seguro",
+            accidents: "Accidentes",
+            marketplace: "Mercado",
+            user_management: "Gestión de usuarios",
+            audit_trail: "Registro de auditoría",
+            logout: "Cerrar sesión",
+
+            login: "Iniciar sesión",
+
+            search: "Buscar",
+            add: "Agregar",
+            edit: "Editar",
+            delete: "Eliminar",
+            view: "Ver",
+            save: "Guardar",
+            cancel: "Cancelar",
+            update: "Actualizar",
+            submit: "Enviar",
+            back: "Atrás",
+
+            actions: "Acciones",
+            details: "Detalles",
+            status: "Estado",
+            date: "Fecha",
+            name: "Nombre",
+            email: "Correo electrónico",
+            phone: "Teléfono",
+            address: "Dirección",
+
+            vehicle: "Vehículo",
+            vehiclesTitle: "Vehículos",
+            owner: "Propietario",
+            ownersTitle: "Propietarios",
+
+            processing: "Procesando...",
+
+            language: "Idioma",
+            selectLanguage: "Seleccionar idioma",
+
+            yes: "Sí",
+            no: "No",
+
+            active: "Activo",
+            inactive: "Inactivo",
+            sold: "Vendido",
+            stolen: "Robado",
+
+            insuranceTitle: "Seguro",
+            accidentsTitle: "Accidentes",
+
+            accidentDate: "Fecha del accidente",
+            location: "Ubicación",
+            description: "Descripción",
+            damageLevel: "Nivel de daños",
+            reportNumber: "Número de informe",
+
+            providerName: "Nombre del proveedor",
+            policyNumber: "Número de póliza",
+            coverageType: "Tipo de cobertura",
+            startDate: "Fecha de inicio",
+            expiryDate: "Fecha de vencimiento",
+
+            firstName: "Nombre",
+            lastName: "Apellido",
+            role: "Rol",
+
+            plateNumber: "Número de matrícula",
+            vin: "VIN",
+            make: "Marca",
+            model: "Modelo",
+            year: "Año",
+            color: "Color",
+
+            confirmDelete:
+                "¿Está seguro de que desea eliminar este registro?",
+
+            noRecords:
+                "No se encontraron registros.",
+
+            allRightsReserved:
+                "Todos los derechos reservados."
+        }
+
+    };
 
 
     /*
     |--------------------------------------------------------------------------
-    | UPDATE DYSLEXIA MODE
+    | GET SAVED LANGUAGE
     |--------------------------------------------------------------------------
     */
 
-    function updateDyslexiaMode(
-        enabled,
-        savePreference = true
-    ) {
-
-        document.documentElement.classList.toggle(
-            "visrs-dyslexia",
-            enabled
-        );
-
-
-        /*
-         * Update button state
-         */
-        if (dyslexiaToggle) {
-
-            dyslexiaToggle.setAttribute(
-                "aria-pressed",
-                enabled ? "true" : "false"
-            );
-
-            dyslexiaToggle.classList.toggle(
-                "is-active",
-                enabled
-            );
-
-        }
-
-
-        /*
-         * Update status text
-         */
-        if (dyslexiaStatus) {
-
-            dyslexiaStatus.textContent =
-                enabled ? "On" : "Off";
-
-        }
-
-
-        /*
-         * Save preference
-         */
-        if (savePreference) {
-
-            try {
-
-                localStorage.setItem(
-                    DYSLEXIA_STORAGE_KEY,
-                    enabled ? "on" : "off"
-                );
-
-            } catch (error) {
-
-                console.warn(
-                    "VISRS could not save accessibility preference.",
-                    error
-                );
-
-            }
-
-        }
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD SAVED DYSLEXIA PREFERENCE
-    |--------------------------------------------------------------------------
-    */
-
-    let savedDyslexiaPreference = "off";
+    let currentLanguage = "en";
 
     try {
 
-        savedDyslexiaPreference =
+        const savedLanguage =
             localStorage.getItem(
-                DYSLEXIA_STORAGE_KEY
-            ) || "off";
+                LANGUAGE_STORAGE_KEY
+            );
+
+        if (
+            savedLanguage &&
+            Object.prototype.hasOwnProperty.call(
+                translations,
+                savedLanguage
+            )
+        ) {
+
+            currentLanguage = savedLanguage;
+
+        }
 
     } catch (error) {
 
         console.warn(
-            "VISRS could not read accessibility preference.",
+            "VISRS could not read saved language.",
             error
         );
 
     }
 
 
-    updateDyslexiaMode(
-        savedDyslexiaPreference === "on",
-        false
-    );
-
-
     /*
     |--------------------------------------------------------------------------
-    | OPEN / CLOSE ACCESSIBILITY PANEL
+    | TRANSLATION FUNCTION
     |--------------------------------------------------------------------------
     */
 
-    function openAccessibilityPanel() {
+    function translateText(
+        key,
+        language = currentLanguage
+    ) {
 
-        if (!accessibilityPanel) {
-            return;
-        }
+        if (
+            !translations[language] ||
+            !translations[language][key]
+        ) {
 
-        accessibilityPanel.classList.add(
-            "is-open"
-        );
-
-        accessibilityPanel.setAttribute(
-            "aria-hidden",
-            "false"
-        );
-
-        if (accessibilityToggle) {
-
-            accessibilityToggle.setAttribute(
-                "aria-expanded",
-                "true"
-            );
-
-            accessibilityToggle.setAttribute(
-                "aria-label",
-                "Close accessibility options"
-            );
+            return key;
 
         }
 
-    }
-
-
-    function closeAccessibilityPanel() {
-
-        if (!accessibilityPanel) {
-            return;
-        }
-
-        accessibilityPanel.classList.remove(
-            "is-open"
-        );
-
-        accessibilityPanel.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        if (accessibilityToggle) {
-
-            accessibilityToggle.setAttribute(
-                "aria-expanded",
-                "false"
-            );
-
-            accessibilityToggle.setAttribute(
-                "aria-label",
-                "Open accessibility options"
-            );
-
-        }
+        return translations[language][key];
 
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | ACCESSIBILITY BUTTON
+    | APPLY LANGUAGE
     |--------------------------------------------------------------------------
     */
 
-    if (accessibilityToggle) {
+    function applyLanguage(language) {
 
-        accessibilityToggle.addEventListener(
-            "click",
-            function (event) {
+        if (!translations[language]) {
+            language = "en";
+        }
 
-                event.stopPropagation();
+        currentLanguage = language;
+
+        /*
+         * Set the HTML language attribute.
+         */
+        document.documentElement.lang = language;
+
+
+        /*
+         * Translate elements using:
+         *
+         * data-i18n="vehicles"
+         */
+        document.querySelectorAll("[data-i18n]").forEach(
+            function (element) {
+
+                const key =
+                    element.getAttribute("data-i18n");
 
                 if (
-                    accessibilityPanel &&
-                    accessibilityPanel.classList.contains("is-open")
+                    translations[language] &&
+                    translations[language][key]
                 ) {
 
-                    closeAccessibilityPanel();
-
-                } else {
-
-                    openAccessibilityPanel();
+                    element.textContent =
+                        translations[language][key];
 
                 }
 
             }
         );
 
-    }
 
+        /*
+         * Translate placeholders using:
+         *
+         * data-i18n-placeholder="search"
+         */
+        document.querySelectorAll(
+            "[data-i18n-placeholder]"
+        ).forEach(function (element) {
 
-    /*
-    |--------------------------------------------------------------------------
-    | DYSLEXIA TOGGLE
-    |--------------------------------------------------------------------------
-    */
-
-    if (dyslexiaToggle) {
-
-        dyslexiaToggle.addEventListener(
-            "click",
-            function () {
-
-                const currentlyEnabled =
-                    document.documentElement.classList.contains(
-                        "visrs-dyslexia"
-                    );
-
-                updateDyslexiaMode(
-                    !currentlyEnabled,
-                    true
-                );
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | RESET ACCESSIBILITY
-    |--------------------------------------------------------------------------
-    */
-
-    if (accessibilityReset) {
-
-        accessibilityReset.addEventListener(
-            "click",
-            function () {
-
-                updateDyslexiaMode(
-                    false,
-                    true
-                );
-
-            }
-        );
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CLOSE ACCESSIBILITY PANEL WHEN CLICKING OUTSIDE
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener(
-        "click",
-        function (event) {
-
-            if (!accessibilityPanel) {
-                return;
-            }
-
-            if (!accessibilityPanel.classList.contains("is-open")) {
-                return;
-            }
-
-            const accessibilityContainer =
-                document.querySelector(
-                    ".visrs-accessibility"
+            const key =
+                element.getAttribute(
+                    "data-i18n-placeholder"
                 );
 
             if (
-                accessibilityContainer &&
-                !accessibilityContainer.contains(event.target)
+                translations[language] &&
+                translations[language][key]
             ) {
 
-                closeAccessibilityPanel();
+                element.setAttribute(
+                    "placeholder",
+                    translations[language][key]
+                );
 
             }
 
+        });
+
+
+        /*
+         * Translate titles/tooltips using:
+         *
+         * data-i18n-title="language"
+         */
+        document.querySelectorAll(
+            "[data-i18n-title]"
+        ).forEach(function (element) {
+
+            const key =
+                element.getAttribute(
+                    "data-i18n-title"
+                );
+
+            if (
+                translations[language] &&
+                translations[language][key]
+            ) {
+
+                element.setAttribute(
+                    "title",
+                    translations[language][key]
+                );
+
+            }
+
+        });
+
+
+        /*
+         * Update language selector if it exists.
+         */
+        const languageSelector =
+            document.getElementById(
+                "visrsLanguageSelector"
+            );
+
+        if (languageSelector) {
+
+            languageSelector.value =
+                language;
+
         }
-    );
+
+
+        /*
+         * Save selected language.
+         */
+        try {
+
+            localStorage.setItem(
+                LANGUAGE_STORAGE_KEY,
+                language
+            );
+
+        } catch (error) {
+
+            console.warn(
+                "VISRS could not save selected language.",
+                error
+            );
+
+        }
+
+    }
 
 
     /*
     |--------------------------------------------------------------------------
-    | ESCAPE KEY
+    | LANGUAGE SELECTOR
     |--------------------------------------------------------------------------
     */
 
-    document.addEventListener(
-        "keydown",
-        function (event) {
+    const languageSelector =
+        document.getElementById(
+            "visrsLanguageSelector"
+        );
 
-            if (event.key === "Escape") {
+    if (languageSelector) {
 
-                closeAccessibilityPanel();
+        languageSelector.addEventListener(
+            "change",
+            function () {
+
+                applyLanguage(
+                    languageSelector.value
+                );
 
             }
+        );
 
-        }
-    );
+    }
 
 
     /*
     |--------------------------------------------------------------------------
-    | ACCESSIBILITY READY
+    | APPLY SAVED LANGUAGE
+    |--------------------------------------------------------------------------
+    */
+
+    applyLanguage(currentLanguage);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VISRS LANGUAGE READY
     |--------------------------------------------------------------------------
     */
 
     console.log(
-        "VISRS accessibility features loaded."
+        "VISRS language changer loaded."
     );
 
 });

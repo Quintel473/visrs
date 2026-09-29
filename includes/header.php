@@ -6,7 +6,7 @@
  * This provides the same topbar on every page.
  *
  * The global JavaScript file is loaded from footer.php.
- * This file is responsible only for the VISRS topbar.
+ * This file provides the VISRS topbar and language selector.
  */
 
 ?>
@@ -15,6 +15,30 @@
 
     <div class="topbar-title">
         <?= htmlspecialchars($pageTitle ?? "VISRS") ?>
+    </div>
+
+
+    <!-- VISRS LANGUAGE SELECTOR -->
+
+    <div class="language-selector-container">
+
+        <label
+            for="visrsLanguageSelector"
+            class="language-selector-label"
+        >
+            Language
+        </label>
+
+        <select
+            id="visrsLanguageSelector"
+            class="language-selector"
+            aria-label="Select language"
+        >
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+        </select>
+
     </div>
 
 

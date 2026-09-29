@@ -1,3 +1,4 @@
+```php
 <?php
 
 $activePage = $activePage ?? "";
@@ -14,7 +15,7 @@ $activePage = $activePage ?? "";
 
         <h2>VISRS</h2>
 
-        <p>
+        <p data-i18n="vehicle_information_system">
             Vehicle Information System
         </p>
 
@@ -38,7 +39,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="dashboard"
+            >
                 Dashboard
             </span>
 
@@ -55,7 +59,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="vehicle_search"
+            >
                 Vehicle Search
             </span>
 
@@ -72,7 +79,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="vehicles"
+            >
                 Vehicles
             </span>
 
@@ -89,7 +99,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="owners"
+            >
                 Owners
             </span>
 
@@ -106,7 +119,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="ownership_history"
+            >
                 Ownership History
             </span>
 
@@ -123,7 +139,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="insurance"
+            >
                 Insurance
             </span>
 
@@ -140,7 +159,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="accidents"
+            >
                 Accidents
             </span>
 
@@ -159,7 +181,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="marketplace"
+            >
                 Marketplace
             </span>
 
@@ -186,7 +211,10 @@ $activePage = $activePage ?? "";
                 <span class="sidebar-icon">
                 </span>
 
-                <span class="sidebar-text">
+                <span
+                    class="sidebar-text"
+                    data-i18n="user_management"
+                >
                     User Management
                 </span>
 
@@ -203,7 +231,10 @@ $activePage = $activePage ?? "";
                 <span class="sidebar-icon">
                 </span>
 
-                <span class="sidebar-text">
+                <span
+                    class="sidebar-text"
+                    data-i18n="audit_trail"
+                >
                     Audit Trail
                 </span>
 
@@ -224,7 +255,10 @@ $activePage = $activePage ?? "";
             <span class="sidebar-icon">
             </span>
 
-            <span class="sidebar-text">
+            <span
+                class="sidebar-text"
+                data-i18n="logout"
+            >
                 Logout
             </span>
 
@@ -234,3 +268,4 @@ $activePage = $activePage ?? "";
     </nav>
 
 </aside>
+```
