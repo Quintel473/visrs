@@ -6,12 +6,14 @@ require_once "includes/database.php";
 $basePath = "";
 $activePage = "dashboard";
 
+
 /* Dashboard statistics */
 
 $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalVehicles
     FROM vehicles
 ");
+
 $totalVehicles = $stmt->fetch()["TotalVehicles"];
 
 
@@ -19,6 +21,7 @@ $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalOwners
     FROM owners
 ");
+
 $totalOwners = $stmt->fetch()["TotalOwners"];
 
 
@@ -26,6 +29,7 @@ $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalAccidents
     FROM accidents
 ");
+
 $totalAccidents = $stmt->fetch()["TotalAccidents"];
 
 
@@ -33,6 +37,7 @@ $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalInsurance
     FROM insurance
 ");
+
 $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
 ?>
@@ -56,6 +61,28 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
         href="css/style.css"
     >
 
+    <!--
+        Dark mode: set the saved/device theme before the page paints
+        so there is no flash of the light theme.
+    -->
+    <script>
+        (function () {
+            var saved = null;
+
+            try {
+                saved = localStorage.getItem("theme");
+            } catch (e) {}
+
+            var prefersDark = window.matchMedia(
+                "(prefers-color-scheme: dark)"
+            ).matches;
+
+            if (saved === "dark" || (!saved && prefersDark)) {
+                document.documentElement.classList.add("dark");
+            }
+        })();
+    </script>
+
     <style>
 
         /*
@@ -71,6 +98,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
             gap: 4px;
         }
 
+
         .sidebar-nav a {
             display: flex;
             align-items: center;
@@ -80,12 +108,14 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
             white-space: nowrap;
         }
 
+
         .dashboard-actions {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
+
 
         .dashboard-action-button {
             display: flex;
@@ -98,16 +128,19 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
             font-weight: 600;
         }
 
+
         .stat-number {
             font-size: 30px;
             font-weight: 700;
             margin-top: 8px;
         }
 
+
         .stat-label {
             color: #64748b;
             font-size: 14px;
         }
+
 
         @media (max-width: 768px) {
 
@@ -147,13 +180,13 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
         <!-- TOPBAR -->
 
-    <?php
+        <?php
 
         $pageTitle = "Dashboard";
 
         include __DIR__ . "/includes/header.php";
 
-    ?>
+        ?>
 
 
         <!-- PAGE CONTENT -->
@@ -166,13 +199,21 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
             <div class="page-title">
 
                 <h1>
-                    Welcome back,
+
+                    <span data-i18n="welcome_back">
+                        Welcome back,
+                    </span>
+
                     <?= htmlspecialchars(
                         $_SESSION["FirstName"]
                     ) ?>!
+
                 </h1>
 
-                <p class="page-subtitle">
+                <p
+                    class="page-subtitle"
+                    data-i18n="vehicle_information_search_system"
+                >
                     Vehicle Information Search & Retrieval System
                 </p>
 
@@ -190,14 +231,19 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                 <div class="stat-card">
 
-                    <div class="stat-label">
+                    <div
+                        class="stat-label"
+                        data-i18n="total_vehicles"
+                    >
                         Total Vehicles
                     </div>
 
                     <div class="stat-number">
+
                         <?= htmlspecialchars(
                             $totalVehicles
                         ) ?>
+
                     </div>
 
                 </div>
@@ -207,14 +253,19 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                 <div class="stat-card">
 
-                    <div class="stat-label">
+                    <div
+                        class="stat-label"
+                        data-i18n="total_owners"
+                    >
                         Total Owners
                     </div>
 
                     <div class="stat-number">
+
                         <?= htmlspecialchars(
                             $totalOwners
                         ) ?>
+
                     </div>
 
                 </div>
@@ -224,14 +275,19 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                 <div class="stat-card">
 
-                    <div class="stat-label">
+                    <div
+                        class="stat-label"
+                        data-i18n="accident_records"
+                    >
                         Accident Records
                     </div>
 
                     <div class="stat-number">
+
                         <?= htmlspecialchars(
                             $totalAccidents
                         ) ?>
+
                     </div>
 
                 </div>
@@ -241,14 +297,19 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                 <div class="stat-card">
 
-                    <div class="stat-label">
+                    <div
+                        class="stat-label"
+                        data-i18n="insurance_records"
+                    >
                         Insurance Records
                     </div>
 
                     <div class="stat-number">
+
                         <?= htmlspecialchars(
                             $totalInsurance
                         ) ?>
+
                     </div>
 
                 </div>
@@ -265,15 +326,14 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                 style="margin-top: 25px;"
             >
 
-                <h2>
+                <h2 data-i18n="search_vehicle_records">
                     Search Vehicle Records
                 </h2>
 
                 <p
-                    style="
-                        margin-top: 8px;
-                        color: #64748b;
-                    "
+                    class="text-muted"
+                    style="margin-top: 8px;"
+                    data-i18n="search_vehicle_description"
                 >
                     Search by license plate, VIN, owner,
                     make, or model.
@@ -297,6 +357,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                         <input
                             type="text"
                             name="q"
+                            data-i18n-placeholder="search_vehicle_placeholder"
                             placeholder="Enter plate, VIN, owner, make or model..."
                             style="
                                 flex: 1;
@@ -308,6 +369,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                         <button
                             type="submit"
                             class="button"
+                            data-i18n="search_vehicles"
                         >
                             Search Vehicles
                         </button>
@@ -328,7 +390,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                 style="margin-top: 25px;"
             >
 
-                <h2>
+                <h2 data-i18n="quick_actions">
                     Quick Actions
                 </h2>
 
@@ -339,6 +401,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="search.php"
                         class="button dashboard-action-button"
+                        data-i18n="search_vehicles"
                     >
                         Search Vehicles
                     </a>
@@ -347,6 +410,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="vehicles/add.php"
                         class="button dashboard-action-button"
+                        data-i18n="add_vehicle"
                     >
                         Add Vehicle
                     </a>
@@ -355,6 +419,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="owners/add.php"
                         class="button dashboard-action-button"
+                        data-i18n="add_owner"
                     >
                         Add Owner
                     </a>
@@ -363,6 +428,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="ownership_history/add.php"
                         class="button dashboard-action-button"
+                        data-i18n="add_ownership_record"
                     >
                         Add Ownership Record
                     </a>
@@ -371,6 +437,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="vehicles/"
                         class="button button-secondary dashboard-action-button"
+                        data-i18n="view_vehicles"
                     >
                         View Vehicles
                     </a>
@@ -379,6 +446,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="owners/"
                         class="button button-secondary dashboard-action-button"
+                        data-i18n="view_owners"
                     >
                         View Owners
                     </a>
@@ -387,6 +455,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                     <a
                         href="ownership_history/"
                         class="button button-secondary dashboard-action-button"
+                        data-i18n="view_ownership_history"
                     >
                         View Ownership History
                     </a>
@@ -397,6 +466,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                         <a
                             href="users/"
                             class="button button-secondary dashboard-action-button"
+                            data-i18n="manage_users"
                         >
                             Manage Users
                         </a>
@@ -418,7 +488,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
                 style="margin-top: 25px;"
             >
 
-                <h2>
+                <h2 data-i18n="system_information">
                     System Information
                 </h2>
 
@@ -438,15 +508,13 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                     <div>
 
-                        <strong>
+                        <strong data-i18n="current_user">
                             Current User
                         </strong>
 
                         <p
-                            style="
-                                margin-top: 5px;
-                                color: #64748b;
-                            "
+                            class="text-muted"
+                            style="margin-top: 5px;"
                         >
 
                             <?= htmlspecialchars(
@@ -464,15 +532,13 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                     <div>
 
-                        <strong>
+                        <strong data-i18n="role">
                             Role
                         </strong>
 
                         <p
-                            style="
-                                margin-top: 5px;
-                                color: #64748b;
-                            "
+                            class="text-muted"
+                            style="margin-top: 5px;"
                         >
 
                             <?= htmlspecialchars(
@@ -486,15 +552,13 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                     <div>
 
-                        <strong>
+                        <strong data-i18n="system">
                             System
                         </strong>
 
                         <p
-                            style="
-                                margin-top: 5px;
-                                color: #64748b;
-                            "
+                            class="text-muted"
+                            style="margin-top: 5px;"
                         >
                             VISRS
                         </p>
@@ -504,15 +568,14 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
                     <div>
 
-                        <strong>
+                        <strong data-i18n="status">
                             Status
                         </strong>
 
                         <p
-                            style="
-                                margin-top: 5px;
-                                color: #166534;
-                            "
+                            class="text-success"
+                            style="margin-top: 5px;"
+                            data-i18n="system_operational"
                         >
                             System Operational
                         </p>
