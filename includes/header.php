@@ -14,16 +14,6 @@
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($pageTitle ?? "VISRS") ?></title>
 
-    <!-- Apply saved theme before CSS loads -->
-    <script>
-        try {
-            if (localStorage.theme === 'dark') {
-                document.documentElement.classList.add('dark');
-            }
-        } catch (e) {
-            // storage unavailable, ignore
-        }
-    </script>
 
     <!-- Global stylesheet -->
     <link rel="stylesheet" href="/css/global.css">
@@ -36,15 +26,6 @@
     </div>
 
     <div class="user-info">
-        <!-- Dark mode toggle -->
-        <button
-            type="button"
-            id="theme-toggle"
-            class="button button-secondary"
-            aria-pressed="false"
-        >
-            🌙 Dark mode
-        </button>
 
         <span>
             <?php

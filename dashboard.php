@@ -61,27 +61,7 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
         href="css/style.css"
     >
 
-    <!--
-        Dark mode: set the saved/device theme before the page paints
-        so there is no flash of the light theme.
-    -->
-    <script>
-        (function () {
-            var saved = null;
 
-            try {
-                saved = localStorage.getItem("theme");
-            } catch (e) {}
-
-            var prefersDark = window.matchMedia(
-                "(prefers-color-scheme: dark)"
-            ).matches;
-
-            if (saved === "dark" || (!saved && prefersDark)) {
-                document.documentElement.classList.add("dark");
-            }
-        })();
-    </script>
 
     <style>
 

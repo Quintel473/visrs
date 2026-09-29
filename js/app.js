@@ -7,33 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     */
     console.log("VISRS JavaScript loaded successfully.");
 
-    /*
-    |--------------------------------------------------------------------------
-    | DARK MODE TOGGLE
-    |--------------------------------------------------------------------------
-    */
-    const themeButton = document.getElementById("theme-toggle");
-    if (themeButton) {
-        const root = document.documentElement;
 
-        function updateThemeLabel() {
-            const isDark = root.classList.contains("dark");
-            themeButton.textContent = isDark ? "☀️ Light mode" : "🌙 Dark mode";
-            themeButton.setAttribute("aria-pressed", isDark ? "true" : "false");
-        }
-
-        themeButton.addEventListener("click", function () {
-            root.classList.toggle("dark");
-            try {
-                localStorage.setItem("theme", root.classList.contains("dark") ? "dark" : "light");
-            } catch (error) {}
-            updateThemeLabel();
-        });
-
-        updateThemeLabel();
-    }
-
-    
     /*
     |--------------------------------------------------------------------------
     | FORM SUBMISSION PROTECTION
