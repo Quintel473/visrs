@@ -61,8 +61,6 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
         href="css/style.css"
     >
 
-
-
     <style>
 
         /*

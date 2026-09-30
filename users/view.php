@@ -1,7 +1,6 @@
 <?php
 
 require_once __DIR__ . "/../includes/auth.php";
-requireRole(["Admin"]);
 
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
@@ -14,16 +13,35 @@ $activePage = "users";
 
 /*
 |--------------------------------------------------------------------------
+| Access Rules
+|--------------------------------------------------------------------------
+| Admins can view any account.
+| All other users can only view their own account (opened from the
+| profile button in the topbar).
+*/
+
+$currentUserID = (int) ($_SESSION["UserID"] ?? 0);
+
+$isAdmin = (($_SESSION["Role"] ?? "") === "Admin");
+
+
+/*
+|--------------------------------------------------------------------------
 | Get User ID
 |--------------------------------------------------------------------------
 */
 
 $userID = isset($_GET["id"])
     ? (int) $_GET["id"]
-    : 0;
+    : $currentUserID;
 
 if ($userID <= 0) {
     header("Location: index.php");
+    exit;
+}
+
+if (!$isAdmin && $userID !== $currentUserID) {
+    header("Location: view.php?id=" . $currentUserID);
     exit;
 }
 
@@ -106,8 +124,6 @@ if ($user["Role"] === "Admin") {
 | Determine Whether This Is the Current User
 |--------------------------------------------------------------------------
 */
-
-$currentUserID = (int) ($_SESSION["UserID"] ?? 0);
 
 $isCurrentUser =
     ((int) $user["UserID"] === $currentUserID);
@@ -257,7 +273,7 @@ $isCurrentUser =
                     <div>
 
                         <h1 class="page-title">
-                            User Details
+                            <?= $isAdmin ? "User Details" : "My Profile" ?>
                         </h1>
 
                         <p style="
@@ -269,12 +285,16 @@ $isCurrentUser =
 
                     </div>
 
-                    <a
-                        href="index.php"
-                        class="button button-secondary"
-                    >
-                        ← Back to Users
-                    </a>
+                    <?php if ($isAdmin): ?>
+
+                        <a
+                            href="index.php"
+                            class="button button-secondary"
+                        >
+                            ← Back to Users
+                        </a>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -417,61 +437,65 @@ $isCurrentUser =
                 </div>
 
 
-                <!-- ACTION BUTTONS -->
+                <!-- ACTION BUTTONS (Admins only) -->
 
-                <div
-                    style="
-                        display:flex;
-                        gap:12px;
-                        margin-top:25px;
-                        flex-wrap:wrap;
-                    "
-                >
+                <?php if ($isAdmin): ?>
 
-                    <!-- EDIT USER -->
-
-                    <a
-                        href="edit.php?id=<?= (int) $user["UserID"] ?>"
-                        class="button"
+                    <div
+                        style="
+                            display:flex;
+                            gap:12px;
+                            margin-top:25px;
+                            flex-wrap:wrap;
+                        "
                     >
-                        Edit User
-                    </a>
 
-
-                    <?php if (!$isCurrentUser): ?>
-
-                        <!--
-                        IMPORTANT:
-                        This link intentionally does NOT use
-                        .confirm-action or JavaScript confirmation.
-
-                        The dedicated delete.php page provides
-                        the VISRS confirmation screen.
-                        -->
+                        <!-- EDIT USER -->
 
                         <a
-                            href="delete.php?id=<?= (int) $user["UserID"] ?>"
+                            href="edit.php?id=<?= (int) $user["UserID"] ?>"
                             class="button"
-                            style="
-                                background:#991b1b;
-                            "
                         >
-                            Delete User
+                            Edit User
                         </a>
 
-                    <?php endif; ?>
+
+                        <?php if (!$isCurrentUser): ?>
+
+                            <!--
+                            IMPORTANT:
+                            This link intentionally does NOT use
+                            .confirm-action or JavaScript confirmation.
+
+                            The dedicated delete.php page provides
+                            the VISRS confirmation screen.
+                            -->
+
+                            <a
+                                href="delete.php?id=<?= (int) $user["UserID"] ?>"
+                                class="button"
+                                style="
+                                    background:#991b1b;
+                                "
+                            >
+                                Delete User
+                            </a>
+
+                        <?php endif; ?>
 
 
-                    <!-- BACK -->
+                        <!-- BACK -->
 
-                    <a
-                        href="index.php"
-                        class="button button-secondary"
-                    >
-                        Back
-                    </a>
+                        <a
+                            href="index.php"
+                            class="button button-secondary"
+                        >
+                            Back
+                        </a>
 
-                </div>
+                    </div>
+
+                <?php endif; ?>
 
             </div>
 
