@@ -1295,6 +1295,20 @@ require_once "../includes/head.php";
                     </a>
 
 
+                    <?php if (hasRole(["Admin", "Police", "Seller"])): ?>
+
+                        <a
+                            href="documents.php?id=<?= (int) $vehicle["VehicleID"] ?>"
+                            class="button button-secondary"
+                        >
+
+                            📁 Documents
+
+                        </a>
+
+                    <?php endif; ?>
+
+
                 </div>
 
             </section>
