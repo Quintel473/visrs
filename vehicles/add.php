@@ -6,8 +6,10 @@ requireRole(["Admin", "Police", "Seller"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
-$pageTitle = "Add Vehicle";
+$basePath = "../";
 $activePage = "vehicles";
+
+$pageTitle = "Add Vehicle";
 
 /*
 |--------------------------------------------------------------------------
@@ -791,385 +793,370 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    /*
+    |--------------------------------------------------------------------------
+    | Add Vehicle Page
+    |--------------------------------------------------------------------------
+    */
 
-<head>
+    .vehicle-form-page {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
 
-    <meta charset="UTF-8">
+    /*
+    |--------------------------------------------------------------------------
+    | Heading
+    |--------------------------------------------------------------------------
+    */
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .vehicle-page-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 25px;
+    }
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+    .vehicle-page-heading h1 {
+        margin: 0 0 6px;
+        font-size: 25px;
+        font-weight: 700;
+        color: #111827;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .vehicle-page-heading p {
+        margin: 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
 
-    <style>
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts
+    |--------------------------------------------------------------------------
+    */
 
-        /*
-        |--------------------------------------------------------------------------
-        | Add Vehicle Page
-        |--------------------------------------------------------------------------
-        */
+    .vehicle-alert {
+        margin-bottom: 20px;
+        padding: 14px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
 
-        .vehicle-form-page {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
+    .vehicle-alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Heading
-        |--------------------------------------------------------------------------
-        */
+    .vehicle-alert-success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Form Card
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-form-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+
+    .vehicle-form-card-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .vehicle-form-card-header h2 {
+        margin: 0 0 5px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .vehicle-form-card-header p {
+        margin: 0;
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .vehicle-form-card-body {
+        padding: 25px;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Form Sections
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-form-section {
+        margin-bottom: 28px;
+    }
+
+    .vehicle-form-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .vehicle-form-section-title {
+        margin: 0 0 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Form Grid
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
+
+    .vehicle-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .vehicle-form-group label {
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .vehicle-required {
+        color: #dc2626;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inputs
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-form-group input,
+    .vehicle-form-group select {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 42px;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 7px;
+        background: #ffffff;
+        color: #111827;
+        font-size: 14px;
+        outline: none;
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .vehicle-form-group input::placeholder {
+        color: #9ca3af;
+    }
+
+    .vehicle-form-group input:focus,
+    .vehicle-form-group select:focus {
+        border-color: #111827;
+        box-shadow:
+            0 0 0 3px rgba(17, 24, 39, 0.08);
+    }
+
+    .vehicle-form-help {
+        margin-top: 5px;
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.45;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Maintenance Information
+    |--------------------------------------------------------------------------
+    */
+
+    .maintenance-info-note {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+        color: #4b5563;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    .maintenance-info-note strong {
+        color: #111827;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seller Notice
+    |--------------------------------------------------------------------------
+    */
+
+    .seller-assignment-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 5px;
+        padding: 14px 16px;
+        border: 1px solid #dbeafe;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: #1e40af;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .seller-assignment-icon {
+        font-size: 17px;
+        line-height: 1;
+        margin-top: 1px;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Owner Empty State
+    |--------------------------------------------------------------------------
+    */
+
+    .no-owner-message {
+        padding: 14px 16px;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        background: #fef2f2;
+        color: #991b1b;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Buttons
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding-top: 22px;
+        margin-top: 25px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .vehicle-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 9px 16px;
+        border-radius: 7px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-sizing: border-box;
+        transition:
+            background 0.15s ease,
+            border-color 0.15s ease;
+    }
+
+    .vehicle-button-primary {
+        border: 1px solid #111827;
+        background: #111827;
+        color: #ffffff;
+    }
+
+    .vehicle-button-primary:hover {
+        background: #1f2937;
+        border-color: #1f2937;
+    }
+
+    .vehicle-button-secondary {
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #374151;
+    }
+
+    .vehicle-button-secondary:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    .vehicle-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width: 800px) {
 
         .vehicle-page-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .vehicle-page-heading h1 {
-            margin: 0 0 6px;
-            font-size: 25px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .vehicle-page-heading p {
-            margin: 0;
-            font-size: 14px;
-            color: #6b7280;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Alerts
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-alert {
-            margin-bottom: 20px;
-            padding: 14px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .vehicle-alert-error {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #991b1b;
-        }
-
-        .vehicle-alert-success {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #166534;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Form Card
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-form-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
-            overflow: hidden;
-        }
-
-        .vehicle-form-card-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .vehicle-form-card-header h2 {
-            margin: 0 0 5px;
-            font-size: 18px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .vehicle-form-card-header p {
-            margin: 0;
-            font-size: 13px;
-            color: #6b7280;
-        }
-
-        .vehicle-form-card-body {
-            padding: 25px;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Form Sections
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-form-section {
-            margin-bottom: 28px;
-        }
-
-        .vehicle-form-section:last-child {
-            margin-bottom: 0;
-        }
-
-        .vehicle-form-section-title {
-            margin: 0 0 16px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Form Grid
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 20px;
-        }
-
-        .vehicle-form-group {
-            display: flex;
             flex-direction: column;
         }
 
-        .vehicle-form-group label {
-            margin-bottom: 7px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
+        .vehicle-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 600px) {
+
+        .vehicle-form-card-body {
+            padding: 18px;
         }
 
-        .vehicle-required {
-            color: #dc2626;
+        .vehicle-form-card-header {
+            padding: 18px;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Inputs
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-form-group input,
-        .vehicle-form-group select {
-            width: 100%;
-            box-sizing: border-box;
-            min-height: 42px;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 7px;
-            background: #ffffff;
-            color: #111827;
-            font-size: 14px;
-            outline: none;
-            transition:
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-        }
-
-        .vehicle-form-group input::placeholder {
-            color: #9ca3af;
-        }
-
-        .vehicle-form-group input:focus,
-        .vehicle-form-group select:focus {
-            border-color: #111827;
-            box-shadow:
-                0 0 0 3px rgba(17, 24, 39, 0.08);
-        }
-
-        .vehicle-form-help {
-            margin-top: 5px;
-            font-size: 12px;
-            color: #6b7280;
-            line-height: 1.45;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Maintenance Information
-        |--------------------------------------------------------------------------
-        */
-
-        .maintenance-info-note {
-            margin-top: 18px;
-            padding: 14px 16px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: #f9fafb;
-            color: #4b5563;
-            font-size: 12px;
-            line-height: 1.6;
-        }
-
-        .maintenance-info-note strong {
-            color: #111827;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Seller Notice
-        |--------------------------------------------------------------------------
-        */
-
-        .seller-assignment-notice {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin-top: 5px;
-            padding: 14px 16px;
-            border: 1px solid #dbeafe;
-            border-radius: 8px;
-            background: #eff6ff;
-            color: #1e40af;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .seller-assignment-icon {
-            font-size: 17px;
-            line-height: 1;
-            margin-top: 1px;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Owner Empty State
-        |--------------------------------------------------------------------------
-        */
-
-        .no-owner-message {
-            padding: 14px 16px;
-            border: 1px solid #fecaca;
-            border-radius: 8px;
-            background: #fef2f2;
-            color: #991b1b;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Buttons
-        |--------------------------------------------------------------------------
-        */
 
         .vehicle-form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            padding-top: 22px;
-            margin-top: 25px;
-            border-top: 1px solid #e5e7eb;
+            flex-direction: column-reverse;
         }
 
         .vehicle-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 40px;
-            padding: 9px 16px;
-            border-radius: 7px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            box-sizing: border-box;
-            transition:
-                background 0.15s ease,
-                border-color 0.15s ease;
+            width: 100%;
         }
+    }
 
-        .vehicle-button-primary {
-            border: 1px solid #111827;
-            background: #111827;
-            color: #ffffff;
-        }
-
-        .vehicle-button-primary:hover {
-            background: #1f2937;
-            border-color: #1f2937;
-        }
-
-        .vehicle-button-secondary {
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            color: #374151;
-        }
-
-        .vehicle-button-secondary:hover {
-            background: #f9fafb;
-            border-color: #9ca3af;
-        }
-
-        .vehicle-button:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Responsive
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width: 800px) {
-
-            .vehicle-page-heading {
-                flex-direction: column;
-            }
-
-            .vehicle-form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 600px) {
-
-            .vehicle-form-card-body {
-                padding: 18px;
-            }
-
-            .vehicle-form-card-header {
-                padding: 18px;
-            }
-
-            .vehicle-form-actions {
-                flex-direction: column-reverse;
-            }
-
-            .vehicle-button {
-                width: 100%;
-            }
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 
@@ -1904,8 +1891,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 </div>
 
+
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     footer.php. footer.php already closes those tags. -->
 <?php include __DIR__ . "/../includes/footer.php"; ?>
-
-</body>
-
-</html>

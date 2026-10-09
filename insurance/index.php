@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 
+$basePath = "../";
 $activePage = "insurance";
 
 $error = "";
@@ -74,30 +75,15 @@ $pageTitle = "Insurance";
 $pageSubtitle =
     "Manage vehicle insurance records and policies.";
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -622,13 +608,12 @@ $pageSubtitle =
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> (it was inside the content
+     wrapper) and removed the duplicate </body></html> that followed.
+     footer.php already closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

@@ -63,30 +63,11 @@ if (!$accident) {
 
     http_response_code(404);
 
+    $pageTitle = "Accident Not Found";
+
+    require_once "../includes/head.php";
+
     ?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>
-            Accident Not Found - VISRS
-        </title>
-
-        <link
-            rel="stylesheet"
-            href="../css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -213,156 +194,142 @@ $damageClass = match (
 
 };
 
+
+/*
+ * Global <head>
+ */
+
+$pageTitle = "Accident Details";
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<style>
 
-<head>
+    .detail-section {
+        margin-top: 28px;
+    }
 
-    <meta charset="UTF-8">
+    .detail-section h3 {
+        margin-bottom: 16px;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
 
-    <title>
-        Accident Details - VISRS
-    </title>
+    .detail-box {
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+    }
 
-    <link
-        rel="stylesheet"
-        href="../css/style.css"
-    >
+    .detail-label {
+        display: block;
+        margin-bottom: 6px;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 500;
+    }
 
-    <style>
+    .detail-value {
+        color: #1f2937;
+        font-size: 14px;
+        font-weight: 600;
+    }
 
-        .detail-section {
-            margin-top: 28px;
-        }
+    .description-box {
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #374151;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
 
-        .detail-section h3 {
-            margin-bottom: 16px;
-        }
+    .damage-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .damage-minor {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .damage-moderate {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .damage-major {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .damage-severe {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .vehicle-summary {
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+
+    .vehicle-summary h3 {
+        margin-top: 0;
+        margin-bottom: 12px;
+    }
+
+    .vehicle-summary p {
+        margin: 7px 0;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+
+    .delete-button {
+        background: #991b1b;
+    }
+
+    .delete-button:hover {
+        background: #7f1d1d;
+    }
+
+    @media (max-width: 700px) {
 
         .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-
-        .detail-box {
-            padding: 16px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: #ffffff;
-        }
-
-        .detail-label {
-            display: block;
-            margin-bottom: 6px;
-            color: #6b7280;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .detail-value {
-            color: #1f2937;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .description-box {
-            padding: 18px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: #f8fafc;
-            color: #374151;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .damage-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .damage-minor {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .damage-moderate {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .damage-major {
-            background: #ffedd5;
-            color: #9a3412;
-        }
-
-        .damage-severe {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .vehicle-summary {
-            padding: 18px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-
-        .vehicle-summary h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-        }
-
-        .vehicle-summary p {
-            margin: 7px 0;
+            grid-template-columns: 1fr;
         }
 
         .page-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-            flex-wrap: wrap;
+            flex-direction: column;
         }
 
-        .delete-button {
-            background: #991b1b;
+        .page-actions .button {
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
         }
 
-        .delete-button:hover {
-            background: #7f1d1d;
-        }
+    }
 
-        @media (max-width: 700px) {
-
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .page-actions {
-                flex-direction: column;
-            }
-
-            .page-actions .button {
-                width: 100%;
-                text-align: center;
-                box-sizing: border-box;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 

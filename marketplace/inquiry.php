@@ -6,6 +6,7 @@ requireRole(["Admin", "Seller"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $pageTitle = "View Inquiry";
 $activePage = "marketplace";
 
@@ -25,25 +26,16 @@ if (!$interestID || $interestID <= 0) {
 
     http_response_code(400);
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Invalid Inquiry - VISRS";
+
+    require_once "../includes/head.php";
+
     ?>
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>Invalid Inquiry - VISRS</title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-    </head>
 
     <body>
 
@@ -261,28 +253,16 @@ if (!$inquiry) {
 
     http_response_code(404);
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Inquiry Not Found - VISRS";
+
+    require_once "../includes/head.php";
+
     ?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>Inquiry Not Found - VISRS</title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -587,603 +567,590 @@ $message =
         $inquiry["Message"] ?? ""
     );
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "Inquiry #" . (int) $inquiry["InterestID"] . " - VISRS";
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    /*
+    |--------------------------------------------------------------------------
+    | Page Header
+    |--------------------------------------------------------------------------
+    */
 
-<head>
+    .inquiry-page-header {
 
-    <meta charset="UTF-8">
+        display:flex;
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        justify-content:space-between;
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+        align-items:flex-start;
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+        gap:20px;
 
-    <style>
+        margin-bottom:25px;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Page Header
-        |--------------------------------------------------------------------------
-        */
+        flex-wrap:wrap;
+    }
 
-        .inquiry-page-header {
 
-            display:flex;
+    .inquiry-page-header h1 {
 
-            justify-content:space-between;
+        margin:0 0 6px;
+    }
 
-            align-items:flex-start;
 
-            gap:20px;
+    .inquiry-page-header p {
 
-            margin-bottom:25px;
+        margin:0;
 
-            flex-wrap:wrap;
+        color:#64748b;
+    }
+
+
+    .inquiry-actions {
+
+        display:flex;
+
+        gap:10px;
+
+        flex-wrap:wrap;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Main Grid
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            minmax(0, 1.15fr)
+            minmax(300px, 0.85fr);
+
+        gap:20px;
+    }
+
+
+    .inquiry-section {
+
+        margin-bottom:20px;
+    }
+
+
+    .inquiry-section:last-child {
+
+        margin-bottom:0;
+    }
+
+
+    .inquiry-section h2 {
+
+        margin:0 0 16px;
+
+        font-size:18px;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Detail Grid
+    |--------------------------------------------------------------------------
+    */
+
+    .detail-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap:14px;
+    }
+
+
+    .detail-item {
+
+        padding:13px 14px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:8px;
+
+        background:#f8fafc;
+    }
+
+
+    .detail-label {
+
+        display:block;
+
+        margin-bottom:5px;
+
+        color:#64748b;
+
+        font-size:12px;
+
+        font-weight:600;
+    }
+
+
+    .detail-value {
+
+        color:#111827;
+
+        font-size:14px;
+
+        font-weight:600;
+
+        word-break:break-word;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Message
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-message {
+
+        padding:18px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        background:#f8fafc;
+
+        color:#374151;
+
+        line-height:1.7;
+
+        white-space:pre-wrap;
+
+        word-break:break-word;
+
+        min-height:60px;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Badges
+    |--------------------------------------------------------------------------
+    */
+
+    .status-badge {
+
+        display:inline-block;
+
+        padding:6px 11px;
+
+        border-radius:999px;
+
+        font-size:12px;
+
+        font-weight:700;
+
+        line-height:1;
+    }
+
+
+    .status-pending {
+
+        background:#fef3c7;
+
+        color:#92400e;
+    }
+
+
+    .status-contacted {
+
+        background:#dbeafe;
+
+        color:#1e40af;
+    }
+
+
+    .status-accepted {
+
+        background:#dcfce7;
+
+        color:#166534;
+    }
+
+
+    .status-declined {
+
+        background:#fee2e2;
+
+        color:#991b1b;
+    }
+
+
+    .status-closed {
+
+        background:#e5e7eb;
+
+        color:#374151;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Management
+    |--------------------------------------------------------------------------
+    */
+
+    .status-management {
+
+        padding:18px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        background:#f8fafc;
+    }
+
+
+    .current-status-row {
+
+        display:flex;
+
+        align-items:center;
+
+        justify-content:space-between;
+
+        gap:15px;
+
+        flex-wrap:wrap;
+
+        margin-bottom:18px;
+    }
+
+
+    .current-status-label {
+
+        display:block;
+
+        margin-bottom:7px;
+
+        color:#64748b;
+
+        font-size:13px;
+
+        font-weight:600;
+    }
+
+
+    .status-help-text {
+
+        margin:0 0 18px;
+
+        color:#64748b;
+
+        font-size:13px;
+
+        line-height:1.6;
+    }
+
+
+    .status-form {
+
+        display:flex;
+
+        align-items:flex-end;
+
+        gap:12px;
+
+        flex-wrap:wrap;
+    }
+
+
+    .status-form-group {
+
+        flex:1;
+
+        min-width:220px;
+    }
+
+
+    .status-form-group label {
+
+        display:block;
+
+        margin-bottom:7px;
+
+        color:#374151;
+
+        font-size:13px;
+
+        font-weight:600;
+    }
+
+
+    .status-form-group select {
+
+        width:100%;
+
+        box-sizing:border-box;
+
+        padding:11px 12px;
+
+        border:1px solid #d1d5db;
+
+        border-radius:7px;
+
+        background:#ffffff;
+
+        color:#111827;
+
+        font-size:14px;
+
+        cursor:pointer;
+    }
+
+
+    .status-form-group select:focus {
+
+        outline:none;
+
+        border-color:#2563eb;
+
+        box-shadow:
+            0 0 0 3px
+            rgba(37,99,235,0.10);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-alert {
+
+        padding:13px 15px;
+
+        border-radius:8px;
+
+        margin-bottom:20px;
+
+        font-size:14px;
+
+        font-weight:600;
+    }
+
+
+    .inquiry-alert-success {
+
+        background:#dcfce7;
+
+        border:1px solid #bbf7d0;
+
+        color:#166534;
+    }
+
+
+    .inquiry-alert-error {
+
+        background:#fee2e2;
+
+        border:1px solid #fecaca;
+
+        color:#991b1b;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vehicle Summary
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-summary {
+
+        padding:18px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        background:#ffffff;
+    }
+
+
+    .vehicle-summary-title {
+
+        margin:0 0 5px;
+
+        font-size:20px;
+
+        font-weight:800;
+
+        color:#111827;
+    }
+
+
+    .vehicle-summary-subtitle {
+
+        margin:0 0 16px;
+
+        color:#64748b;
+
+        font-size:13px;
+    }
+
+
+    .price-display {
+
+        margin-bottom:18px;
+
+        font-size:25px;
+
+        font-weight:800;
+
+        color:#111827;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Timeline
+    |--------------------------------------------------------------------------
+    */
+
+    .timeline-item {
+
+        display:flex;
+
+        justify-content:space-between;
+
+        gap:20px;
+
+        padding:11px 0;
+
+        border-bottom:1px solid #f1f5f9;
+    }
+
+
+    .timeline-item:last-child {
+
+        border-bottom:0;
+    }
+
+
+    .timeline-label {
+
+        color:#64748b;
+
+        font-size:13px;
+    }
+
+
+    .timeline-value {
+
+        color:#374151;
+
+        font-size:13px;
+
+        font-weight:600;
+
+        text-align:right;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width:900px) {
+
+        .inquiry-grid {
+
+            grid-template-columns:1fr;
         }
 
-
-        .inquiry-page-header h1 {
-
-            margin:0 0 6px;
-        }
+    }
 
 
-        .inquiry-page-header p {
+    @media (max-width:600px) {
 
-            margin:0;
+        .detail-grid {
 
-            color:#64748b;
+            grid-template-columns:1fr;
         }
 
 
         .inquiry-actions {
 
-            display:flex;
-
-            gap:10px;
-
-            flex-wrap:wrap;
+            width:100%;
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Main Grid
-        |--------------------------------------------------------------------------
-        */
+        .inquiry-actions .button {
 
-        .inquiry-grid {
+            flex:1;
 
-            display:grid;
-
-            grid-template-columns:
-                minmax(0, 1.15fr)
-                minmax(300px, 0.85fr);
-
-            gap:20px;
-        }
-
-
-        .inquiry-section {
-
-            margin-bottom:20px;
-        }
-
-
-        .inquiry-section:last-child {
-
-            margin-bottom:0;
-        }
-
-
-        .inquiry-section h2 {
-
-            margin:0 0 16px;
-
-            font-size:18px;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Detail Grid
-        |--------------------------------------------------------------------------
-        */
-
-        .detail-grid {
-
-            display:grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            gap:14px;
-        }
-
-
-        .detail-item {
-
-            padding:13px 14px;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:8px;
-
-            background:#f8fafc;
-        }
-
-
-        .detail-label {
-
-            display:block;
-
-            margin-bottom:5px;
-
-            color:#64748b;
-
-            font-size:12px;
-
-            font-weight:600;
-        }
-
-
-        .detail-value {
-
-            color:#111827;
-
-            font-size:14px;
-
-            font-weight:600;
-
-            word-break:break-word;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Message
-        |--------------------------------------------------------------------------
-        */
-
-        .inquiry-message {
-
-            padding:18px;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
-            background:#f8fafc;
-
-            color:#374151;
-
-            line-height:1.7;
-
-            white-space:pre-wrap;
-
-            word-break:break-word;
-
-            min-height:60px;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status Badges
-        |--------------------------------------------------------------------------
-        */
-
-        .status-badge {
-
-            display:inline-block;
-
-            padding:6px 11px;
-
-            border-radius:999px;
-
-            font-size:12px;
-
-            font-weight:700;
-
-            line-height:1;
-        }
-
-
-        .status-pending {
-
-            background:#fef3c7;
-
-            color:#92400e;
-        }
-
-
-        .status-contacted {
-
-            background:#dbeafe;
-
-            color:#1e40af;
-        }
-
-
-        .status-accepted {
-
-            background:#dcfce7;
-
-            color:#166534;
-        }
-
-
-        .status-declined {
-
-            background:#fee2e2;
-
-            color:#991b1b;
-        }
-
-
-        .status-closed {
-
-            background:#e5e7eb;
-
-            color:#374151;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status Management
-        |--------------------------------------------------------------------------
-        */
-
-        .status-management {
-
-            padding:18px;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
-            background:#f8fafc;
-        }
-
-
-        .current-status-row {
-
-            display:flex;
-
-            align-items:center;
-
-            justify-content:space-between;
-
-            gap:15px;
-
-            flex-wrap:wrap;
-
-            margin-bottom:18px;
-        }
-
-
-        .current-status-label {
-
-            display:block;
-
-            margin-bottom:7px;
-
-            color:#64748b;
-
-            font-size:13px;
-
-            font-weight:600;
-        }
-
-
-        .status-help-text {
-
-            margin:0 0 18px;
-
-            color:#64748b;
-
-            font-size:13px;
-
-            line-height:1.6;
+            text-align:center;
         }
 
 
         .status-form {
 
-            display:flex;
-
-            align-items:flex-end;
-
-            gap:12px;
-
-            flex-wrap:wrap;
+            display:block;
         }
 
 
         .status-form-group {
 
-            flex:1;
-
-            min-width:220px;
-        }
-
-
-        .status-form-group label {
-
-            display:block;
-
-            margin-bottom:7px;
-
-            color:#374151;
-
-            font-size:13px;
-
-            font-weight:600;
-        }
-
-
-        .status-form-group select {
-
             width:100%;
 
-            box-sizing:border-box;
-
-            padding:11px 12px;
-
-            border:1px solid #d1d5db;
-
-            border-radius:7px;
-
-            background:#ffffff;
-
-            color:#111827;
-
-            font-size:14px;
-
-            cursor:pointer;
+            margin-bottom:12px;
         }
 
 
-        .status-form-group select:focus {
+        .status-form .button {
 
-            outline:none;
-
-            border-color:#2563eb;
-
-            box-shadow:
-                0 0 0 3px
-                rgba(37,99,235,0.10);
+            width:100%;
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Alerts
-        |--------------------------------------------------------------------------
-        */
-
-        .inquiry-alert {
-
-            padding:13px 15px;
-
-            border-radius:8px;
-
-            margin-bottom:20px;
-
-            font-size:14px;
-
-            font-weight:600;
-        }
-
-
-        .inquiry-alert-success {
-
-            background:#dcfce7;
-
-            border:1px solid #bbf7d0;
-
-            color:#166534;
-        }
-
-
-        .inquiry-alert-error {
-
-            background:#fee2e2;
-
-            border:1px solid #fecaca;
-
-            color:#991b1b;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vehicle Summary
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-summary {
-
-            padding:18px;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
-            background:#ffffff;
-        }
-
-
-        .vehicle-summary-title {
-
-            margin:0 0 5px;
-
-            font-size:20px;
-
-            font-weight:800;
-
-            color:#111827;
-        }
-
-
-        .vehicle-summary-subtitle {
-
-            margin:0 0 16px;
-
-            color:#64748b;
-
-            font-size:13px;
-        }
-
-
-        .price-display {
-
-            margin-bottom:18px;
-
-            font-size:25px;
-
-            font-weight:800;
-
-            color:#111827;
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Timeline
-        |--------------------------------------------------------------------------
-        */
 
         .timeline-item {
 
-            display:flex;
-
-            justify-content:space-between;
-
-            gap:20px;
-
-            padding:11px 0;
-
-            border-bottom:1px solid #f1f5f9;
-        }
-
-
-        .timeline-item:last-child {
-
-            border-bottom:0;
-        }
-
-
-        .timeline-label {
-
-            color:#64748b;
-
-            font-size:13px;
+            display:block;
         }
 
 
         .timeline-value {
 
-            color:#374151;
+            margin-top:4px;
 
-            font-size:13px;
-
-            font-weight:600;
-
-            text-align:right;
+            text-align:left;
         }
 
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Responsive
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width:900px) {
-
-            .inquiry-grid {
-
-                grid-template-columns:1fr;
-            }
-
-        }
-
-
-        @media (max-width:600px) {
-
-            .detail-grid {
-
-                grid-template-columns:1fr;
-            }
-
-
-            .inquiry-actions {
-
-                width:100%;
-            }
-
-
-            .inquiry-actions .button {
-
-                flex:1;
-
-                text-align:center;
-            }
-
-
-            .status-form {
-
-                display:block;
-            }
-
-
-            .status-form-group {
-
-                width:100%;
-
-                margin-bottom:12px;
-            }
-
-
-            .status-form .button {
-
-                width:100%;
-            }
-
-
-            .timeline-item {
-
-                display:block;
-            }
-
-
-            .timeline-value {
-
-                margin-top:4px;
-
-                text-align:left;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>
@@ -1847,10 +1814,8 @@ $message =
 </div>
 
 
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     footer.php. footer.php already closes those tags. -->
 <?php
 require_once __DIR__ . "/../includes/footer.php";
 ?>
-
-</body>
-
-</html>

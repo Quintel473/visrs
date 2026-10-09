@@ -4,10 +4,11 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
+$activePage = "vehicles";
+
 $pageTitle = "Vehicles";
 $pageSubtitle = "View complete vehicle information";
-
-$activePage = "vehicles";
 
 
 /*
@@ -83,30 +84,16 @@ if (!$vehicle) {
 
     http_response_code(404);
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Vehicle Not Found";
+
+    require_once "../includes/head.php";
+
     ?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>
-            Vehicle Not Found - VISRS
-        </title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -301,154 +288,141 @@ if ($mileageUntilOilChange !== null) {
 
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "VISRS - " . $vehicle["PlateNumber"];
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /*
+    |--------------------------------------------------------------------------
+    | Maintenance Section
+    |--------------------------------------------------------------------------
+    */
 
-    <meta charset="UTF-8">
+    .maintenance-section {
+        margin-top:20px;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .maintenance-grid {
+        display:grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        gap:16px;
+        margin-top:20px;
+    }
 
-    <title>
-        VISRS -
-        <?= htmlspecialchars($vehicle["PlateNumber"]) ?>
-    </title>
+    .maintenance-card {
+        padding:18px;
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        background:#ffffff;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .maintenance-card h3 {
+        margin:0 0 8px;
+        font-size:13px;
+        color:#6b7280;
+        font-weight:600;
+    }
 
-    <style>
+    .maintenance-card-value {
+        font-size:20px;
+        font-weight:700;
+        color:#111827;
+        word-break:break-word;
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Maintenance Section
-        |--------------------------------------------------------------------------
-        */
+    .maintenance-card-help {
+        margin-top:6px;
+        font-size:12px;
+        color:#6b7280;
+        line-height:1.4;
+    }
 
-        .maintenance-section {
-            margin-top:20px;
-        }
+    .maintenance-status {
+        margin-top:20px;
+        padding:14px 16px;
+        border-radius:8px;
+        background:#f9fafb;
+        border:1px solid #e5e7eb;
+    }
+
+    .maintenance-status-title {
+        margin:0 0 5px;
+        font-size:13px;
+        color:#6b7280;
+    }
+
+    .maintenance-status-value {
+        font-size:16px;
+        font-weight:700;
+        color:#111827;
+    }
+
+    .maintenance-status-due {
+        background:#fef2f2;
+        border-color:#fecaca;
+    }
+
+    .maintenance-status-due
+    .maintenance-status-value {
+        color:#991b1b;
+    }
+
+    .maintenance-status-warning {
+        background:#fffbeb;
+        border-color:#fde68a;
+    }
+
+    .maintenance-status-warning
+    .maintenance-status-value {
+        color:#92400e;
+    }
+
+    .maintenance-status-ok {
+        background:#f0fdf4;
+        border-color:#bbf7d0;
+    }
+
+    .maintenance-status-ok
+    .maintenance-status-value {
+        color:#166534;
+    }
+
+    .maintenance-info-note {
+        margin-top:18px;
+        padding:14px 16px;
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        background:#f9fafb;
+        color:#4b5563;
+        font-size:12px;
+        line-height:1.6;
+    }
+
+    .maintenance-info-note strong {
+        color:#111827;
+    }
+
+    @media (max-width:700px) {
 
         .maintenance-grid {
-            display:grid;
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-            gap:16px;
-            margin-top:20px;
+            grid-template-columns:1fr;
         }
 
-        .maintenance-card {
-            padding:18px;
-            border:1px solid #e5e7eb;
-            border-radius:8px;
-            background:#ffffff;
-        }
+    }
 
-        .maintenance-card h3 {
-            margin:0 0 8px;
-            font-size:13px;
-            color:#6b7280;
-            font-weight:600;
-        }
-
-        .maintenance-card-value {
-            font-size:20px;
-            font-weight:700;
-            color:#111827;
-            word-break:break-word;
-        }
-
-        .maintenance-card-help {
-            margin-top:6px;
-            font-size:12px;
-            color:#6b7280;
-            line-height:1.4;
-        }
-
-        .maintenance-status {
-            margin-top:20px;
-            padding:14px 16px;
-            border-radius:8px;
-            background:#f9fafb;
-            border:1px solid #e5e7eb;
-        }
-
-        .maintenance-status-title {
-            margin:0 0 5px;
-            font-size:13px;
-            color:#6b7280;
-        }
-
-        .maintenance-status-value {
-            font-size:16px;
-            font-weight:700;
-            color:#111827;
-        }
-
-        .maintenance-status-due {
-            background:#fef2f2;
-            border-color:#fecaca;
-        }
-
-        .maintenance-status-due
-        .maintenance-status-value {
-            color:#991b1b;
-        }
-
-        .maintenance-status-warning {
-            background:#fffbeb;
-            border-color:#fde68a;
-        }
-
-        .maintenance-status-warning
-        .maintenance-status-value {
-            color:#92400e;
-        }
-
-        .maintenance-status-ok {
-            background:#f0fdf4;
-            border-color:#bbf7d0;
-        }
-
-        .maintenance-status-ok
-        .maintenance-status-value {
-            color:#166534;
-        }
-
-        .maintenance-info-note {
-            margin-top:18px;
-            padding:14px 16px;
-            border:1px solid #e5e7eb;
-            border-radius:8px;
-            background:#f9fafb;
-            color:#4b5563;
-            font-size:12px;
-            line-height:1.6;
-        }
-
-        .maintenance-info-note strong {
-            color:#111827;
-        }
-
-        @media (max-width:700px) {
-
-            .maintenance-grid {
-                grid-template-columns:1fr;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>
@@ -1370,8 +1344,6 @@ if ($mileageUntilOilChange !== null) {
 </div>
 
 
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     footer.php. footer.php already closes those tags. -->
 <?php include __DIR__ . "/../includes/footer.php"; ?>
-
-</body>
-
-</html>

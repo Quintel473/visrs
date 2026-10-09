@@ -6,6 +6,7 @@ require_once "../includes/functions.php";
 
 requireRole(['Admin', 'Seller', 'User']);
 
+$basePath = "../";
 $pageTitle = "Vehicle Chat";
 $activePage = "inquiries";
 
@@ -95,24 +96,37 @@ $isSeller = ((int) $inquiry['SellerID'] === (int) $currentUserId);
 if (!$isAdmin && !$isBuyer && !$isSeller) {
     http_response_code(403);
 
-    die("
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>VISRS Access Denied</title>
-            <link rel='stylesheet' href='/visrs/css/style.css'>
-        </head>
-        <body>
-            <div style='max-width:600px;margin:100px auto;padding:30px;text-align:center;'>
-                <h1>Access Denied</h1>
-                <p>You are not authorized to view this conversation.</p>
-                <a href='/visrs/marketplace/inquiries.php' class='button'>
-                    Back to Inquiries
-                </a>
-            </div>
-        </body>
-        </html>
-    ");
+    /*
+     * FIX: Use head.php instead of hardcoded <head> block
+     * (was previously output via die() with absolute CSS path).
+     */
+
+    $pageTitle = "VISRS Access Denied";
+
+    require_once "../includes/head.php";
+
+    ?>
+
+    <body>
+
+        <div style='max-width:600px;margin:100px auto;padding:30px;text-align:center;'>
+
+            <h1>Access Denied</h1>
+
+            <p>You are not authorized to view this conversation.</p>
+
+            <a href='/visrs/marketplace/inquiries.php' class='button'>
+                Back to Inquiries
+            </a>
+
+        </div>
+
+    </body>
+    </html>
+
+    <?php
+
+    exit;
 }
 
 /*
@@ -276,445 +290,435 @@ $messageStmt->execute([$interestID]);
 
 $messages = $messageStmt->fetchAll(PDO::FETCH_ASSOC);
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "Vehicle Chat - VISRS";
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /*
+    |--------------------------------------------------------------------------
+    | Marketplace / Inquiry Style
+    |--------------------------------------------------------------------------
+    */
 
-    <meta charset="UTF-8">
+    .chat-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .page-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-    <title><?= e($pageTitle) ?> - VISRS</title>
+    .page-heading h1 {
+        margin: 0;
+        font-size: 25px;
+        color: #111827;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .page-heading p {
+        margin: 6px 0 0;
+        font-size: 14px;
+        color: #64748b;
+    }
 
-    <style>
+    .page-heading-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Marketplace / Inquiry Style
-        |--------------------------------------------------------------------------
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | Inquiry-style cards
+    |--------------------------------------------------------------------------
+    */
 
-        .chat-container {
-            max-width: 1200px;
-            margin: 0 auto;
+    .inquiry-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        box-shadow: 0 2px 7px rgba(0,0,0,.04);
+        margin-bottom: 20px;
+    }
+
+    .inquiry-top {
+        padding: 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .vehicle-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .vehicle-meta {
+        margin-top: 5px;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status badge
+    |--------------------------------------------------------------------------
+    */
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-contacted {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-accepted {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-declined {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-closed {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inquiry information grid
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        padding: 20px;
+    }
+
+    .inquiry-grid-item label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #94a3b8;
+    }
+
+    .inquiry-grid-item div {
+        font-size: 13px;
+        color: #334155;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Original inquiry
+    |--------------------------------------------------------------------------
+    */
+
+    .buyer-message {
+        margin: 0 20px 20px;
+        padding: 15px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+
+    .buyer-message-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #94a3b8;
+        margin-bottom: 7px;
+    }
+
+    .buyer-message-text {
+        font-size: 13px;
+        color: #334155;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Conversation section
+    |--------------------------------------------------------------------------
+    */
+
+    .conversation-title {
+        padding: 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .conversation-title h2 {
+        margin: 0;
+        font-size: 18px;
+        color: #111827;
+    }
+
+    .conversation-title p {
+        margin: 5px 0 0;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Messages
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    | No chat bubbles.
+    | No dark background.
+    | No avatar.
+    | Messages use the same card language as inquiries.php.
+    |
+    */
+
+    .messages-list {
+        padding: 0 20px;
+    }
+
+    .message-row {
+        padding: 18px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .message-row:last-child {
+        border-bottom: none;
+    }
+
+    .message-row.mine {
+        background: #f8fafc;
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 8px;
+    }
+
+    .message-sender {
+        font-size: 13px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .message-role {
+        display: inline-block;
+        margin-left: 7px;
+        font-size: 10px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .message-date {
+        font-size: 11px;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+
+    .message-body {
+        font-size: 13px;
+        color: #334155;
+        line-height: 1.65;
+        white-space: pre-wrap;
+    }
+
+    .empty-messages {
+        padding: 40px 20px;
+        text-align: center;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Composer
+    |--------------------------------------------------------------------------
+    */
+
+    .composer-card {
+        padding: 20px;
+    }
+
+    .composer-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .composer-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        resize: vertical;
+        font-family: inherit;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .composer-textarea:focus {
+        outline: none;
+        border-color: #111827;
+        box-shadow: 0 0 0 2px rgba(17,24,39,.08);
+    }
+
+    .composer-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        margin-top: 10px;
+    }
+
+    .character-count {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .send-button {
+        border: none;
+        background: #111827;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .send-button:hover {
+        background: #1f2937;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Footer actions
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 13px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #374151;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .action-button:hover {
+        background: #f9fafb;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width: 800px) {
+
+        .inquiry-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
 
         .page-heading {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
-            margin-bottom: 24px;
+            flex-direction: column;
         }
 
-        .page-heading h1 {
-            margin: 0;
-            font-size: 25px;
-            color: #111827;
-        }
+    }
 
-        .page-heading p {
-            margin: 6px 0 0;
-            font-size: 14px;
-            color: #64748b;
-        }
-
-        .page-heading-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Inquiry-style cards
-        |--------------------------------------------------------------------------
-        */
-
-        .inquiry-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            box-shadow: 0 2px 7px rgba(0,0,0,.04);
-            margin-bottom: 20px;
-        }
-
-        .inquiry-top {
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .vehicle-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .vehicle-meta {
-            margin-top: 5px;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status badge
-        |--------------------------------------------------------------------------
-        */
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 5px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-contacted {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .status-accepted {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-declined {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-closed {
-            background: #e5e7eb;
-            color: #374151;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Inquiry information grid
-        |--------------------------------------------------------------------------
-        */
+    @media (max-width: 600px) {
 
         .inquiry-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-            padding: 20px;
-        }
-
-        .inquiry-grid-item label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            color: #94a3b8;
-        }
-
-        .inquiry-grid-item div {
-            font-size: 13px;
-            color: #334155;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Original inquiry
-        |--------------------------------------------------------------------------
-        */
-
-        .buyer-message {
-            margin: 0 20px 20px;
-            padding: 15px;
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-        }
-
-        .buyer-message-label {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            color: #94a3b8;
-            margin-bottom: 7px;
-        }
-
-        .buyer-message-text {
-            font-size: 13px;
-            color: #334155;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Conversation section
-        |--------------------------------------------------------------------------
-        */
-
-        .conversation-title {
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .conversation-title h2 {
-            margin: 0;
-            font-size: 18px;
-            color: #111827;
-        }
-
-        .conversation-title p {
-            margin: 5px 0 0;
-            font-size: 13px;
-            color: #64748b;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Messages
-        |--------------------------------------------------------------------------
-        |
-        | IMPORTANT:
-        | No chat bubbles.
-        | No dark background.
-        | No avatar.
-        | Messages use the same card language as inquiries.php.
-        |
-        */
-
-        .messages-list {
-            padding: 0 20px;
-        }
-
-        .message-row {
-            padding: 18px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .message-row:last-child {
-            border-bottom: none;
-        }
-
-        .message-row.mine {
-            background: #f8fafc;
-            margin: 0 -20px;
-            padding-left: 20px;
-            padding-right: 20px;
+            grid-template-columns: 1fr;
         }
 
         .message-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 15px;
-            margin-bottom: 8px;
-        }
-
-        .message-sender {
-            font-size: 13px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .message-role {
-            display: inline-block;
-            margin-left: 7px;
-            font-size: 10px;
-            color: #64748b;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .message-date {
-            font-size: 11px;
-            color: #94a3b8;
-            white-space: nowrap;
-        }
-
-        .message-body {
-            font-size: 13px;
-            color: #334155;
-            line-height: 1.65;
-            white-space: pre-wrap;
-        }
-
-        .empty-messages {
-            padding: 40px 20px;
-            text-align: center;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Composer
-        |--------------------------------------------------------------------------
-        */
-
-        .composer-card {
-            padding: 20px;
-        }
-
-        .composer-label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #64748b;
-        }
-
-        .composer-textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            resize: vertical;
-            font-family: inherit;
-            font-size: 13px;
-            box-sizing: border-box;
-        }
-
-        .composer-textarea:focus {
-            outline: none;
-            border-color: #111827;
-            box-shadow: 0 0 0 2px rgba(17,24,39,.08);
+            flex-direction: column;
+            gap: 4px;
         }
 
         .composer-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .character-count {
-            font-size: 11px;
-            color: #94a3b8;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .send-button {
-            border: none;
-            background: #111827;
-            color: #ffffff;
-            padding: 10px 18px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
+            width: 100%;
         }
-
-        .send-button:hover {
-            background: #1f2937;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Footer actions
-        |--------------------------------------------------------------------------
-        */
 
         .inquiry-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 20px;
-            border-top: 1px solid #e5e7eb;
+            flex-direction: column;
+            align-items: stretch;
         }
 
         .action-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 13px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            color: #374151;
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: 600;
+            width: 100%;
         }
 
-        .action-button:hover {
-            background: #f9fafb;
-        }
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Responsive
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width: 800px) {
-
-            .inquiry-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .page-heading {
-                flex-direction: column;
-            }
-
-        }
-
-        @media (max-width: 600px) {
-
-            .inquiry-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .message-header {
-                flex-direction: column;
-                gap: 4px;
-            }
-
-            .composer-footer {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .send-button {
-                width: 100%;
-            }
-
-            .inquiry-footer {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .action-button {
-                width: 100%;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 
@@ -1064,8 +1068,9 @@ $messages = $messageStmt->fetchAll(PDO::FETCH_ASSOC);
 
 </div>
 
-<?php require_once "../includes/footer.php"; ?>
 
+<!-- FIX: page-specific script moved BEFORE footer.php
+     (was after </html>, which is invalid HTML) -->
 <script>
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -1124,5 +1129,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 </script>
 
-</body>
-</html>
+
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     footer.php. footer.php already closes those tags. -->
+<?php require_once "../includes/footer.php"; ?>

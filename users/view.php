@@ -5,10 +5,11 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
+$activePage = "users";
+
 $pageTitle = "View User";
 $pageSubtitle = "View VISRS user account information";
-
-$activePage = "users";
 
 
 /*
@@ -128,120 +129,106 @@ if ($user["Role"] === "Admin") {
 $isCurrentUser =
     ((int) $user["UserID"] === $currentUserID);
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /*
+    |--------------------------------------------------------------------------
+    | User Role Badges
+    |--------------------------------------------------------------------------
+    */
 
-    <meta charset="UTF-8">
+    .user-role {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .user-role-default {
+        background: #f3f4f6;
+        color: #374151;
+    }
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+    .user-role-admin {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .user-role-police {
+        background: #dcfce7;
+        color: #166534;
+    }
 
-    <style>
-
-        /*
-        |--------------------------------------------------------------------------
-        | User Role Badges
-        |--------------------------------------------------------------------------
-        */
-
-        .user-role {
-            display: inline-block;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .user-role-default {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .user-role-admin {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .user-role-police {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .user-role-seller {
-            background: #fef3c7;
-            color: #92400e;
-        }
+    .user-role-seller {
+        background: #fef3c7;
+        color: #92400e;
+    }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | User Detail Rows
-        |--------------------------------------------------------------------------
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | User Detail Rows
+    |--------------------------------------------------------------------------
+    */
+
+    .user-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 16px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .user-detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .user-detail-label {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .user-detail-value {
+        color: #111827;
+        font-size: 15px;
+        font-weight: 500;
+        text-align: right;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mobile Layout
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width: 600px) {
 
         .user-detail-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 20px;
-            padding: 16px 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .user-detail-row:last-child {
-            border-bottom: none;
-        }
-
-        .user-detail-label {
-            color: #6b7280;
-            font-size: 14px;
+            display: block;
         }
 
         .user-detail-value {
-            color: #111827;
-            font-size: 15px;
-            font-weight: 500;
-            text-align: right;
+            text-align: left;
+            margin-top: 5px;
         }
 
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Mobile Layout
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width: 600px) {
-
-            .user-detail-row {
-                display: block;
-            }
-
-            .user-detail-value {
-                text-align: left;
-                margin-top: 5px;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 

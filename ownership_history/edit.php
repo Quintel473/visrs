@@ -6,7 +6,9 @@ requireRole(["Admin", "Police"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $activePage = "ownership_history";
+
 $pageTitle = "Edit Ownership Record";
 $pageSubtitle = "Update ownership information.";
 
@@ -581,30 +583,17 @@ $ownersStmt = $pdo->query("
 
 $owners = $ownersStmt->fetchAll();
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "Edit Ownership Record - VISRS";
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        Edit Ownership Record - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -935,13 +924,11 @@ $owners = $ownersStmt->fetchAll();
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
+     </body></html> that followed. footer.php closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

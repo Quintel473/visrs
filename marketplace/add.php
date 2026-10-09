@@ -6,6 +6,7 @@ requireRole(["Admin", "Seller"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $pageTitle = "Create Vehicle Listing";
 $activePage = "marketplace";
 
@@ -821,229 +822,215 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /*
+    |--------------------------------------------------------------------------
+    | Marketplace Photo Upload
+    |--------------------------------------------------------------------------
+    */
 
-    <meta charset="UTF-8">
+    .photo-upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 14px;
+        background: #f8fafc;
+        padding: 34px 24px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+            border-color 0.2s ease,
+            background 0.2s ease,
+            transform 0.2s ease;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .photo-upload-area:hover {
+        border-color: #94a3b8;
+        background: #f1f5f9;
+    }
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+    .photo-upload-area.dragging {
+        border-color: #4f46e5;
+        background: #eef2ff;
+        transform: scale(1.005);
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .photo-upload-icon {
+        width: 68px;
+        height: 68px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: #e0e7ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 31px;
+    }
 
-    <style>
+    .photo-upload-title {
+        margin: 0 0 8px;
+        color: #111827;
+        font-size: 19px;
+        font-weight: 700;
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Marketplace Photo Upload
-        |--------------------------------------------------------------------------
-        */
+    .photo-upload-description {
+        max-width: 520px;
+        margin: 0 auto 20px;
+        color: #64748b;
+        line-height: 1.6;
+        font-size: 14px;
+    }
+
+    .photo-upload-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 20px;
+        border: none;
+        border-radius: 7px;
+        background: #111827;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .photo-upload-button:hover {
+        opacity: 0.92;
+    }
+
+    .photo-upload-info {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 18px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .photo-count {
+        display: none;
+        margin-top: 16px;
+        padding: 11px 14px;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: #1e40af;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .photo-preview-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(
+                auto-fill,
+                minmax(155px, 1fr)
+            );
+        gap: 16px;
+        margin-top: 18px;
+    }
+
+    .photo-preview-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow:
+            0 1px 3px
+            rgba(0, 0, 0, 0.06);
+    }
+
+    .photo-preview-image {
+        display: block;
+        width: 100%;
+        height: 145px;
+        object-fit: cover;
+        background: #f1f5f9;
+    }
+
+    .primary-photo-badge {
+        position: absolute;
+        top: 9px;
+        left: 9px;
+        padding: 5px 8px;
+        border-radius: 5px;
+        background: #111827;
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+
+    .remove-photo-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #991b1b;
+        font-size: 20px;
+        line-height: 28px;
+        cursor: pointer;
+        box-shadow:
+            0 2px 7px
+            rgba(0, 0, 0, 0.18);
+    }
+
+    .remove-photo-button:hover {
+        background: #fee2e2;
+    }
+
+    .photo-file-name {
+        padding: 9px 10px;
+        color: #475569;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .photo-upload-note {
+        margin-top: 12px;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
 
         .photo-upload-area {
-            border: 2px dashed #cbd5e1;
-            border-radius: 14px;
-            background: #f8fafc;
-            padding: 34px 24px;
-            text-align: center;
-            cursor: pointer;
-            transition:
-                border-color 0.2s ease,
-                background 0.2s ease,
-                transform 0.2s ease;
-        }
-
-        .photo-upload-area:hover {
-            border-color: #94a3b8;
-            background: #f1f5f9;
-        }
-
-        .photo-upload-area.dragging {
-            border-color: #4f46e5;
-            background: #eef2ff;
-            transform: scale(1.005);
-        }
-
-        .photo-upload-icon {
-            width: 68px;
-            height: 68px;
-            margin: 0 auto 16px;
-            border-radius: 50%;
-            background: #e0e7ff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 31px;
-        }
-
-        .photo-upload-title {
-            margin: 0 0 8px;
-            color: #111827;
-            font-size: 19px;
-            font-weight: 700;
-        }
-
-        .photo-upload-description {
-            max-width: 520px;
-            margin: 0 auto 20px;
-            color: #64748b;
-            line-height: 1.6;
-            font-size: 14px;
-        }
-
-        .photo-upload-button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 11px 20px;
-            border: none;
-            border-radius: 7px;
-            background: #111827;
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .photo-upload-button:hover {
-            opacity: 0.92;
-        }
-
-        .photo-upload-info {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 7px;
-            margin-top: 18px;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .photo-count {
-            display: none;
-            margin-top: 16px;
-            padding: 11px 14px;
-            border: 1px solid #bfdbfe;
-            border-radius: 8px;
-            background: #eff6ff;
-            color: #1e40af;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 28px 16px;
         }
 
         .photo-preview-grid {
-            display: grid;
             grid-template-columns:
                 repeat(
-                    auto-fill,
-                    minmax(155px, 1fr)
+                    2,
+                    minmax(0, 1fr)
                 );
-            gap: 16px;
-            margin-top: 18px;
         }
+    }
 
-        .photo-preview-card {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            background: #ffffff;
-            box-shadow:
-                0 1px 3px
-                rgba(0, 0, 0, 0.06);
-        }
-
-        .photo-preview-image {
-            display: block;
-            width: 100%;
-            height: 145px;
-            object-fit: cover;
-            background: #f1f5f9;
-        }
-
-        .primary-photo-badge {
-            position: absolute;
-            top: 9px;
-            left: 9px;
-            padding: 5px 8px;
-            border-radius: 5px;
-            background: #111827;
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-        }
-
-        .remove-photo-button {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 30px;
-            height: 30px;
-            padding: 0;
-            border: 0;
-            border-radius: 50%;
-            background: #ffffff;
-            color: #991b1b;
-            font-size: 20px;
-            line-height: 28px;
-            cursor: pointer;
-            box-shadow:
-                0 2px 7px
-                rgba(0, 0, 0, 0.18);
-        }
-
-        .remove-photo-button:hover {
-            background: #fee2e2;
-        }
-
-        .photo-file-name {
-            padding: 9px 10px;
-            color: #475569;
-            font-size: 12px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .photo-upload-note {
-            margin-top: 12px;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        @media (max-width: 600px) {
-
-            .photo-upload-area {
-                padding: 28px 16px;
-            }
-
-            .photo-preview-grid {
-                grid-template-columns:
-                    repeat(
-                        2,
-                        minmax(0, 1fr)
-                    );
-            }
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>

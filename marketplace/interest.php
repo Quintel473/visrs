@@ -11,6 +11,7 @@ requireRole([
     "User"
 ]);
 
+$basePath = "../";
 $pageTitle = "I'm Interested";
 $activePage = "marketplace";
 
@@ -418,330 +419,315 @@ if (!$listingId || $listingId <= 0) {
 
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    .interest-container {
 
-<head>
+        max-width:850px;
 
-    <meta charset="UTF-8">
+        margin:0 auto;
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= e($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-    <style>
-
-        .interest-container {
-
-            max-width:850px;
-
-            margin:0 auto;
-
-        }
+    }
 
 
-        .interest-card {
+    .interest-card {
 
-            background:#ffffff;
+        background:#ffffff;
 
-            border:1px solid #e5e7eb;
+        border:1px solid #e5e7eb;
 
-            border-radius:12px;
+        border-radius:12px;
 
-            box-shadow:
-                0 2px 7px
-                rgba(0,0,0,0.06);
+        box-shadow:
+            0 2px 7px
+            rgba(0,0,0,0.06);
 
-            overflow:hidden;
+        overflow:hidden;
 
-        }
-
-
-        .interest-header {
-
-            padding:22px;
-
-            border-bottom:1px solid #e5e7eb;
-
-        }
+    }
 
 
-        .interest-header h1 {
+    .interest-header {
 
-            margin:0 0 6px;
+        padding:22px;
 
-            font-size:24px;
+        border-bottom:1px solid #e5e7eb;
 
-        }
+    }
 
 
-        .interest-header p {
+    .interest-header h1 {
 
-            margin:0;
+        margin:0 0 6px;
 
-            color:#64748b;
+        font-size:24px;
 
-            font-size:14px;
+    }
+
+
+    .interest-header p {
+
+        margin:0;
+
+        color:#64748b;
+
+        font-size:14px;
+
+    }
+
+
+    .interest-body {
+
+        padding:22px;
+
+    }
+
+
+    .vehicle-summary {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap:12px;
+
+        margin-bottom:22px;
+
+        padding:18px;
+
+        border-radius:8px;
+
+        background:#f8fafc;
+
+    }
+
+
+    .vehicle-summary-item {
+
+        padding:10px;
+
+    }
+
+
+    .vehicle-summary-label {
+
+        margin-bottom:4px;
+
+        color:#64748b;
+
+        font-size:11px;
+
+        font-weight:600;
+
+        text-transform:uppercase;
+
+    }
+
+
+    .vehicle-summary-value {
+
+        color:#111827;
+
+        font-size:14px;
+
+        font-weight:600;
+
+    }
+
+
+    .interest-price {
+
+        margin-top:5px;
+
+        color:#111827;
+
+        font-size:20px;
+
+        font-weight:800;
+
+    }
+
+
+    .form-group {
+
+        margin-bottom:18px;
+
+    }
+
+
+    .form-group label {
+
+        display:block;
+
+        margin-bottom:7px;
+
+        color:#374151;
+
+        font-size:13px;
+
+        font-weight:600;
+
+    }
+
+
+    .form-group textarea {
+
+        width:100%;
+
+        min-height:140px;
+
+        box-sizing:border-box;
+
+        padding:11px 12px;
+
+        border:1px solid #d1d5db;
+
+        border-radius:7px;
+
+        resize:vertical;
+
+        font-family:inherit;
+
+        font-size:14px;
+
+    }
+
+
+    .form-group textarea:focus {
+
+        outline:none;
+
+        border-color:#111827;
+
+    }
+
+
+    .character-count {
+
+        margin-top:5px;
+
+        color:#94a3b8;
+
+        font-size:11px;
+
+        text-align:right;
+
+    }
+
+
+    .interest-actions {
+
+        display:flex;
+
+        gap:10px;
+
+        flex-wrap:wrap;
+
+        margin-top:20px;
+
+    }
+
+
+    .interest-actions .button {
+
+        cursor:pointer;
+
+    }
+
+
+    .error-box {
+
+        margin-bottom:18px;
+
+        padding:14px;
+
+        border:1px solid #fecaca;
+
+        border-radius:7px;
+
+        background:#fef2f2;
+
+        color:#991b1b;
+
+        font-size:13px;
+
+    }
+
+
+    .error-box ul {
+
+        margin:0;
+
+        padding-left:20px;
+
+    }
+
+
+    .error-box li {
+
+        margin-bottom:4px;
+
+    }
+
+
+    .error-box li:last-child {
+
+        margin-bottom:0;
+
+    }
+
+
+    .information-box {
+
+        margin-bottom:20px;
+
+        padding:14px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:7px;
+
+        background:#f8fafc;
+
+        color:#475569;
+
+        font-size:13px;
+
+        line-height:1.6;
+
+    }
+
+
+    @media (max-width:600px) {
+
+        .vehicle-summary {
+
+            grid-template-columns:1fr;
 
         }
 
 
         .interest-body {
 
-            padding:22px;
-
-        }
-
-
-        .vehicle-summary {
-
-            display:grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            gap:12px;
-
-            margin-bottom:22px;
-
             padding:18px;
 
-            border-radius:8px;
-
-            background:#f8fafc;
-
         }
 
+    }
 
-        .vehicle-summary-item {
-
-            padding:10px;
-
-        }
-
-
-        .vehicle-summary-label {
-
-            margin-bottom:4px;
-
-            color:#64748b;
-
-            font-size:11px;
-
-            font-weight:600;
-
-            text-transform:uppercase;
-
-        }
-
-
-        .vehicle-summary-value {
-
-            color:#111827;
-
-            font-size:14px;
-
-            font-weight:600;
-
-        }
-
-
-        .interest-price {
-
-            margin-top:5px;
-
-            color:#111827;
-
-            font-size:20px;
-
-            font-weight:800;
-
-        }
-
-
-        .form-group {
-
-            margin-bottom:18px;
-
-        }
-
-
-        .form-group label {
-
-            display:block;
-
-            margin-bottom:7px;
-
-            color:#374151;
-
-            font-size:13px;
-
-            font-weight:600;
-
-        }
-
-
-        .form-group textarea {
-
-            width:100%;
-
-            min-height:140px;
-
-            box-sizing:border-box;
-
-            padding:11px 12px;
-
-            border:1px solid #d1d5db;
-
-            border-radius:7px;
-
-            resize:vertical;
-
-            font-family:inherit;
-
-            font-size:14px;
-
-        }
-
-
-        .form-group textarea:focus {
-
-            outline:none;
-
-            border-color:#111827;
-
-        }
-
-
-        .character-count {
-
-            margin-top:5px;
-
-            color:#94a3b8;
-
-            font-size:11px;
-
-            text-align:right;
-
-        }
-
-
-        .interest-actions {
-
-            display:flex;
-
-            gap:10px;
-
-            flex-wrap:wrap;
-
-            margin-top:20px;
-
-        }
-
-
-        .interest-actions .button {
-
-            cursor:pointer;
-
-        }
-
-
-        .error-box {
-
-            margin-bottom:18px;
-
-            padding:14px;
-
-            border:1px solid #fecaca;
-
-            border-radius:7px;
-
-            background:#fef2f2;
-
-            color:#991b1b;
-
-            font-size:13px;
-
-        }
-
-
-        .error-box ul {
-
-            margin:0;
-
-            padding-left:20px;
-
-        }
-
-
-        .error-box li {
-
-            margin-bottom:4px;
-
-        }
-
-
-        .error-box li:last-child {
-
-            margin-bottom:0;
-
-        }
-
-
-        .information-box {
-
-            margin-bottom:20px;
-
-            padding:14px;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:7px;
-
-            background:#f8fafc;
-
-            color:#475569;
-
-            font-size:13px;
-
-            line-height:1.6;
-
-        }
-
-
-        @media (max-width:600px) {
-
-            .vehicle-summary {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .interest-body {
-
-                padding:18px;
-
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>

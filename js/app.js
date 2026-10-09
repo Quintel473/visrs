@@ -299,3 +299,78 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 });
+
+/* =========================================================
+   VISRS Dark Mode Toggle
+   =========================================================
+   - Reads the theme set by the inline anti-FOUC script.
+   - Updates the toggle button state (icon + ARIA).
+   - Persists choice to localStorage under 'visrs-theme'.
+   ========================================================= */
+(function () {
+    'use strict';
+
+    function onReady(fn) {
+        if (document.readyState !== 'loading') {
+            fn();
+        } else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+
+    onReady(function () {
+        var btn  = document.getElementById('theme-toggle');
+        var icon = btn ? btn.querySelector('.theme-icon') : null;
+
+        if (!btn || !icon) {
+            return;
+        }
+
+        function syncButton(theme) {
+            var isDark = theme === 'dark';
+
+            btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            btn.setAttribute(
+                'aria-label',
+                isDark ? 'Switch to light mode' : 'Switch to dark mode'
+            );
+            btn.setAttribute(
+                'title',
+                isDark ? 'Switch to light mode' : 'Switch to dark mode'
+            );
+            icon.textContent = isDark ? '☀️' : '🌙';
+        }
+
+        /* Sync with what the head script already applied */
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        syncButton(current);
+
+        /* Toggle on click */
+        btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark'
+                ? 'light'
+                : 'dark';
+
+            document.documentElement.setAttribute('data-theme', next);
+
+            try {
+                localStorage.setItem('visrs-theme', next);
+            } catch (e) {
+                /* localStorage may be blocked; fail silently */
+            }
+
+            syncButton(next);
+        });
+
+        /* Keep in sync if user changes OS preference and has no saved choice */
+        try {
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            mq.addEventListener('change', function (e) {
+                if (localStorage.getItem('visrs-theme')) return;
+                var t = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', t);
+                syncButton(t);
+            });
+        } catch (e) {}
+    });
+})();

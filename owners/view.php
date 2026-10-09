@@ -4,7 +4,9 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $activePage = "owners";
+
 $pageTitle = "Owner Details";
 $pageSubtitle = "Owner profile and associated vehicle information.";
 
@@ -60,27 +62,16 @@ if (!$owner) {
 
     http_response_code(404);
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Owner Not Found";
+
+    require_once "../includes/head.php";
+
     ?>
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>Owner Not Found - VISRS</title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -188,30 +179,17 @@ $canManageOwners = in_array(
     true
 );
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "VISRS - Owner Details";
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        VISRS - Owner Details
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -621,13 +599,12 @@ $canManageOwners = in_array(
 
         </main>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </div>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of .main-content and removed the
+     duplicate </body></html> that followed. footer.php closes
+     those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

@@ -6,10 +6,11 @@ requireRole(["Admin", "Police"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
+$activePage = "owners";
+
 $pageTitle = "Edit Owner";
 $pageSubtitle = "Update the owner's contact and registration information";
-
-$activePage = "owners";
 
 $error = "";
 $success = "";
@@ -67,30 +68,17 @@ $owner = $stmt->fetch();
 if (!$owner) {
 
     http_response_code(404);
+
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Owner Not Found";
+
+    require_once "../includes/head.php";
+
     ?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>
-            Owner Not Found - VISRS
-        </title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -362,30 +350,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 

@@ -5,6 +5,7 @@ requireRole(["Admin"]);
 
 require_once __DIR__ . "/../includes/database.php";
 
+$basePath = "../";
 $activePage = "audit_logs";
 $pageTitle = "Audit Trail";
 
@@ -127,31 +128,15 @@ $usersStmt = $pdo->query("
 
 $activeUsers = (int) $usersStmt->fetchColumn();
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block,
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        Audit Trail - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 
 <body>
@@ -671,13 +656,10 @@ $activeUsers = (int) $usersStmt->fetchColumn();
 </div>
 
 
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     this include. footer.php already closes those tags. -->
 <?php
 
 include __DIR__ . "/../includes/footer.php";
 
 ?>
-
-
-</body>
-
-</html>

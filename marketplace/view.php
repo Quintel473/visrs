@@ -4,6 +4,7 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $pageTitle = "Vehicle Details";
 $activePage = "marketplace";
 
@@ -24,41 +25,45 @@ if (!$vehicleId || $vehicleId <= 0) {
 
     http_response_code(404);
 
-    echo "
-        <!DOCTYPE html>
-        <html lang='en'>
-        <head>
-            <meta charset='UTF-8'>
-            <title>Vehicle Not Found - VISRS</title>
-            <link rel='stylesheet' href='/visrs/css/style.css'>
-        </head>
-        <body>
+    /*
+     * FIX: Use head.php instead of hardcoded <head> block
+     * (was previously output via echo with absolute CSS path).
+     */
 
-            <div style='
-                max-width:700px;
-                margin:80px auto;
-                padding:30px;
-                text-align:center;
-            '>
+    $pageTitle = "Vehicle Not Found";
 
-                <h1>Vehicle Not Found</h1>
+    require_once "../includes/head.php";
 
-                <p style='color:#64748b;'>
-                    The vehicle listing you requested could not be found.
-                </p>
+    ?>
 
-                <a
-                    href='/visrs/marketplace/'
-                    class='button'
-                >
-                    Back to Marketplace
-                </a>
+    <body>
 
-            </div>
+        <div style='
+            max-width:700px;
+            margin:80px auto;
+            padding:30px;
+            text-align:center;
+        '>
 
-        </body>
-        </html>
-    ";
+            <h1>Vehicle Not Found</h1>
+
+            <p style='color:#64748b;'>
+                The vehicle listing you requested could not be found.
+            </p>
+
+            <a
+                href='/visrs/marketplace/'
+                class='button'
+            >
+                Back to Marketplace
+            </a>
+
+        </div>
+
+    </body>
+    </html>
+
+    <?php
 
     exit;
 }
@@ -134,41 +139,44 @@ if (!$listing) {
 
     http_response_code(404);
 
-    echo "
-        <!DOCTYPE html>
-        <html lang='en'>
-        <head>
-            <meta charset='UTF-8'>
-            <title>Vehicle Not Found - VISRS</title>
-            <link rel='stylesheet' href='/visrs/css/style.css'>
-        </head>
-        <body>
+    /*
+     * FIX: Use head.php instead of hardcoded <head> block.
+     */
 
-            <div style='
-                max-width:700px;
-                margin:80px auto;
-                padding:30px;
-                text-align:center;
-            '>
+    $pageTitle = "Vehicle Not Found";
 
-                <h1>Vehicle Not Found</h1>
+    require_once "../includes/head.php";
 
-                <p style='color:#64748b;'>
-                    This vehicle does not currently have a marketplace listing.
-                </p>
+    ?>
 
-                <a
-                    href='/visrs/marketplace/'
-                    class='button'
-                >
-                    Back to Marketplace
-                </a>
+    <body>
 
-            </div>
+        <div style='
+            max-width:700px;
+            margin:80px auto;
+            padding:30px;
+            text-align:center;
+        '>
 
-        </body>
-        </html>
-    ";
+            <h1>Vehicle Not Found</h1>
+
+            <p style='color:#64748b;'>
+                This vehicle does not currently have a marketplace listing.
+            </p>
+
+            <a
+                href='/visrs/marketplace/'
+                class='button'
+            >
+                Back to Marketplace
+            </a>
+
+        </div>
+
+    </body>
+    </html>
+
+    <?php
 
     exit;
 }
@@ -338,992 +346,974 @@ $vehicleStatusClass =
         $listing["VehicleStatus"]
     );
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = $listing["Make"] . " " . $listing["Model"] . " - VISRS";
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    /*
+    |--------------------------------------------------------------------------
+    | Page Header
+    |--------------------------------------------------------------------------
+    */
 
-<head>
+    .vehicle-page-header {
 
-    <meta charset="UTF-8">
+        display:flex;
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        justify-content:space-between;
 
-    <title>
-        <?= e(
-            $listing["Make"]
-            . " "
-            . $listing["Model"]
-        ) ?>
-        - VISRS
-    </title>
+        align-items:flex-start;
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+        gap:20px;
 
-    <style>
+        margin-bottom:25px;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Page Header
-        |--------------------------------------------------------------------------
-        */
+        flex-wrap:wrap;
 
-        .vehicle-page-header {
-
-            display:flex;
-
-            justify-content:space-between;
-
-            align-items:flex-start;
-
-            gap:20px;
-
-            margin-bottom:25px;
-
-            flex-wrap:wrap;
-
-        }
+    }
 
 
-        .vehicle-page-header h1 {
+    .vehicle-page-header h1 {
 
-            margin:0;
+        margin:0;
 
-        }
-
-
-        .vehicle-page-header p {
-
-            margin:6px 0 0;
-
-            color:#64748b;
-
-        }
+    }
 
 
-        .vehicle-page-actions {
+    .vehicle-page-header p {
 
-            display:flex;
+        margin:6px 0 0;
 
-            gap:10px;
+        color:#64748b;
 
-            flex-wrap:wrap;
-
-        }
+    }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Main Vehicle Layout
-        |--------------------------------------------------------------------------
-        */
+    .vehicle-page-actions {
+
+        display:flex;
+
+        gap:10px;
+
+        flex-wrap:wrap;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Main Vehicle Layout
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-detail-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            minmax(0, 1.25fr)
+            minmax(320px, 0.75fr);
+
+        gap:25px;
+
+        margin-bottom:25px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cards
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-detail-card {
+
+        background:#ffffff;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:12px;
+
+        box-shadow:
+            0 2px 7px
+            rgba(0, 0, 0, 0.06);
+
+        overflow:hidden;
+
+    }
+
+
+    .vehicle-detail-card-content {
+
+        padding:22px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gallery
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-gallery {
+
+        background:#f1f5f9;
+
+    }
+
+
+    .vehicle-primary-image {
+
+        position:relative;
+
+        width:100%;
+
+        height:430px;
+
+        background:#e2e8f0;
+
+    }
+
+
+    .vehicle-primary-image img {
+
+        display:block;
+
+        width:100%;
+
+        height:100%;
+
+        object-fit:cover;
+
+    }
+
+
+    .vehicle-no-image {
+
+        width:100%;
+
+        height:100%;
+
+        display:flex;
+
+        flex-direction:column;
+
+        align-items:center;
+
+        justify-content:center;
+
+        color:#94a3b8;
+
+        gap:10px;
+
+    }
+
+
+    .vehicle-no-image-icon {
+
+        font-size:64px;
+
+    }
+
+
+    .vehicle-image-count {
+
+        position:absolute;
+
+        bottom:12px;
+
+        right:12px;
+
+        padding:7px 11px;
+
+        border-radius:20px;
+
+        background:rgba(17,24,39,0.80);
+
+        color:#ffffff;
+
+        font-size:12px;
+
+        font-weight:600;
+
+    }
+
+
+    .vehicle-thumbnails {
+
+        display:flex;
+
+        gap:10px;
+
+        padding:14px;
+
+        overflow-x:auto;
+
+        background:#ffffff;
+
+    }
+
+
+    .vehicle-thumbnail {
+
+        flex:0 0 82px;
+
+        width:82px;
+
+        height:62px;
+
+        padding:0;
+
+        border:2px solid transparent;
+
+        border-radius:7px;
+
+        overflow:hidden;
+
+        background:#f1f5f9;
+
+        cursor:pointer;
+
+    }
+
+
+    .vehicle-thumbnail.active {
+
+        border-color:#111827;
+
+    }
+
+
+    .vehicle-thumbnail img {
+
+        display:block;
+
+        width:100%;
+
+        height:100%;
+
+        object-fit:cover;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Listing Information
+    |--------------------------------------------------------------------------
+    */
+
+    .listing-main-info {
+
+        padding:25px;
+
+    }
+
+
+    .listing-status-badge {
+
+        display:inline-block;
+
+        margin-bottom:12px;
+
+        padding:6px 11px;
+
+        border-radius:20px;
+
+        background:#166534;
+
+        color:#ffffff;
+
+        font-size:11px;
+
+        font-weight:700;
+
+    }
+
+
+    .listing-status-badge.reserved {
+
+        background:#92400e;
+
+    }
+
+
+    .listing-status-badge.sold {
+
+        background:#991b1b;
+
+    }
+
+
+    .listing-status-badge.inactive {
+
+        background:#475569;
+
+    }
+
+
+    .listing-main-info h1 {
+
+        margin:0 0 5px;
+
+        color:#111827;
+
+        font-size:29px;
+
+    }
+
+
+    .vehicle-subtitle {
+
+        margin-bottom:18px;
+
+        color:#64748b;
+
+        font-size:14px;
+
+    }
+
+
+    .vehicle-price {
+
+        margin-bottom:22px;
+
+        color:#111827;
+
+        font-size:30px;
+
+        font-weight:800;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Action Buttons
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-action-buttons {
+
+        display:flex;
+
+        flex-direction:column;
+
+        gap:10px;
+
+        margin-bottom:22px;
+
+    }
+
+
+    .vehicle-action-button {
+
+        display:block;
+
+        width:100%;
+
+        box-sizing:border-box;
+
+        padding:12px 16px;
+
+        border:0;
+
+        border-radius:7px;
+
+        background:#111827;
+
+        color:#ffffff;
+
+        text-align:center;
+
+        text-decoration:none;
+
+        font-size:14px;
+
+        font-weight:700;
+
+        cursor:pointer;
+
+    }
+
+
+    .vehicle-action-button:hover {
+
+        opacity:0.9;
+
+    }
+
+
+    .vehicle-action-button.secondary {
+
+        background:#ffffff;
+
+        color:#111827;
+
+        border:1px solid #d1d5db;
+
+    }
+
+
+    .vehicle-action-button.secondary:hover {
+
+        background:#f8fafc;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vehicle Specification Grid
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-spec-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        border-top:1px solid #e5e7eb;
+
+        border-left:1px solid #e5e7eb;
+
+    }
+
+
+    .vehicle-spec {
+
+        padding:14px;
+
+        border-right:1px solid #e5e7eb;
+
+        border-bottom:1px solid #e5e7eb;
+
+    }
+
+
+    .vehicle-spec-label {
+
+        margin-bottom:4px;
+
+        color:#64748b;
+
+        font-size:11px;
+
+        font-weight:600;
+
+        text-transform:uppercase;
+
+        letter-spacing:0.03em;
+
+    }
+
+
+    .vehicle-maintenance-grid {
+
+        display:grid;
+
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+
+        border-top:1px solid #e5e7eb;
+
+        border-left:1px solid #e5e7eb;
+
+    }
+
+
+    .vehicle-maintenance-grid .vehicle-spec {
+
+        border-right:1px solid #e5e7eb;
+
+        border-bottom:1px solid #e5e7eb;
+
+    }
+
+
+    .maintenance-value {
+
+        color:#111827;
+
+        font-size:14px;
+
+        font-weight:700;
+
+    }
+
+
+    .maintenance-note {
+
+        margin-top:14px;
+
+        padding:12px 14px;
+
+        border-radius:7px;
+
+        background:#f8fafc;
+
+        color:#64748b;
+
+        font-size:12px;
+
+        line-height:1.6;
+
+    }
+
+
+    .vehicle-spec-value {
+
+        color:#111827;
+
+        font-size:14px;
+
+        font-weight:600;
+
+        word-break:break-word;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Section Headers
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-section {
+
+        margin-bottom:25px;
+
+    }
+
+
+    .vehicle-section:last-child {
+
+        margin-bottom:0;
+
+    }
+
+
+    .vehicle-section-header {
+
+        display:flex;
+
+        justify-content:space-between;
+
+        align-items:center;
+
+        gap:15px;
+
+        margin-bottom:15px;
+
+    }
+
+
+    .vehicle-section-header h2 {
+
+        margin:0;
+
+        font-size:20px;
+
+    }
+
+
+    .vehicle-section-count {
+
+        color:#64748b;
+
+        font-size:13px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Description
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-description {
+
+        color:#475569;
+
+        font-size:14px;
+
+        line-height:1.7;
+
+        white-space:pre-line;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seller Card
+    |--------------------------------------------------------------------------
+    */
+
+    .seller-card {
+
+        display:flex;
+
+        align-items:center;
+
+        gap:14px;
+
+    }
+
+
+    .seller-avatar {
+
+        width:48px;
+
+        height:48px;
+
+        display:flex;
+
+        align-items:center;
+
+        justify-content:center;
+
+        flex:0 0 48px;
+
+        border-radius:50%;
+
+        background:#111827;
+
+        color:#ffffff;
+
+        font-size:18px;
+
+        font-weight:700;
+
+    }
+
+
+    .seller-name {
+
+        margin-bottom:3px;
+
+        color:#111827;
+
+        font-size:15px;
+
+        font-weight:700;
+
+    }
+
+
+    .seller-role {
+
+        color:#64748b;
+
+        font-size:12px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Record Tables
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-record-table-wrapper {
+
+        overflow-x:auto;
+
+    }
+
+
+    .vehicle-record-table {
+
+        width:100%;
+
+        border-collapse:collapse;
+
+        font-size:13px;
+
+    }
+
+
+    .vehicle-record-table th {
+
+        padding:11px 12px;
+
+        border-bottom:1px solid #e5e7eb;
+
+        background:#f8fafc;
+
+        color:#475569;
+
+        text-align:left;
+
+        font-size:11px;
+
+        font-weight:700;
+
+        text-transform:uppercase;
+
+    }
+
+
+    .vehicle-record-table td {
+
+        padding:12px;
+
+        border-bottom:1px solid #f1f5f9;
+
+        color:#475569;
+
+        vertical-align:top;
+
+    }
+
+
+    .vehicle-record-table tr:last-child td {
+
+        border-bottom:0;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Labels
+    |--------------------------------------------------------------------------
+    */
+
+    .record-status {
+
+        display:inline-block;
+
+        padding:4px 8px;
+
+        border-radius:5px;
+
+        background:#f1f5f9;
+
+        color:#475569;
+
+        font-size:11px;
+
+        font-weight:600;
+
+    }
+
+
+    .record-status.active {
+
+        background:#dcfce7;
+
+        color:#166534;
+
+    }
+
+
+    .record-status.expired {
+
+        background:#fee2e2;
+
+        color:#991b1b;
+
+    }
+
+
+    .record-status.cancelled {
+
+        background:#f1f5f9;
+
+        color:#475569;
+
+    }
+
+
+    .damage-level {
+
+        display:inline-block;
+
+        padding:4px 8px;
+
+        border-radius:5px;
+
+        font-size:11px;
+
+        font-weight:600;
+
+    }
+
+
+    .damage-level.minor {
+
+        background:#dcfce7;
+
+        color:#166534;
+
+    }
+
+
+    .damage-level.moderate {
+
+        background:#fef3c7;
+
+        color:#92400e;
+
+    }
+
+
+    .damage-level.major {
+
+        background:#ffedd5;
+
+        color:#9a3412;
+
+    }
+
+
+    .damage-level.severe {
+
+        background:#fee2e2;
+
+        color:#991b1b;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Empty Record
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-empty-record {
+
+        padding:25px;
+
+        text-align:center;
+
+        color:#64748b;
+
+        font-size:13px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Back Link
+    |--------------------------------------------------------------------------
+    */
+
+    .back-marketplace {
+
+        display:inline-block;
+
+        margin-bottom:18px;
+
+        color:#475569;
+
+        text-decoration:none;
+
+        font-size:13px;
+
+        font-weight:600;
+
+    }
+
+
+    .back-marketplace:hover {
+
+        color:#111827;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width:900px) {
 
         .vehicle-detail-grid {
 
-            display:grid;
-
-            grid-template-columns:
-                minmax(0, 1.25fr)
-                minmax(320px, 0.75fr);
-
-            gap:25px;
-
-            margin-bottom:25px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Cards
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-detail-card {
-
-            background:#ffffff;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:12px;
-
-            box-shadow:
-                0 2px 7px
-                rgba(0, 0, 0, 0.06);
-
-            overflow:hidden;
-
-        }
-
-
-        .vehicle-detail-card-content {
-
-            padding:22px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Gallery
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-gallery {
-
-            background:#f1f5f9;
+            grid-template-columns:1fr;
 
         }
 
 
         .vehicle-primary-image {
 
-            position:relative;
+            height:350px;
 
-            width:100%;
+        }
 
-            height:430px;
+    }
 
-            background:#e2e8f0;
+
+    @media (max-width:600px) {
+
+        .vehicle-maintenance-grid {
+
+            grid-template-columns:1fr;
 
         }
 
 
-        .vehicle-primary-image img {
 
-            display:block;
+        .vehicle-primary-image {
 
-            width:100%;
-
-            height:100%;
-
-            object-fit:cover;
+            height:270px;
 
         }
 
-
-        .vehicle-no-image {
-
-            width:100%;
-
-            height:100%;
-
-            display:flex;
-
-            flex-direction:column;
-
-            align-items:center;
-
-            justify-content:center;
-
-            color:#94a3b8;
-
-            gap:10px;
-
-        }
-
-
-        .vehicle-no-image-icon {
-
-            font-size:64px;
-
-        }
-
-
-        .vehicle-image-count {
-
-            position:absolute;
-
-            bottom:12px;
-
-            right:12px;
-
-            padding:7px 11px;
-
-            border-radius:20px;
-
-            background:rgba(17,24,39,0.80);
-
-            color:#ffffff;
-
-            font-size:12px;
-
-            font-weight:600;
-
-        }
-
-
-        .vehicle-thumbnails {
-
-            display:flex;
-
-            gap:10px;
-
-            padding:14px;
-
-            overflow-x:auto;
-
-            background:#ffffff;
-
-        }
-
-
-        .vehicle-thumbnail {
-
-            flex:0 0 82px;
-
-            width:82px;
-
-            height:62px;
-
-            padding:0;
-
-            border:2px solid transparent;
-
-            border-radius:7px;
-
-            overflow:hidden;
-
-            background:#f1f5f9;
-
-            cursor:pointer;
-
-        }
-
-
-        .vehicle-thumbnail.active {
-
-            border-color:#111827;
-
-        }
-
-
-        .vehicle-thumbnail img {
-
-            display:block;
-
-            width:100%;
-
-            height:100%;
-
-            object-fit:cover;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Listing Information
-        |--------------------------------------------------------------------------
-        */
 
         .listing-main-info {
 
-            padding:25px;
-
-        }
-
-
-        .listing-status-badge {
-
-            display:inline-block;
-
-            margin-bottom:12px;
-
-            padding:6px 11px;
-
-            border-radius:20px;
-
-            background:#166534;
-
-            color:#ffffff;
-
-            font-size:11px;
-
-            font-weight:700;
-
-        }
-
-
-        .listing-status-badge.reserved {
-
-            background:#92400e;
-
-        }
-
-
-        .listing-status-badge.sold {
-
-            background:#991b1b;
-
-        }
-
-
-        .listing-status-badge.inactive {
-
-            background:#475569;
+            padding:18px;
 
         }
 
 
         .listing-main-info h1 {
 
-            margin:0 0 5px;
-
-            color:#111827;
-
-            font-size:29px;
-
-        }
-
-
-        .vehicle-subtitle {
-
-            margin-bottom:18px;
-
-            color:#64748b;
-
-            font-size:14px;
+            font-size:24px;
 
         }
 
 
         .vehicle-price {
 
-            margin-bottom:22px;
-
-            color:#111827;
-
-            font-size:30px;
-
-            font-weight:800;
+            font-size:26px;
 
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Action Buttons
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-action-buttons {
-
-            display:flex;
-
-            flex-direction:column;
-
-            gap:10px;
-
-            margin-bottom:22px;
-
-        }
-
-
-        .vehicle-action-button {
-
-            display:block;
-
-            width:100%;
-
-            box-sizing:border-box;
-
-            padding:12px 16px;
-
-            border:0;
-
-            border-radius:7px;
-
-            background:#111827;
-
-            color:#ffffff;
-
-            text-align:center;
-
-            text-decoration:none;
-
-            font-size:14px;
-
-            font-weight:700;
-
-            cursor:pointer;
-
-        }
-
-
-        .vehicle-action-button:hover {
-
-            opacity:0.9;
-
-        }
-
-
-        .vehicle-action-button.secondary {
-
-            background:#ffffff;
-
-            color:#111827;
-
-            border:1px solid #d1d5db;
-
-        }
-
-
-        .vehicle-action-button.secondary:hover {
-
-            background:#f8fafc;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vehicle Specification Grid
-        |--------------------------------------------------------------------------
-        */
 
         .vehicle-spec-grid {
 
-            display:grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            border-top:1px solid #e5e7eb;
-
-            border-left:1px solid #e5e7eb;
+            grid-template-columns:1fr;
 
         }
 
+    }
 
-        .vehicle-spec {
-
-            padding:14px;
-
-            border-right:1px solid #e5e7eb;
-
-            border-bottom:1px solid #e5e7eb;
-
-        }
-
-
-        .vehicle-spec-label {
-
-            margin-bottom:4px;
-
-            color:#64748b;
-
-            font-size:11px;
-
-            font-weight:600;
-
-            text-transform:uppercase;
-
-            letter-spacing:0.03em;
-
-        }
-
-
-        .vehicle-maintenance-grid {
-
-            display:grid;
-
-            grid-template-columns:repeat(2, minmax(0, 1fr));
-
-            border-top:1px solid #e5e7eb;
-
-            border-left:1px solid #e5e7eb;
-
-        }
-
-
-        .vehicle-maintenance-grid .vehicle-spec {
-
-            border-right:1px solid #e5e7eb;
-
-            border-bottom:1px solid #e5e7eb;
-
-        }
-
-
-        .maintenance-value {
-
-            color:#111827;
-
-            font-size:14px;
-
-            font-weight:700;
-
-        }
-
-
-        .maintenance-note {
-
-            margin-top:14px;
-
-            padding:12px 14px;
-
-            border-radius:7px;
-
-            background:#f8fafc;
-
-            color:#64748b;
-
-            font-size:12px;
-
-            line-height:1.6;
-
-        }
-
-
-        .vehicle-spec-value {
-
-            color:#111827;
-
-            font-size:14px;
-
-            font-weight:600;
-
-            word-break:break-word;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Section Headers
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-section {
-
-            margin-bottom:25px;
-
-        }
-
-
-        .vehicle-section:last-child {
-
-            margin-bottom:0;
-
-        }
-
-
-        .vehicle-section-header {
-
-            display:flex;
-
-            justify-content:space-between;
-
-            align-items:center;
-
-            gap:15px;
-
-            margin-bottom:15px;
-
-        }
-
-
-        .vehicle-section-header h2 {
-
-            margin:0;
-
-            font-size:20px;
-
-        }
-
-
-        .vehicle-section-count {
-
-            color:#64748b;
-
-            font-size:13px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Description
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-description {
-
-            color:#475569;
-
-            font-size:14px;
-
-            line-height:1.7;
-
-            white-space:pre-line;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Seller Card
-        |--------------------------------------------------------------------------
-        */
-
-        .seller-card {
-
-            display:flex;
-
-            align-items:center;
-
-            gap:14px;
-
-        }
-
-
-        .seller-avatar {
-
-            width:48px;
-
-            height:48px;
-
-            display:flex;
-
-            align-items:center;
-
-            justify-content:center;
-
-            flex:0 0 48px;
-
-            border-radius:50%;
-
-            background:#111827;
-
-            color:#ffffff;
-
-            font-size:18px;
-
-            font-weight:700;
-
-        }
-
-
-        .seller-name {
-
-            margin-bottom:3px;
-
-            color:#111827;
-
-            font-size:15px;
-
-            font-weight:700;
-
-        }
-
-
-        .seller-role {
-
-            color:#64748b;
-
-            font-size:12px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Record Tables
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-record-table-wrapper {
-
-            overflow-x:auto;
-
-        }
-
-
-        .vehicle-record-table {
-
-            width:100%;
-
-            border-collapse:collapse;
-
-            font-size:13px;
-
-        }
-
-
-        .vehicle-record-table th {
-
-            padding:11px 12px;
-
-            border-bottom:1px solid #e5e7eb;
-
-            background:#f8fafc;
-
-            color:#475569;
-
-            text-align:left;
-
-            font-size:11px;
-
-            font-weight:700;
-
-            text-transform:uppercase;
-
-        }
-
-
-        .vehicle-record-table td {
-
-            padding:12px;
-
-            border-bottom:1px solid #f1f5f9;
-
-            color:#475569;
-
-            vertical-align:top;
-
-        }
-
-
-        .vehicle-record-table tr:last-child td {
-
-            border-bottom:0;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Status Labels
-        |--------------------------------------------------------------------------
-        */
-
-        .record-status {
-
-            display:inline-block;
-
-            padding:4px 8px;
-
-            border-radius:5px;
-
-            background:#f1f5f9;
-
-            color:#475569;
-
-            font-size:11px;
-
-            font-weight:600;
-
-        }
-
-
-        .record-status.active {
-
-            background:#dcfce7;
-
-            color:#166534;
-
-        }
-
-
-        .record-status.expired {
-
-            background:#fee2e2;
-
-            color:#991b1b;
-
-        }
-
-
-        .record-status.cancelled {
-
-            background:#f1f5f9;
-
-            color:#475569;
-
-        }
-
-
-        .damage-level {
-
-            display:inline-block;
-
-            padding:4px 8px;
-
-            border-radius:5px;
-
-            font-size:11px;
-
-            font-weight:600;
-
-        }
-
-
-        .damage-level.minor {
-
-            background:#dcfce7;
-
-            color:#166534;
-
-        }
-
-
-        .damage-level.moderate {
-
-            background:#fef3c7;
-
-            color:#92400e;
-
-        }
-
-
-        .damage-level.major {
-
-            background:#ffedd5;
-
-            color:#9a3412;
-
-        }
-
-
-        .damage-level.severe {
-
-            background:#fee2e2;
-
-            color:#991b1b;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Empty Record
-        |--------------------------------------------------------------------------
-        */
-
-        .vehicle-empty-record {
-
-            padding:25px;
-
-            text-align:center;
-
-            color:#64748b;
-
-            font-size:13px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Back Link
-        |--------------------------------------------------------------------------
-        */
-
-        .back-marketplace {
-
-            display:inline-block;
-
-            margin-bottom:18px;
-
-            color:#475569;
-
-            text-decoration:none;
-
-            font-size:13px;
-
-            font-weight:600;
-
-        }
-
-
-        .back-marketplace:hover {
-
-            color:#111827;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Responsive
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width:900px) {
-
-            .vehicle-detail-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .vehicle-primary-image {
-
-                height:350px;
-
-            }
-
-        }
-
-
-        @media (max-width:600px) {
-
-            .vehicle-maintenance-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-
-            .vehicle-primary-image {
-
-                height:270px;
-
-            }
-
-
-            .listing-main-info {
-
-                padding:18px;
-
-            }
-
-
-            .listing-main-info h1 {
-
-                font-size:24px;
-
-            }
-
-
-            .vehicle-price {
-
-                font-size:26px;
-
-            }
-
-
-            .vehicle-spec-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>
@@ -2662,14 +2652,8 @@ $vehicleStatusClass =
 </div>
 
 
-<?php
-
-require_once __DIR__ .
-    "/../includes/footer.php";
-
-?>
-
-
+<!-- FIX: page-specific script moved BEFORE footer.php
+     (was after </html>, which is invalid HTML) -->
 <script>
 
 document.addEventListener(
@@ -2742,3 +2726,11 @@ document.addEventListener(
 );
 
 </script>
+
+
+<?php
+
+require_once __DIR__ .
+    "/../includes/footer.php";
+
+?>

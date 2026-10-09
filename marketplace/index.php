@@ -4,6 +4,7 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
 $pageTitle = "Vehicle Marketplace";
 $activePage = "marketplace";
 
@@ -208,581 +209,566 @@ $listings =
 $totalListings =
     count($listings);
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    /*
+    |--------------------------------------------------------------------------
+    | Marketplace Header
+    |--------------------------------------------------------------------------
+    */
 
-<head>
+    .marketplace-header {
 
-    <meta charset="UTF-8">
+        display:flex;
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        justify-content:space-between;
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+        align-items:center;
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+        gap:20px;
 
-    <style>
+        margin-bottom:25px;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Marketplace Header
-        |--------------------------------------------------------------------------
-        */
+        flex-wrap:wrap;
 
-        .marketplace-header {
-
-            display:flex;
-
-            justify-content:space-between;
-
-            align-items:center;
-
-            gap:20px;
-
-            margin-bottom:25px;
-
-            flex-wrap:wrap;
-
-        }
+    }
 
 
-        .marketplace-header h1 {
+    .marketplace-header h1 {
 
-            margin:0;
+        margin:0;
 
-        }
-
-
-        .marketplace-header p {
-
-            margin:6px 0 0;
-
-            color:#64748b;
-
-        }
+    }
 
 
-        .marketplace-actions {
+    .marketplace-header p {
 
-            display:flex;
+        margin:6px 0 0;
 
-            gap:10px;
+        color:#64748b;
 
-            flex-wrap:wrap;
-
-        }
+    }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Filters
-        |--------------------------------------------------------------------------
-        */
+    .marketplace-actions {
 
-        .marketplace-filters {
+        display:flex;
 
-            padding:20px;
+        gap:10px;
 
-            margin-bottom:25px;
+        flex-wrap:wrap;
 
-            border:1px solid #e5e7eb;
+    }
 
-            border-radius:10px;
 
-            background:#ffffff;
+    /*
+    |--------------------------------------------------------------------------
+    | Filters
+    |--------------------------------------------------------------------------
+    */
 
-        }
+    .marketplace-filters {
 
+        padding:20px;
+
+        margin-bottom:25px;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        background:#ffffff;
+
+    }
+
+
+    .filter-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            minmax(220px, 2fr)
+            minmax(140px, 1fr)
+            minmax(140px, 1fr)
+            minmax(160px, 1fr)
+            auto;
+
+        gap:12px;
+
+        align-items:end;
+
+    }
+
+
+    .filter-group label {
+
+        display:block;
+
+        margin-bottom:6px;
+
+        font-size:13px;
+
+        font-weight:600;
+
+        color:#374151;
+
+    }
+
+
+    .filter-group input,
+    .filter-group select {
+
+        width:100%;
+
+        box-sizing:border-box;
+
+        padding:10px 12px;
+
+        border:1px solid #d1d5db;
+
+        border-radius:6px;
+
+        background:#ffffff;
+
+        font-size:14px;
+
+    }
+
+
+    .filter-buttons {
+
+        display:flex;
+
+        gap:8px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Listing Grid
+    |--------------------------------------------------------------------------
+    */
+
+    .marketplace-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(
+                auto-fill,
+                minmax(270px, 1fr)
+            );
+
+        gap:22px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Listing Card
+    |--------------------------------------------------------------------------
+    */
+
+    .vehicle-listing-card {
+
+        overflow:hidden;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:12px;
+
+        background:#ffffff;
+
+        box-shadow:
+            0 2px 7px
+            rgba(0, 0, 0, 0.06);
+
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+
+    }
+
+
+    .vehicle-listing-card:hover {
+
+        transform:translateY(-3px);
+
+        box-shadow:
+            0 8px 20px
+            rgba(0, 0, 0, 0.10);
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vehicle Image
+    |--------------------------------------------------------------------------
+    */
+
+    .listing-image-container {
+
+        position:relative;
+
+        width:100%;
+
+        height:210px;
+
+        background:#f1f5f9;
+
+    }
+
+
+    .listing-image {
+
+        display:block;
+
+        width:100%;
+
+        height:100%;
+
+        object-fit:cover;
+
+    }
+
+
+    .listing-no-image {
+
+        width:100%;
+
+        height:100%;
+
+        display:flex;
+
+        align-items:center;
+
+        justify-content:center;
+
+        flex-direction:column;
+
+        color:#94a3b8;
+
+        font-size:14px;
+
+        gap:8px;
+
+    }
+
+
+    .listing-no-image-icon {
+
+        font-size:42px;
+
+    }
+
+
+    .listing-status {
+
+        position:absolute;
+
+        top:12px;
+
+        right:12px;
+
+        padding:6px 10px;
+
+        border-radius:20px;
+
+        background:#166534;
+
+        color:#ffffff;
+
+        font-size:11px;
+
+        font-weight:700;
+
+    }
+
+
+    .listing-status.reserved {
+
+        background:#92400e;
+
+    }
+
+
+    .listing-status.sold {
+
+        background:#991b1b;
+
+    }
+
+
+    .listing-status.inactive {
+
+        background:#475569;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Listing Content
+    |--------------------------------------------------------------------------
+    */
+
+    .listing-content {
+
+        padding:18px;
+
+    }
+
+
+    .listing-title {
+
+        margin:0 0 5px;
+
+        font-size:18px;
+
+        font-weight:700;
+
+        color:#111827;
+
+    }
+
+
+    .listing-year {
+
+        color:#64748b;
+
+        font-size:13px;
+
+        margin-bottom:12px;
+
+    }
+
+
+    .listing-price {
+
+        margin-bottom:15px;
+
+        color:#111827;
+
+        font-size:21px;
+
+        font-weight:800;
+
+    }
+
+
+    .listing-details {
+
+        display:flex;
+
+        flex-wrap:wrap;
+
+        gap:6px;
+
+        margin-bottom:15px;
+
+    }
+
+
+    .listing-detail {
+
+        padding:5px 8px;
+
+        border-radius:5px;
+
+        background:#f1f5f9;
+
+        color:#475569;
+
+        font-size:11px;
+
+    }
+
+
+    .listing-description {
+
+        min-height:42px;
+
+        margin-bottom:15px;
+
+        color:#64748b;
+
+        font-size:13px;
+
+        line-height:1.5;
+
+    }
+
+
+    .listing-seller {
+
+        padding-top:12px;
+
+        margin-bottom:15px;
+
+        border-top:1px solid #f1f5f9;
+
+        color:#64748b;
+
+        font-size:12px;
+
+    }
+
+
+    .listing-seller strong {
+
+        color:#374151;
+
+    }
+
+
+    .listing-button {
+
+        display:block;
+
+        width:100%;
+
+        box-sizing:border-box;
+
+        padding:10px 14px;
+
+        border-radius:6px;
+
+        background:#111827;
+
+        color:#ffffff;
+
+        text-align:center;
+
+        text-decoration:none;
+
+        font-size:13px;
+
+        font-weight:600;
+
+    }
+
+
+    .listing-button:hover {
+
+        opacity:0.9;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Empty State
+    |--------------------------------------------------------------------------
+    */
+
+    .marketplace-empty {
+
+        padding:60px 25px;
+
+        text-align:center;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:12px;
+
+        background:#ffffff;
+
+    }
+
+
+    .marketplace-empty-icon {
+
+        margin-bottom:12px;
+
+        font-size:48px;
+
+    }
+
+
+    .marketplace-empty h2 {
+
+        margin:0 0 8px;
+
+    }
+
+
+    .marketplace-empty p {
+
+        margin:0 auto 20px;
+
+        max-width:500px;
+
+        color:#64748b;
+
+        line-height:1.6;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive
+    |--------------------------------------------------------------------------
+    */
+
+    @media (
+        max-width:900px
+    ) {
 
         .filter-grid {
 
-            display:grid;
-
             grid-template-columns:
-                minmax(220px, 2fr)
-                minmax(140px, 1fr)
-                minmax(140px, 1fr)
-                minmax(160px, 1fr)
-                auto;
-
-            gap:12px;
-
-            align-items:end;
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
 
         }
 
+    }
 
-        .filter-group label {
 
-            display:block;
+    @media (
+        max-width:600px
+    ) {
 
-            margin-bottom:6px;
+        .filter-grid {
 
-            font-size:13px;
-
-            font-weight:600;
-
-            color:#374151;
+            grid-template-columns:1fr;
 
         }
 
-
-        .filter-group input,
-        .filter-group select {
-
-            width:100%;
-
-            box-sizing:border-box;
-
-            padding:10px 12px;
-
-            border:1px solid #d1d5db;
-
-            border-radius:6px;
-
-            background:#ffffff;
-
-            font-size:14px;
-
-        }
-
-
-        .filter-buttons {
-
-            display:flex;
-
-            gap:8px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Listing Grid
-        |--------------------------------------------------------------------------
-        */
 
         .marketplace-grid {
 
-            display:grid;
-
-            grid-template-columns:
-                repeat(
-                    auto-fill,
-                    minmax(270px, 1fr)
-                );
-
-            gap:22px;
+            grid-template-columns:1fr;
 
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Listing Card
-        |--------------------------------------------------------------------------
-        */
+        .marketplace-header {
 
-        .vehicle-listing-card {
-
-            overflow:hidden;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:12px;
-
-            background:#ffffff;
-
-            box-shadow:
-                0 2px 7px
-                rgba(0, 0, 0, 0.06);
-
-            transition:
-                transform 0.2s ease,
-                box-shadow 0.2s ease;
+            align-items:flex-start;
 
         }
 
+    }
 
-        .vehicle-listing-card:hover {
-
-            transform:translateY(-3px);
-
-            box-shadow:
-                0 8px 20px
-                rgba(0, 0, 0, 0.10);
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vehicle Image
-        |--------------------------------------------------------------------------
-        */
-
-        .listing-image-container {
-
-            position:relative;
-
-            width:100%;
-
-            height:210px;
-
-            background:#f1f5f9;
-
-        }
-
-
-        .listing-image {
-
-            display:block;
-
-            width:100%;
-
-            height:100%;
-
-            object-fit:cover;
-
-        }
-
-
-        .listing-no-image {
-
-            width:100%;
-
-            height:100%;
-
-            display:flex;
-
-            align-items:center;
-
-            justify-content:center;
-
-            flex-direction:column;
-
-            color:#94a3b8;
-
-            font-size:14px;
-
-            gap:8px;
-
-        }
-
-
-        .listing-no-image-icon {
-
-            font-size:42px;
-
-        }
-
-
-        .listing-status {
-
-            position:absolute;
-
-            top:12px;
-
-            right:12px;
-
-            padding:6px 10px;
-
-            border-radius:20px;
-
-            background:#166534;
-
-            color:#ffffff;
-
-            font-size:11px;
-
-            font-weight:700;
-
-        }
-
-
-        .listing-status.reserved {
-
-            background:#92400e;
-
-        }
-
-
-        .listing-status.sold {
-
-            background:#991b1b;
-
-        }
-
-
-        .listing-status.inactive {
-
-            background:#475569;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Listing Content
-        |--------------------------------------------------------------------------
-        */
-
-        .listing-content {
-
-            padding:18px;
-
-        }
-
-
-        .listing-title {
-
-            margin:0 0 5px;
-
-            font-size:18px;
-
-            font-weight:700;
-
-            color:#111827;
-
-        }
-
-
-        .listing-year {
-
-            color:#64748b;
-
-            font-size:13px;
-
-            margin-bottom:12px;
-
-        }
-
-
-        .listing-price {
-
-            margin-bottom:15px;
-
-            color:#111827;
-
-            font-size:21px;
-
-            font-weight:800;
-
-        }
-
-
-        .listing-details {
-
-            display:flex;
-
-            flex-wrap:wrap;
-
-            gap:6px;
-
-            margin-bottom:15px;
-
-        }
-
-
-        .listing-detail {
-
-            padding:5px 8px;
-
-            border-radius:5px;
-
-            background:#f1f5f9;
-
-            color:#475569;
-
-            font-size:11px;
-
-        }
-
-
-        .listing-description {
-
-            min-height:42px;
-
-            margin-bottom:15px;
-
-            color:#64748b;
-
-            font-size:13px;
-
-            line-height:1.5;
-
-        }
-
-
-        .listing-seller {
-
-            padding-top:12px;
-
-            margin-bottom:15px;
-
-            border-top:1px solid #f1f5f9;
-
-            color:#64748b;
-
-            font-size:12px;
-
-        }
-
-
-        .listing-seller strong {
-
-            color:#374151;
-
-        }
-
-
-        .listing-button {
-
-            display:block;
-
-            width:100%;
-
-            box-sizing:border-box;
-
-            padding:10px 14px;
-
-            border-radius:6px;
-
-            background:#111827;
-
-            color:#ffffff;
-
-            text-align:center;
-
-            text-decoration:none;
-
-            font-size:13px;
-
-            font-weight:600;
-
-        }
-
-
-        .listing-button:hover {
-
-            opacity:0.9;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Empty State
-        |--------------------------------------------------------------------------
-        */
-
-        .marketplace-empty {
-
-            padding:60px 25px;
-
-            text-align:center;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:12px;
-
-            background:#ffffff;
-
-        }
-
-
-        .marketplace-empty-icon {
-
-            margin-bottom:12px;
-
-            font-size:48px;
-
-        }
-
-
-        .marketplace-empty h2 {
-
-            margin:0 0 8px;
-
-        }
-
-
-        .marketplace-empty p {
-
-            margin:0 auto 20px;
-
-            max-width:500px;
-
-            color:#64748b;
-
-            line-height:1.6;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Responsive
-        |--------------------------------------------------------------------------
-        */
-
-        @media (
-            max-width:900px
-        ) {
-
-            .filter-grid {
-
-                grid-template-columns:
-                    repeat(
-                        2,
-                        minmax(0, 1fr)
-                    );
-
-            }
-
-        }
-
-
-        @media (
-            max-width:600px
-        ) {
-
-            .filter-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .marketplace-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .marketplace-header {
-
-                align-items:flex-start;
-
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>

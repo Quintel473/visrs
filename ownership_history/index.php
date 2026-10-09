@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 
+$basePath = "../";
 $activePage = "ownership_history";
 
 $canManage =
@@ -53,30 +54,17 @@ $stmt = $pdo->query("
 
 $history = $stmt->fetchAll();
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "VISRS - Ownership History";
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        VISRS - Ownership History
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -476,13 +464,11 @@ $history = $stmt->fetchAll();
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
+     </body></html> that followed. footer.php closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

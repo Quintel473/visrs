@@ -1334,3 +1334,487 @@ footer {
 .text-success {
     color: #166534;
 }
+
+
+/* =========================================================
+   =========================================================
+   =========================================================
+   NEW SECTION — DARK MODE + NEW UI COMPONENTS
+   =========================================================
+   Everything below is new.
+   Nothing above has been modified.
+   =========================================================
+   =========================================================
+   ========================================================= */
+
+
+/* =========================================================
+   38. DARK MODE TOGGLE BUTTON
+   ---------------------------------------------------------
+   Round button in the topbar.
+   Light-mode defaults: matches the white topbar background.
+   Dark-mode overrides further down.
+   ========================================================= */
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    margin: 0 12px 0 0;
+    padding: 0;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.theme-toggle:active {
+    transform: scale(0.94);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.theme-icon {
+    display: inline-block;
+    pointer-events: none;
+    line-height: 1;
+}
+
+
+/* =========================================================
+   39. SCREEN-READER-ONLY UTILITY
+   ---------------------------------------------------------
+   Hides content visually but keeps it accessible to screen
+   readers. Used for form labels that don't have visible text.
+   ========================================================= */
+
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+
+    padding: 0;
+    margin: -1px;
+
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+
+    white-space: nowrap;
+
+    border: 0;
+}
+
+
+/* =========================================================
+   40. PROFILE LINK
+   ---------------------------------------------------------
+   Styles the profile <a> in includes/header.php
+   (previously used inline styles).
+   ========================================================= */
+
+.profile-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+
+    color: inherit;
+    text-decoration: none;
+}
+
+
+/* =========================================================
+   41. DARK MODE OVERRIDES
+   ---------------------------------------------------------
+   Applied only when <html data-theme="dark"> is set.
+   Overrides hardcoded colors without editing the rules above.
+   ========================================================= */
+
+
+/* --- Body & base --------------------------------------- */
+
+[data-theme="dark"] body {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] a {
+    color: inherit;
+}
+
+
+/* --- Sidebar ------------------------------------------- */
+
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .sidebar-logo {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .sidebar-logo h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .sidebar-logo p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .sidebar-nav a {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .sidebar-nav a:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .sidebar-nav a.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .sidebar-nav a.active:hover {
+    background: #1d4ed8;
+}
+
+
+/* --- Main content -------------------------------------- */
+
+[data-theme="dark"] .main-content {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+
+/* --- Topbar -------------------------------------------- */
+
+[data-theme="dark"] .topbar {
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+}
+
+[data-theme="dark"] .topbar-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .user-info,
+[data-theme="dark"] .user-info > span {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .user-avatar {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+
+/* --- Theme toggle in dark mode ------------------------- */
+
+[data-theme="dark"] .theme-toggle {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .theme-toggle:focus-visible {
+    outline: 2px solid #60a5fa;
+}
+
+
+/* --- Page titles --------------------------------------- */
+
+[data-theme="dark"] .page-title {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .page-subtitle {
+    color: #94a3b8;
+}
+
+
+/* --- Cards & stat cards -------------------------------- */
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .card h2,
+[data-theme="dark"] .card h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .card p {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .stat-card h3 {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .stat-card .number,
+[data-theme="dark"] .stat-number {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #94a3b8;
+}
+
+
+/* --- Forms --------------------------------------------- */
+
+[data-theme="dark"] .form-group label {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+    color: #64748b;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.20);
+}
+
+[data-theme="dark"] input:disabled,
+[data-theme="dark"] select:disabled,
+[data-theme="dark"] textarea:disabled {
+    background: #1e293b;
+    color: #64748b;
+}
+
+
+/* --- Buttons ------------------------------------------- */
+
+[data-theme="dark"] .button {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .button:hover {
+    background: #3b82f6;
+}
+
+[data-theme="dark"] .button-secondary {
+    background: #475569;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .button-secondary:hover {
+    background: #64748b;
+}
+
+[data-theme="dark"] .button-danger {
+    background: #b91c1c;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .button-danger:hover {
+    background: #dc2626;
+}
+
+[data-theme="dark"] .button-success {
+    background: #15803d;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .button-success:hover {
+    background: #16a34a;
+}
+
+
+/* --- Tables -------------------------------------------- */
+
+[data-theme="dark"] table {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] thead {
+    background: #0f172a;
+}
+
+[data-theme="dark"] th {
+    color: #cbd5e1;
+    background: #0f172a;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] td {
+    color: #e2e8f0;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] tbody tr:hover {
+    background: #334155;
+}
+
+[data-theme="dark"] tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* --- Alerts -------------------------------------------- */
+
+[data-theme="dark"] .alert-success {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .alert-error,
+[data-theme="dark"] .error-box {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .alert-warning,
+[data-theme="dark"] .warning-box {
+    background: #78350f;
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .alert-info {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+
+/* --- Status & role badges ------------------------------ */
+
+[data-theme="dark"] .user-role-default,
+[data-theme="dark"] .status-inactive,
+[data-theme="dark"] .status-cancelled {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .user-role-admin {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .user-role-police,
+[data-theme="dark"] .status-active {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .user-role-seller,
+[data-theme="dark"] .status-sold {
+    background: #78350f;
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .status-stolen,
+[data-theme="dark"] .status-expired {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+
+
+/* --- Detail grid --------------------------------------- */
+
+[data-theme="dark"] .detail-grid {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .detail-item {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .detail-item:nth-child(odd) {
+    border-right-color: #334155;
+}
+
+[data-theme="dark"] .detail-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .detail-value {
+    color: #f1f5f9;
+}
+
+
+/* --- Empty state --------------------------------------- */
+
+[data-theme="dark"] .empty-state {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .empty-state h3 {
+    color: #cbd5e1;
+}
+
+
+/* --- Utility text colors ------------------------------- */
+
+[data-theme="dark"] .text-muted {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .text-success {
+    color: #4ade80;
+}
+
+
+/* --- Mobile responsive fix for dark mode --------------- */
+
+@media (max-width: 700px) {
+    [data-theme="dark"] .sidebar {
+        border-bottom: 1px solid #334155;
+    }
+}

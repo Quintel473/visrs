@@ -54,28 +54,16 @@ if ($search !== "") {
     $vehicles = $stmt->fetchAll();
 }
 
+
+/*
+ * Global <head>
+ */
+
+$pageTitle = "VISRS - Vehicle Search";
+
+require_once "includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>VISRS - Vehicle Search</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -310,6 +298,8 @@ if ($search !== "") {
     </main>
 
 </div>
+
+<script src="js/app.js"></script>
 
 </body>
 

@@ -40,97 +40,81 @@ $stmt = $pdo->query("
 
 $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
+
+$pageTitle = "VISRS - Dashboard";
+
+require_once "includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<style>
 
-<head>
+    /*
+     * Dashboard-specific navigation styling.
+     * Keeping the sidebar links at a fixed height prevents
+     * the navigation from moving around when additional
+     * menu items are added.
+     */
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>VISRS - Dashboard</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-
-    <style>
-
-        /*
-         * Dashboard-specific navigation styling.
-         * Keeping the sidebar links at a fixed height prevents
-         * the navigation from moving around when additional
-         * menu items are added.
-         */
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
+    .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
 
 
-        .sidebar-nav a {
-            display: flex;
-            align-items: center;
-            min-height: 44px;
-            box-sizing: border-box;
-            text-decoration: none;
-            white-space: nowrap;
-        }
+    .sidebar-nav a {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        box-sizing: border-box;
+        text-decoration: none;
+        white-space: nowrap;
+    }
 
+
+    .dashboard-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+
+    .dashboard-action-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        box-sizing: border-box;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+
+    .stat-number {
+        font-size: 30px;
+        font-weight: 700;
+        margin-top: 8px;
+    }
+
+
+    .stat-label {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+
+    @media (max-width: 768px) {
 
         .dashboard-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: 1fr;
         }
 
+    }
 
-        .dashboard-action-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 48px;
-            box-sizing: border-box;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-
-
-        .stat-number {
-            font-size: 30px;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-
-        .stat-label {
-            color: #64748b;
-            font-size: 14px;
-        }
-
-
-        @media (max-width: 768px) {
-
-            .dashboard-actions {
-                grid-template-columns: 1fr;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>

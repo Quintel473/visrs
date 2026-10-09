@@ -9,6 +9,7 @@ requireRole([
     "Seller"
 ]);
 
+$basePath = "../";
 $pageTitle = "Buyer Inquiries";
 $activePage = "marketplace";
 
@@ -264,645 +265,630 @@ unset(
     $_SESSION["flash_error"]
 );
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<html lang="en">
+    .inquiries-page {
 
-<head>
+        max-width:1200px;
 
-    <meta charset="UTF-8">
+        margin:0 auto;
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= e($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-    <style>
-
-        .inquiries-page {
-
-            max-width:1200px;
-
-            margin:0 auto;
-
-        }
+    }
 
 
-        .page-heading {
+    .page-heading {
 
-            margin-bottom:20px;
+        margin-bottom:20px;
 
-        }
-
-
-        .page-heading h1 {
-
-            margin:0 0 6px;
-
-            font-size:25px;
-
-            color:#111827;
-
-        }
+    }
 
 
-        .page-heading p {
+    .page-heading h1 {
 
-            margin:0;
+        margin:0 0 6px;
 
-            color:#64748b;
+        font-size:25px;
 
-            font-size:14px;
+        color:#111827;
 
-        }
+    }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | SUMMARY
-        |--------------------------------------------------------------------------
-        */
+    .page-heading p {
+
+        margin:0;
+
+        color:#64748b;
+
+        font-size:14px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    .summary-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap:14px;
+
+        margin-bottom:20px;
+
+    }
+
+
+    .summary-card {
+
+        padding:18px;
+
+        background:#ffffff;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        box-shadow:
+            0 2px 7px
+            rgba(0,0,0,0.04);
+
+    }
+
+
+    .summary-label {
+
+        margin-bottom:6px;
+
+        color:#94a3b8;
+
+        font-size:10px;
+
+        font-weight:700;
+
+        text-transform:uppercase;
+
+    }
+
+
+    .summary-number {
+
+        color:#111827;
+
+        font-size:25px;
+
+        font-weight:750;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER BAR
+    |--------------------------------------------------------------------------
+    */
+
+    .filter-bar {
+
+        display:flex;
+
+        align-items:center;
+
+        gap:8px;
+
+        flex-wrap:wrap;
+
+        margin-bottom:20px;
+
+    }
+
+
+    .filter-button {
+
+        display:inline-block;
+
+        padding:8px 12px;
+
+        border:1px solid #d1d5db;
+
+        border-radius:6px;
+
+        background:#ffffff;
+
+        color:#374151;
+
+        font-size:12px;
+
+        font-weight:600;
+
+        text-decoration:none;
+
+    }
+
+
+    .filter-button:hover {
+
+        background:#f8fafc;
+
+    }
+
+
+    .filter-button.active {
+
+        background:#111827;
+
+        border-color:#111827;
+
+        color:#ffffff;
+
+    }
+
+
+    .clear-filter {
+
+        color:#64748b;
+
+        font-size:12px;
+
+        text-decoration:none;
+
+    }
+
+
+    .clear-filter:hover {
+
+        color:#111827;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INQUIRY CARD
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-card {
+
+        margin-bottom:16px;
+
+        padding:20px;
+
+        background:#ffffff;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        box-shadow:
+            0 2px 7px
+            rgba(0,0,0,0.04);
+
+    }
+
+
+    .inquiry-top {
+
+        display:flex;
+
+        justify-content:space-between;
+
+        align-items:flex-start;
+
+        gap:15px;
+
+        margin-bottom:16px;
+
+    }
+
+
+    .vehicle-name {
+
+        margin:0 0 5px;
+
+        color:#111827;
+
+        font-size:18px;
+
+        font-weight:750;
+
+    }
+
+
+    .vehicle-meta {
+
+        color:#64748b;
+
+        font-size:12px;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    .status-badge {
+
+        display:inline-block;
+
+        padding:5px 9px;
+
+        border-radius:999px;
+
+        font-size:11px;
+
+        font-weight:700;
+
+        white-space:nowrap;
+
+    }
+
+
+    .status-pending {
+
+        background:#fef3c7;
+
+        color:#92400e;
+
+    }
+
+
+    .status-contacted {
+
+        background:#dbeafe;
+
+        color:#1e40af;
+
+    }
+
+
+    .status-accepted {
+
+        background:#dcfce7;
+
+        color:#166534;
+
+    }
+
+
+    .status-declined {
+
+        background:#fee2e2;
+
+        color:#991b1b;
+
+    }
+
+
+    .status-closed {
+
+        background:#e5e7eb;
+
+        color:#374151;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INFORMATION GRID
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-grid {
+
+        display:grid;
+
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+
+        gap:14px;
+
+        padding:16px 0;
+
+        border-top:1px solid #f1f5f9;
+
+        border-bottom:1px solid #f1f5f9;
+
+    }
+
+
+    .inquiry-info-label {
+
+        margin-bottom:4px;
+
+        color:#94a3b8;
+
+        font-size:10px;
+
+        font-weight:700;
+
+        text-transform:uppercase;
+
+    }
+
+
+    .inquiry-info-value {
+
+        color:#334155;
+
+        font-size:13px;
+
+        font-weight:600;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BUYER MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    .buyer-message {
+
+        margin-top:16px;
+
+        padding:14px;
+
+        border-radius:7px;
+
+        background:#f8fafc;
+
+        color:#475569;
+
+        font-size:13px;
+
+        line-height:1.6;
+
+    }
+
+
+    .buyer-message-label {
+
+        margin-bottom:6px;
+
+        color:#94a3b8;
+
+        font-size:10px;
+
+        font-weight:700;
+
+        text-transform:uppercase;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CARD FOOTER
+    |--------------------------------------------------------------------------
+    */
+
+    .inquiry-footer {
+
+        display:flex;
+
+        justify-content:space-between;
+
+        align-items:center;
+
+        gap:15px;
+
+        margin-top:16px;
+
+    }
+
+
+    .submitted-date {
+
+        color:#94a3b8;
+
+        font-size:11px;
+
+    }
+
+
+    .inquiry-actions {
+
+        display:flex;
+
+        gap:8px;
+
+        flex-wrap:wrap;
+
+    }
+
+
+    .action-button {
+
+        display:inline-block;
+
+        padding:8px 12px;
+
+        border:1px solid #d1d5db;
+
+        border-radius:6px;
+
+        color:#374151;
+
+        background:#ffffff;
+
+        font-size:12px;
+
+        font-weight:600;
+
+        text-decoration:none;
+
+    }
+
+
+    .action-button:hover {
+
+        background:#f8fafc;
+
+    }
+
+
+    .action-button.primary {
+
+        background:#111827;
+
+        border-color:#111827;
+
+        color:#ffffff;
+
+    }
+
+
+    .action-button.primary:hover {
+
+        background:#1f2937;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | EMPTY STATE
+    |--------------------------------------------------------------------------
+    */
+
+    .empty-state {
+
+        padding:55px 25px;
+
+        background:#ffffff;
+
+        border:1px solid #e5e7eb;
+
+        border-radius:10px;
+
+        text-align:center;
+
+    }
+
+
+    .empty-state h2 {
+
+        margin:0 0 8px;
+
+        color:#111827;
+
+        font-size:20px;
+
+    }
+
+
+    .empty-state p {
+
+        margin:0 auto 18px;
+
+        max-width:520px;
+
+        color:#64748b;
+
+        font-size:13px;
+
+        line-height:1.6;
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESPONSIVE
+    |--------------------------------------------------------------------------
+    */
+
+    @media (max-width:850px) {
 
         .summary-grid {
 
-            display:grid;
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+        }
+
+
+        .inquiry-grid {
 
             grid-template-columns:
-                repeat(4, minmax(0, 1fr));
-
-            gap:14px;
-
-            margin-bottom:20px;
+                repeat(2, minmax(0, 1fr));
 
         }
 
+    }
 
-        .summary-card {
 
-            padding:18px;
+    @media (max-width:600px) {
 
-            background:#ffffff;
+        .summary-grid {
 
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
-            box-shadow:
-                0 2px 7px
-                rgba(0,0,0,0.04);
-
-        }
-
-
-        .summary-label {
-
-            margin-bottom:6px;
-
-            color:#94a3b8;
-
-            font-size:10px;
-
-            font-weight:700;
-
-            text-transform:uppercase;
-
-        }
-
-
-        .summary-number {
-
-            color:#111827;
-
-            font-size:25px;
-
-            font-weight:750;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | FILTER BAR
-        |--------------------------------------------------------------------------
-        */
-
-        .filter-bar {
-
-            display:flex;
-
-            align-items:center;
-
-            gap:8px;
-
-            flex-wrap:wrap;
-
-            margin-bottom:20px;
-
-        }
-
-
-        .filter-button {
-
-            display:inline-block;
-
-            padding:8px 12px;
-
-            border:1px solid #d1d5db;
-
-            border-radius:6px;
-
-            background:#ffffff;
-
-            color:#374151;
-
-            font-size:12px;
-
-            font-weight:600;
-
-            text-decoration:none;
-
-        }
-
-
-        .filter-button:hover {
-
-            background:#f8fafc;
-
-        }
-
-
-        .filter-button.active {
-
-            background:#111827;
-
-            border-color:#111827;
-
-            color:#ffffff;
-
-        }
-
-
-        .clear-filter {
-
-            color:#64748b;
-
-            font-size:12px;
-
-            text-decoration:none;
-
-        }
-
-
-        .clear-filter:hover {
-
-            color:#111827;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | INQUIRY CARD
-        |--------------------------------------------------------------------------
-        */
-
-        .inquiry-card {
-
-            margin-bottom:16px;
-
-            padding:20px;
-
-            background:#ffffff;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
-            box-shadow:
-                0 2px 7px
-                rgba(0,0,0,0.04);
+            grid-template-columns:1fr;
 
         }
 
 
         .inquiry-top {
 
-            display:flex;
-
-            justify-content:space-between;
-
-            align-items:flex-start;
-
-            gap:15px;
-
-            margin-bottom:16px;
+            flex-direction:column;
 
         }
 
-
-        .vehicle-name {
-
-            margin:0 0 5px;
-
-            color:#111827;
-
-            font-size:18px;
-
-            font-weight:750;
-
-        }
-
-
-        .vehicle-meta {
-
-            color:#64748b;
-
-            font-size:12px;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | STATUS
-        |--------------------------------------------------------------------------
-        */
-
-        .status-badge {
-
-            display:inline-block;
-
-            padding:5px 9px;
-
-            border-radius:999px;
-
-            font-size:11px;
-
-            font-weight:700;
-
-            white-space:nowrap;
-
-        }
-
-
-        .status-pending {
-
-            background:#fef3c7;
-
-            color:#92400e;
-
-        }
-
-
-        .status-contacted {
-
-            background:#dbeafe;
-
-            color:#1e40af;
-
-        }
-
-
-        .status-accepted {
-
-            background:#dcfce7;
-
-            color:#166534;
-
-        }
-
-
-        .status-declined {
-
-            background:#fee2e2;
-
-            color:#991b1b;
-
-        }
-
-
-        .status-closed {
-
-            background:#e5e7eb;
-
-            color:#374151;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | INFORMATION GRID
-        |--------------------------------------------------------------------------
-        */
 
         .inquiry-grid {
 
-            display:grid;
-
-            grid-template-columns:
-                repeat(4, minmax(0, 1fr));
-
-            gap:14px;
-
-            padding:16px 0;
-
-            border-top:1px solid #f1f5f9;
-
-            border-bottom:1px solid #f1f5f9;
+            grid-template-columns:1fr;
 
         }
 
-
-        .inquiry-info-label {
-
-            margin-bottom:4px;
-
-            color:#94a3b8;
-
-            font-size:10px;
-
-            font-weight:700;
-
-            text-transform:uppercase;
-
-        }
-
-
-        .inquiry-info-value {
-
-            color:#334155;
-
-            font-size:13px;
-
-            font-weight:600;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | BUYER MESSAGE
-        |--------------------------------------------------------------------------
-        */
-
-        .buyer-message {
-
-            margin-top:16px;
-
-            padding:14px;
-
-            border-radius:7px;
-
-            background:#f8fafc;
-
-            color:#475569;
-
-            font-size:13px;
-
-            line-height:1.6;
-
-        }
-
-
-        .buyer-message-label {
-
-            margin-bottom:6px;
-
-            color:#94a3b8;
-
-            font-size:10px;
-
-            font-weight:700;
-
-            text-transform:uppercase;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CARD FOOTER
-        |--------------------------------------------------------------------------
-        */
 
         .inquiry-footer {
 
-            display:flex;
+            align-items:stretch;
 
-            justify-content:space-between;
-
-            align-items:center;
-
-            gap:15px;
-
-            margin-top:16px;
-
-        }
-
-
-        .submitted-date {
-
-            color:#94a3b8;
-
-            font-size:11px;
+            flex-direction:column;
 
         }
 
 
         .inquiry-actions {
 
-            display:flex;
-
-            gap:8px;
-
-            flex-wrap:wrap;
+            width:100%;
 
         }
 
 
         .action-button {
 
-            display:inline-block;
-
-            padding:8px 12px;
-
-            border:1px solid #d1d5db;
-
-            border-radius:6px;
-
-            color:#374151;
-
-            background:#ffffff;
-
-            font-size:12px;
-
-            font-weight:600;
-
-            text-decoration:none;
-
-        }
-
-
-        .action-button:hover {
-
-            background:#f8fafc;
-
-        }
-
-
-        .action-button.primary {
-
-            background:#111827;
-
-            border-color:#111827;
-
-            color:#ffffff;
-
-        }
-
-
-        .action-button.primary:hover {
-
-            background:#1f2937;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | EMPTY STATE
-        |--------------------------------------------------------------------------
-        */
-
-        .empty-state {
-
-            padding:55px 25px;
-
-            background:#ffffff;
-
-            border:1px solid #e5e7eb;
-
-            border-radius:10px;
-
             text-align:center;
 
         }
 
+    }
 
-        .empty-state h2 {
-
-            margin:0 0 8px;
-
-            color:#111827;
-
-            font-size:20px;
-
-        }
-
-
-        .empty-state p {
-
-            margin:0 auto 18px;
-
-            max-width:520px;
-
-            color:#64748b;
-
-            font-size:13px;
-
-            line-height:1.6;
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | RESPONSIVE
-        |--------------------------------------------------------------------------
-        */
-
-        @media (max-width:850px) {
-
-            .summary-grid {
-
-                grid-template-columns:
-                    repeat(2, minmax(0, 1fr));
-
-            }
-
-
-            .inquiry-grid {
-
-                grid-template-columns:
-                    repeat(2, minmax(0, 1fr));
-
-            }
-
-        }
-
-
-        @media (max-width:600px) {
-
-            .summary-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .inquiry-top {
-
-                flex-direction:column;
-
-            }
-
-
-            .inquiry-grid {
-
-                grid-template-columns:1fr;
-
-            }
-
-
-            .inquiry-footer {
-
-                align-items:stretch;
-
-                flex-direction:column;
-
-            }
-
-
-            .inquiry-actions {
-
-                width:100%;
-
-            }
-
-
-            .action-button {
-
-                text-align:center;
-
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>
@@ -1233,8 +1219,7 @@ unset(
                                         status-<?= e(
                                             $statusClass
                                         )
-                                        ?>
-                                    "
+                                        ?>"
                                 >
 
                                     <?= e(

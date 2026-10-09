@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 
+$basePath = "../";
 $activePage = "insurance";
 
 $pageTitle = "Insurance Details";
@@ -83,29 +84,16 @@ if (!$insurance) {
 
     http_response_code(404);
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    $pageTitle = "Insurance Not Found";
+
+    require_once "../includes/head.php";
+
     ?>
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>
-            Insurance Not Found - VISRS
-        </title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -240,30 +228,17 @@ if ($status === "Active") {
     $statusColor = "#92400e";
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "Insurance Details";
+
+require_once "../includes/head.php";
+
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -887,13 +862,11 @@ if ($status === "Active") {
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
+     </body></html> that followed. footer.php closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

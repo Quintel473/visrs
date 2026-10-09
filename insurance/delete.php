@@ -5,6 +5,7 @@ require_once __DIR__ . "/../includes/database.php";
 
 requireRole(["Admin", "Police"]);
 
+$basePath = "../";
 $activePage = "insurance";
 
 $pageTitle = "Delete Insurance Record";
@@ -216,67 +217,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    .delete-warning {
+        background: #fff7ed;
+        color: #9a3412;
+        padding: 14px;
+        border-radius: 8px;
+        margin-top: 20px;
+        border: 1px solid #fed7aa;
+    }
 
-    <meta charset="UTF-8">
+    .delete-danger-button {
+        background: #991b1b !important;
+        color: #ffffff !important;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .delete-danger-button:hover {
+        background: #7f1d1d !important;
+    }
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+    .record-summary {
+        margin-top: 20px;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .record-summary p {
+        margin-bottom: 10px;
+    }
 
-    <style>
+    .delete-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 25px;
+    }
 
-        .delete-warning {
-            background: #fff7ed;
-            color: #9a3412;
-            padding: 14px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border: 1px solid #fed7aa;
-        }
-
-        .delete-danger-button {
-            background: #991b1b !important;
-            color: #ffffff !important;
-        }
-
-        .delete-danger-button:hover {
-            background: #7f1d1d !important;
-        }
-
-        .record-summary {
-            margin-top: 20px;
-        }
-
-        .record-summary p {
-            margin-bottom: 10px;
-        }
-
-        .delete-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 25px;
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 
@@ -516,13 +503,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
+     </body></html> that followed. footer.php closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

@@ -470,252 +470,236 @@ $vehicles =
 $csrfToken =
     generateCSRFToken();
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block)
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /* =========================================
+       ACCIDENT FORM CONTROLS
+       ========================================= */
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="../css/style.css"
-    >
+    .select-wrapper {
+        position: relative;
+        width: 100%;
+    }
 
 
-    <style>
-
-        /* =========================================
-           ACCIDENT FORM CONTROLS
-           ========================================= */
-
-        .select-wrapper {
-            position: relative;
-            width: 100%;
-        }
-
-
-        .visrs-select {
-            width: 100%;
-            appearance: none;
-            -webkit-appearance: none;
-            padding: 13px 45px 13px 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #1f2937;
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            outline: none;
-            transition:
-                border-color 0.2s ease,
-                box-shadow 0.2s ease;
-        }
+    .visrs-select {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 13px 45px 13px 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #1f2937;
+        font-size: 14px;
+        font-family: inherit;
+        cursor: pointer;
+        outline: none;
+        transition:
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+    }
 
 
-        .visrs-select:hover {
-            border-color: #9ca3af;
-        }
+    .visrs-select:hover {
+        border-color: #9ca3af;
+    }
 
 
-        .visrs-select:focus {
-            border-color: #2563eb;
-            box-shadow:
-                0 0 0 3px
-                rgba(37, 99, 235, 0.10);
-        }
+    .visrs-select:focus {
+        border-color: #2563eb;
+        box-shadow:
+            0 0 0 3px
+            rgba(37, 99, 235, 0.10);
+    }
 
 
-        .select-arrow {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6b7280;
-            font-size: 18px;
-            pointer-events: none;
-        }
+    .select-arrow {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-size: 18px;
+        pointer-events: none;
+    }
 
 
-        .form-help {
-            display: block;
-            margin-top: 7px;
-            color: #6b7280;
-            font-size: 12px;
-        }
+    .form-help {
+        display: block;
+        margin-top: 7px;
+        color: #6b7280;
+        font-size: 12px;
+    }
 
 
-        /* Description */
+    /* Description */
 
-        .textarea-wrapper {
-            position: relative;
-        }
-
-
-        .visrs-textarea {
-            display: block;
-            width: 100%;
-            min-height: 140px;
-            padding: 14px 15px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #ffffff;
-            color: #1f2937;
-            font-family: inherit;
-            font-size: 14px;
-            line-height: 1.6;
-            resize: vertical;
-            outline: none;
-            box-sizing: border-box;
-            transition:
-                border-color 0.2s ease,
-                box-shadow 0.2s ease;
-        }
+    .textarea-wrapper {
+        position: relative;
+    }
 
 
-        .visrs-textarea::placeholder {
-            color: #9ca3af;
-        }
+    .visrs-textarea {
+        display: block;
+        width: 100%;
+        min-height: 140px;
+        padding: 14px 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #1f2937;
+        font-family: inherit;
+        font-size: 14px;
+        line-height: 1.6;
+        resize: vertical;
+        outline: none;
+        box-sizing: border-box;
+        transition:
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+    }
 
 
-        .visrs-textarea:hover {
-            border-color: #9ca3af;
-        }
+    .visrs-textarea::placeholder {
+        color: #9ca3af;
+    }
 
 
-        .visrs-textarea:focus {
-            border-color: #2563eb;
-            box-shadow:
-                0 0 0 3px
-                rgba(37, 99, 235, 0.10);
+    .visrs-textarea:hover {
+        border-color: #9ca3af;
+    }
+
+
+    .visrs-textarea:focus {
+        border-color: #2563eb;
+        box-shadow:
+            0 0 0 3px
+            rgba(37, 99, 235, 0.10);
+    }
+
+
+    .textarea-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 7px;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+
+    #descriptionCount {
+        font-weight: 500;
+    }
+
+
+    /* Damage Level */
+
+    .damage-options {
+        display: grid;
+        grid-template-columns:
+            repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+
+    .damage-option {
+        position: relative;
+        display: block;
+        cursor: pointer;
+    }
+
+
+    .damage-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+
+    .damage-option-content {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-height: 72px;
+        padding: 14px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        transition:
+            border-color 0.2s ease,
+            background 0.2s ease,
+            box-shadow 0.2s ease,
+            transform 0.2s ease;
+    }
+
+
+    .damage-option-content strong {
+        color: #1f2937;
+        font-size: 14px;
+    }
+
+
+    .damage-option-content small {
+        color: #6b7280;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+
+    .damage-option:hover
+    .damage-option-content {
+        border-color: #9ca3af;
+        transform: translateY(-1px);
+    }
+
+
+    .damage-option input:checked
+    + .damage-option-content {
+        border-color: #2563eb;
+        background: #f8fbff;
+        box-shadow:
+            0 0 0 3px
+            rgba(37, 99, 235, 0.08);
+    }
+
+
+    .damage-option input:checked
+    + .damage-option-content strong {
+        color: #2563eb;
+    }
+
+
+    /* Responsive */
+
+    @media (max-width: 700px) {
+
+        .damage-options {
+            grid-template-columns: 1fr;
         }
 
 
         .textarea-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 7px;
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-
-        #descriptionCount {
-            font-weight: 500;
-        }
-
-
-        /* Damage Level */
-
-        .damage-options {
-            display: grid;
-            grid-template-columns:
-                repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-
-        .damage-option {
-            position: relative;
-            display: block;
-            cursor: pointer;
-        }
-
-
-        .damage-option input {
-            position: absolute;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-
-        .damage-option-content {
-            display: flex;
+            gap: 10px;
             flex-direction: column;
-            gap: 5px;
-            min-height: 72px;
-            padding: 14px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #ffffff;
-            transition:
-                border-color 0.2s ease,
-                background 0.2s ease,
-                box-shadow 0.2s ease,
-                transform 0.2s ease;
+            align-items: flex-start;
         }
 
+    }
 
-        .damage-option-content strong {
-            color: #1f2937;
-            font-size: 14px;
-        }
-
-
-        .damage-option-content small {
-            color: #6b7280;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-
-        .damage-option:hover
-        .damage-option-content {
-            border-color: #9ca3af;
-            transform: translateY(-1px);
-        }
-
-
-        .damage-option input:checked
-        + .damage-option-content {
-            border-color: #2563eb;
-            background: #f8fbff;
-            box-shadow:
-                0 0 0 3px
-                rgba(37, 99, 235, 0.08);
-        }
-
-
-        .damage-option input:checked
-        + .damage-option-content strong {
-            color: #2563eb;
-        }
-
-
-        /* Responsive */
-
-        @media (max-width: 700px) {
-
-            .damage-options {
-                grid-template-columns: 1fr;
-            }
-
-
-            .textarea-footer {
-                gap: 10px;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 
 <body>
@@ -1164,9 +1148,8 @@ $csrfToken =
 </div>
 
 
-<?php require_once "../includes/footer.php"; ?>
-
-
+<!-- FIX: page-specific script moved BEFORE footer.php
+     (was after </html>, which is invalid HTML) -->
 <script>
 
 document.addEventListener(
@@ -1205,5 +1188,8 @@ document.addEventListener(
 
 </script>
 
-</body>
-</html>
+
+<!-- FIX: footer.php outputs </body></html>.
+     The original file had a second </body></html> after the script,
+     producing invalid duplicate closing tags. Removed. -->
+<?php require_once "../includes/footer.php"; ?>

@@ -226,30 +226,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 $csrfToken = generateCSRFToken();
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block)
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="../css/style.css"
-    >
-
-</head>
 
 <body>
 
@@ -488,7 +473,6 @@ $csrfToken = generateCSRFToken();
 </div>
 
 
+<!-- FIX: removed the duplicate </body></html> that appeared after
+     this include. footer.php already closes those tags. -->
 <?php require_once "../includes/footer.php"; ?>
-
-</body>
-</html>

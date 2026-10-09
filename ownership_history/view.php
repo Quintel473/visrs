@@ -3,6 +3,7 @@
 require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 
+$basePath = "../";
 $activePage = "ownership_history";
 
 $canManage =
@@ -98,30 +99,14 @@ if (!$record) {
     $pageTitle = "Ownership Record Not Found";
     $pageSubtitle = "The requested ownership record could not be found.";
 
+    /*
+     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+     * with hardcoded /visrs/css/style.css path).
+     */
+
+    require_once "../includes/head.php";
+
     ?>
-
-    <!DOCTYPE html>
-    <html lang="en">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        >
-
-        <title>
-            Ownership Record Not Found - VISRS
-        </title>
-
-        <link
-            rel="stylesheet"
-            href="/visrs/css/style.css"
-        >
-
-    </head>
 
     <body>
 
@@ -188,8 +173,6 @@ if (!$record) {
 
             </div>
 
-            <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
         </main>
 
     </div>
@@ -207,110 +190,98 @@ if (!$record) {
 $isCurrentOwner =
     empty($record["EndDate"]);
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+$pageTitle = "Ownership Record - VISRS";
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
 
-    <meta charset="UTF-8">
+    .detail-item {
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    .detail-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
 
-    <title>
-        Ownership Record - VISRS
-    </title>
+    .detail-value {
+        font-size: 16px;
+        font-weight: 500;
+        color: #1e293b;
+        word-break: break-word;
+    }
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
 
-    <style>
+    .status-current {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-former {
+        background: #e2e8f0;
+        color: #475569;
+    }
+
+    .section-title {
+        margin-bottom: 18px;
+        font-size: 20px;
+        color: #1e293b;
+    }
+
+    .action-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+
+    .danger-button {
+        background: #991b1b !important;
+        color: #ffffff !important;
+    }
+
+    .danger-button:hover {
+        background: #7f1d1d !important;
+    }
+
+    @media (max-width: 768px) {
 
         .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            grid-template-columns: 1fr;
         }
 
-        .detail-item {
-            padding: 15px;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
+    }
 
-        .detail-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            margin-bottom: 6px;
-        }
-
-        .detail-value {
-            font-size: 16px;
-            font-weight: 500;
-            color: #1e293b;
-            word-break: break-word;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .status-current {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-former {
-            background: #e2e8f0;
-            color: #475569;
-        }
-
-        .section-title {
-            margin-bottom: 18px;
-            font-size: 20px;
-            color: #1e293b;
-        }
-
-        .action-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .danger-button {
-            background: #991b1b !important;
-            color: #ffffff !important;
-        }
-
-        .danger-button:hover {
-            background: #7f1d1d !important;
-        }
-
-        @media (max-width: 768px) {
-
-            .detail-grid {
-                grid-template-columns: 1fr;
-            }
-
-        }
-
-    </style>
-
-</head>
+</style>
 
 <body>
 
@@ -741,13 +712,11 @@ $isCurrentOwner =
 
         </div>
 
-
-        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
     </main>
 
 </div>
 
-</body>
 
-</html>
+<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
+     </body></html> that followed. footer.php closes those tags. -->
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

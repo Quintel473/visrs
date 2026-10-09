@@ -6,6 +6,9 @@ requireRole(["Admin"]);
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
+$basePath = "../";
+$activePage = "users";
+
 $pageTitle = "User Management";
 $pageSubtitle = "Manage VISRS system users and account roles";
 
@@ -44,90 +47,76 @@ $users = $stmt->fetchAll();
 $currentUserID =
     (int) ($_SESSION["UserID"] ?? 0);
 
+
+/*
+ * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
+ * with hardcoded /visrs/css/style.css path).
+ */
+
+require_once "../includes/head.php";
+
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
+<style>
 
-<head>
+    /*
+    |--------------------------------------------------------------------------
+    | VISRS User Role Badges
+    |--------------------------------------------------------------------------
+    */
 
-    <meta charset="UTF-8">
+    .user-role {
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        display:inline-block;
 
-    <title>
-        <?= htmlspecialchars($pageTitle) ?> - VISRS
-    </title>
+        padding:6px 10px;
 
-    <link
-        rel="stylesheet"
-        href="/visrs/css/style.css"
-    >
+        border-radius:999px;
 
-    <style>
+        font-size:12px;
 
-        /*
-        |--------------------------------------------------------------------------
-        | VISRS User Role Badges
-        |--------------------------------------------------------------------------
-        */
+        font-weight:600;
 
-        .user-role {
-
-            display:inline-block;
-
-            padding:6px 10px;
-
-            border-radius:999px;
-
-            font-size:12px;
-
-            font-weight:600;
-
-        }
+    }
 
 
-        .user-role-default {
+    .user-role-default {
 
-            background:#f3f4f6;
+        background:#f3f4f6;
 
-            color:#374151;
+        color:#374151;
 
-        }
-
-
-        .user-role-admin {
-
-            background:#dbeafe;
-
-            color:#1d4ed8;
-
-        }
+    }
 
 
-        .user-role-police {
+    .user-role-admin {
 
-            background:#dcfce7;
+        background:#dbeafe;
 
-            color:#166534;
+        color:#1d4ed8;
 
-        }
+    }
 
 
-        .user-role-seller {
+    .user-role-police {
 
-            background:#fef3c7;
+        background:#dcfce7;
 
-            color:#92400e;
+        color:#166534;
 
-        }
+    }
 
-    </style>
 
-</head>
+    .user-role-seller {
+
+        background:#fef3c7;
+
+        color:#92400e;
+
+    }
+
+</style>
 
 
 <body>
