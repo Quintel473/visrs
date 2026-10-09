@@ -583,6 +583,16 @@ require_once "../includes/head.php";
                 </a>
 
 
+                <button
+                    type="button"
+                    onclick="window.print()"
+                    class="button"
+                    style="background:#15803d;"
+                >
+                    🖨 Print / Save as PDF
+                </button>
+
+
                 <?php if ($canManageOwners): ?>
 
                     <a

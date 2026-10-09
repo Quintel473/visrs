@@ -105,10 +105,14 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     | AUTO FOCUS
     |--------------------------------------------------------------------------
+    | FIX: Match the .auto-focus class used on login/register/forgot
+    |      password inputs. Previously looked for [data-autofocus]
+    |      which no element uses.
+    |--------------------------------------------------------------------------
     */
 
     const autofocusElement =
-        document.querySelector("[data-autofocus]");
+        document.querySelector(".auto-focus");
 
     if (autofocusElement) {
         autofocusElement.focus();
@@ -119,15 +123,19 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     | PASSWORD VISIBILITY TOGGLE
     |--------------------------------------------------------------------------
+    | FIX: Match the [data-toggle-password] attribute used on the
+    |      login, register, and reset-password forms. Previously
+    |      looked for [data-password-toggle], which no element uses.
+    |--------------------------------------------------------------------------
     */
 
-    document.querySelectorAll("[data-password-toggle]").forEach(
+    document.querySelectorAll("[data-toggle-password]").forEach(
         function (button) {
 
             button.addEventListener("click", function () {
 
                 const targetId =
-                    button.getAttribute("data-password-toggle");
+                    button.getAttribute("data-toggle-password");
 
                 const input =
                     document.getElementById(targetId);
@@ -730,4 +738,99 @@ document.addEventListener("DOMContentLoaded", function () {
         init();
     }
 
+})();
+
+/* =========================================================
+   VISRS Bulk Selection
+   =========================================================
+   - Toggles the bulk action bar based on row checkboxes
+   - Handles the "Select All" checkbox
+   - Clears the selection when the "Clear" button is clicked
+   ========================================================= */
+(function () {
+    'use strict';
+
+    function onReady(fn) {
+        if (document.readyState !== 'loading') {
+            fn();
+        } else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+
+    onReady(function () {
+
+        var selectAll    = document.getElementById('selectAll');
+        var rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        var actionBar    = document.getElementById('bulkActionBar');
+        var selectedCount = document.getElementById('bulkSelectedCount');
+        var clearBtn     = document.getElementById('bulkClearSelection');
+
+        if (!rowCheckboxes.length) return;
+
+        function updateBar() {
+
+            var checked = document.querySelectorAll('.row-checkbox:checked').length;
+
+            if (selectedCount) {
+                selectedCount.textContent = checked;
+            }
+
+            if (actionBar) {
+                if (checked > 0) {
+                    actionBar.classList.add('visible');
+                } else {
+                    actionBar.classList.remove('visible');
+                }
+            }
+
+            /* Sync "Select All" indeterminate state */
+            if (selectAll) {
+                var total = rowCheckboxes.length;
+                if (checked === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else if (checked === total) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                }
+            }
+        }
+
+        /* Select All toggle */
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                var isChecked = selectAll.checked;
+                rowCheckboxes.forEach(function (cb) {
+                    cb.checked = isChecked;
+                });
+                updateBar();
+            });
+        }
+
+        /* Individual row toggles */
+        rowCheckboxes.forEach(function (cb) {
+            cb.addEventListener('change', updateBar);
+        });
+
+        /* Clear button */
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                rowCheckboxes.forEach(function (cb) {
+                    cb.checked = false;
+                });
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                updateBar();
+            });
+        }
+
+        /* Initial state */
+        updateBar();
+    });
 })();

@@ -23,7 +23,18 @@ $pageSubtitle = "View and manage vehicle owner records";
 |--------------------------------------------------------------------------
 */
 
-$stmt = $pdo->query("
+/* Pagination setup */
+$perPage = 25;
+
+/* Count total rows */
+$countStmt = $pdo->query("SELECT COUNT(*) FROM owners");
+$totalOwners = (int) $countStmt->fetchColumn();
+
+/* Compute pagination metadata */
+$pagination = paginationMeta($totalOwners, $perPage);
+
+/* Load only the current page */
+$stmt = $pdo->prepare("
     SELECT
         OwnerID,
         FirstName,
@@ -34,7 +45,12 @@ $stmt = $pdo->query("
         CreatedAt
     FROM owners
     ORDER BY OwnerID DESC
+    LIMIT ? OFFSET ?
 ");
+
+$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+$stmt->execute();
 
 $owners = $stmt->fetchAll();
 
@@ -49,6 +65,16 @@ $deleted = isset($_GET["deleted"]) &&
     $_GET["deleted"] === "1";
 
 $error = $_GET["error"] ?? "";
+
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Action Flash Message
+|--------------------------------------------------------------------------
+*/
+
+$bulkMessage = $_SESSION["bulk_message"] ?? null;
+unset($_SESSION["bulk_message"]);
 
 
 /*
@@ -125,6 +151,62 @@ require_once "../includes/head.php";
             <?php endif; ?>
 
 
+            <!-- BULK ACTION MESSAGE -->
+
+            <?php if ($bulkMessage): ?>
+
+                <?php
+                $bulkBg = "#fef3c7";
+                $bulkColor = "#92400e";
+
+                if ($bulkMessage["type"] === "success") {
+                    $bulkBg = "#dcfce7";
+                    $bulkColor = "#166534";
+                } elseif ($bulkMessage["type"] === "error") {
+                    $bulkBg = "#fee2e2";
+                    $bulkColor = "#991b1b";
+                }
+                ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:<?= $bulkBg ?>;
+                        color:<?= $bulkColor ?>;
+                        padding:12px;
+                        border-radius:6px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <?= htmlspecialchars($bulkMessage["text"]) ?>
+
+                    <?php if (!empty($bulkMessage["skipped"])): ?>
+
+                        <ul
+                            style="
+                                margin:8px 0 0 20px;
+                                padding:0;
+                            "
+                        >
+
+                            <?php foreach ($bulkMessage["skipped"] as $item): ?>
+
+                                <li>
+                                    <?= htmlspecialchars($item) ?>
+                                </li>
+
+                            <?php endforeach; ?>
+
+                        </ul>
+
+                    <?php endif; ?>
+
+                </div>
+
+            <?php endif; ?>
+
+
             <!-- HEADER CARD -->
 
             <section class="card">
@@ -146,7 +228,7 @@ require_once "../includes/head.php";
                         </h2>
 
                         <p style="color:#6b7280;">
-                            <?= count($owners) ?>
+                            <?= $pagination["totalRows"] ?>
                             owner(s) currently registered.
                         </p>
 
@@ -183,177 +265,273 @@ require_once "../includes/head.php";
 
                 <?php if (count($owners) > 0): ?>
 
-                    <div style="overflow-x:auto;">
+                    <form
+                        method="POST"
+                        action="bulk_delete.php"
+                        id="bulkForm"
+                    >
 
-                        <table
-                            style="
-                                width:100%;
-                                border-collapse:collapse;
-                            "
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= htmlspecialchars(generateCSRFToken()) ?>"
                         >
 
-                            <thead>
 
-                                <tr
-                                    style="
-                                        border-bottom:2px solid #e5e7eb;
-                                        text-align:left;
-                                    "
-                                >
+                        <!-- BULK ACTION BAR -->
 
-                                    <th style="padding:12px;">
-                                        Name
-                                    </th>
+                        <?php if ($canManageOwners): ?>
 
-                                    <th style="padding:12px;">
-                                        Phone
-                                    </th>
+                            <div
+                                class="bulk-action-bar"
+                                id="bulkActionBar"
+                            >
 
-                                    <th style="padding:12px;">
-                                        Email
-                                    </th>
-
-                                    <th style="padding:12px;">
-                                        Address
-                                    </th>
-
-                                    <th style="padding:12px;">
-                                        Actions
-                                    </th>
-
-                                </tr>
-
-                            </thead>
+                                <span class="bulk-action-count">
+                                    <strong id="bulkSelectedCount">0</strong>
+                                    selected
+                                </span>
 
 
-                            <tbody>
+                                <div class="bulk-action-buttons">
 
-                                <?php foreach ($owners as $owner): ?>
+                                    <button
+                                        type="button"
+                                        class="button button-secondary"
+                                        id="bulkClearSelection"
+                                    >
+                                        Clear
+                                    </button>
+
+
+                                    <button
+                                        type="submit"
+                                        class="button"
+                                        style="background:#991b1b;"
+                                        onclick="return confirmBulkDelete();"
+                                    >
+                                        Delete Selected
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        <?php endif; ?>
+
+
+                        <div style="overflow-x:auto; margin-top:15px;">
+
+                            <table
+                                style="
+                                    width:100%;
+                                    border-collapse:collapse;
+                                "
+                            >
+
+                                <thead>
 
                                     <tr
                                         style="
-                                            border-bottom:1px solid #e5e7eb;
+                                            border-bottom:2px solid #e5e7eb;
+                                            text-align:left;
                                         "
                                     >
 
-                                        <!-- NAME -->
+                                        <?php if ($canManageOwners): ?>
 
-                                        <td style="padding:12px;">
-
-                                            <strong>
-
-                                                <?= htmlspecialchars(
-                                                    $owner["FirstName"]
-                                                    . " "
-                                                    . $owner["LastName"]
-                                                ) ?>
-
-                                            </strong>
-
-                                        </td>
-
-
-                                        <!-- PHONE -->
-
-                                        <td style="padding:12px;">
-
-                                            <?= htmlspecialchars(
-                                                $owner["Phone"] ?? ""
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- EMAIL -->
-
-                                        <td style="padding:12px;">
-
-                                            <?= htmlspecialchars(
-                                                $owner["Email"] ?? ""
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- ADDRESS -->
-
-                                        <td style="padding:12px;">
-
-                                            <?= htmlspecialchars(
-                                                $owner["Address"] ?? ""
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- ACTIONS -->
-
-                                        <td style="padding:12px;">
-
-                                            <div
+                                            <th
                                                 style="
-                                                    display:flex;
-                                                    gap:6px;
-                                                    flex-wrap:wrap;
+                                                    padding:12px;
+                                                    width:36px;
                                                 "
                                             >
 
-                                                <!-- VIEW -->
-
-                                                <a
-                                                    href="view.php?id=<?= (int) $owner["OwnerID"] ?>"
-                                                    class="button button-secondary"
-                                                    style="
-                                                        padding:8px 12px;
-                                                    "
+                                                <input
+                                                    type="checkbox"
+                                                    id="selectAll"
+                                                    aria-label="Select all owners"
                                                 >
-                                                    View
-                                                </a>
+
+                                            </th>
+
+                                        <?php endif; ?>
 
 
-                                                <?php if ($canManageOwners): ?>
+                                        <th style="padding:12px;">
+                                            Name
+                                        </th>
 
-                                                    <!-- EDIT -->
+                                        <th style="padding:12px;">
+                                            Phone
+                                        </th>
 
-                                                    <a
-                                                        href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
-                                                        class="button"
-                                                        style="
-                                                            padding:8px 12px;
-                                                        "
-                                                    >
-                                                        Edit
-                                                    </a>
+                                        <th style="padding:12px;">
+                                            Email
+                                        </th>
 
+                                        <th style="padding:12px;">
+                                            Address
+                                        </th>
 
-                                                    <!-- DELETE -->
-
-                                                    <a
-                                                        href="delete.php?id=<?= (int) $owner["OwnerID"] ?>"
-                                                        class="button"
-                                                        style="
-                                                            padding:8px 12px;
-                                                            background:#991b1b;
-                                                        "
-                                                    >
-                                                        Delete
-                                                    </a>
-
-                                                <?php endif; ?>
-
-                                            </div>
-
-                                        </td>
+                                        <th style="padding:12px;">
+                                            Actions
+                                        </th>
 
                                     </tr>
 
-                                <?php endforeach; ?>
+                                </thead>
 
-                            </tbody>
 
-                        </table>
+                                <tbody>
 
-                    </div>
+                                    <?php foreach ($owners as $owner): ?>
+
+                                        <tr
+                                            style="
+                                                border-bottom:1px solid #e5e7eb;
+                                            "
+                                        >
+
+                                            <?php if ($canManageOwners): ?>
+
+                                                <td style="padding:12px;">
+
+                                                    <input
+                                                        type="checkbox"
+                                                        name="selected_ids[]"
+                                                        value="<?= (int) $owner["OwnerID"] ?>"
+                                                        class="row-checkbox"
+                                                        aria-label="Select this owner"
+                                                    >
+
+                                                </td>
+
+                                            <?php endif; ?>
+
+
+                                            <!-- NAME -->
+
+                                            <td style="padding:12px;">
+
+                                                <strong>
+
+                                                    <?= htmlspecialchars(
+                                                        $owner["FirstName"]
+                                                        . " "
+                                                        . $owner["LastName"]
+                                                    ) ?>
+
+                                                </strong>
+
+                                            </td>
+
+
+                                            <!-- PHONE -->
+
+                                            <td style="padding:12px;">
+
+                                                <?= htmlspecialchars(
+                                                    $owner["Phone"] ?? ""
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <!-- EMAIL -->
+
+                                            <td style="padding:12px;">
+
+                                                <?= htmlspecialchars(
+                                                    $owner["Email"] ?? ""
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <!-- ADDRESS -->
+
+                                            <td style="padding:12px;">
+
+                                                <?= htmlspecialchars(
+                                                    $owner["Address"] ?? ""
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <!-- ACTIONS -->
+
+                                            <td style="padding:12px;">
+
+                                                <div
+                                                    style="
+                                                        display:flex;
+                                                        gap:6px;
+                                                        flex-wrap:wrap;
+                                                    "
+                                                >
+
+                                                    <!-- VIEW -->
+
+                                                    <a
+                                                        href="view.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                        class="button button-secondary"
+                                                        style="
+                                                            padding:8px 12px;
+                                                        "
+                                                    >
+                                                        View
+                                                    </a>
+
+
+                                                    <?php if ($canManageOwners): ?>
+
+                                                        <!-- EDIT -->
+
+                                                        <a
+                                                            href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                            class="button"
+                                                            style="
+                                                                padding:8px 12px;
+                                                            "
+                                                        >
+                                                            Edit
+                                                        </a>
+
+
+                                                        <!-- DELETE -->
+
+                                                        <a
+                                                            href="delete.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                            class="button"
+                                                            style="
+                                                                padding:8px 12px;
+                                                                background:#991b1b;
+                                                            "
+                                                        >
+                                                            Delete
+                                                        </a>
+
+                                                    <?php endif; ?>
+
+                                                </div>
+
+                                            </td>
+
+                                        </tr>
+
+                                    <?php endforeach; ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </form>
+
+                    <?php renderPagination($pagination); ?>
 
 
                 <?php else: ?>
@@ -399,5 +577,28 @@ require_once "../includes/head.php";
     </main>
 
 </div>
+
+
+<script>
+
+function confirmBulkDelete() {
+
+    var count = document.querySelectorAll(".row-checkbox:checked").length;
+
+    if (count === 0) {
+        alert("Please select at least one owner to delete.");
+        return false;
+    }
+
+    return confirm(
+        "Delete " + count + " selected owner(s)?\n\n" +
+        "Owners with registered vehicles or ownership history " +
+        "will be skipped automatically.\n\n" +
+        "This action cannot be undone."
+    );
+}
+
+</script>
+
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

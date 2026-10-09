@@ -22,10 +22,24 @@ $error = $_GET["error"] ?? "";
 
 
 /*
- * Retrieve all users.
+|--------------------------------------------------------------------------
+| Pagination Setup
+|--------------------------------------------------------------------------
+*/
+
+$perPage = 25;
+
+$countStmt = $pdo->query("SELECT COUNT(*) FROM users");
+$totalUsers = (int) $countStmt->fetchColumn();
+
+$pagination = paginationMeta($totalUsers, $perPage);
+
+
+/*
+ * Retrieve users for current page.
  */
 
-$stmt = $pdo->query("
+$stmt = $pdo->prepare("
     SELECT
         UserID,
         FirstName,
@@ -35,7 +49,12 @@ $stmt = $pdo->query("
         CreatedAt
     FROM users
     ORDER BY CreatedAt DESC
+    LIMIT ? OFFSET ?
 ");
+
+$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+$stmt->execute();
 
 $users = $stmt->fetchAll();
 
@@ -46,6 +65,16 @@ $users = $stmt->fetchAll();
 
 $currentUserID =
     (int) ($_SESSION["UserID"] ?? 0);
+
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Action Flash Message
+|--------------------------------------------------------------------------
+*/
+
+$bulkMessage = $_SESSION["bulk_message"] ?? null;
+unset($_SESSION["bulk_message"]);
 
 
 /*
@@ -363,6 +392,62 @@ require_once "../includes/head.php";
             <?php endif; ?>
 
 
+            <!-- BULK ACTION MESSAGE -->
+
+            <?php if ($bulkMessage): ?>
+
+                <?php
+                $bulkBg = "#fef3c7";
+                $bulkColor = "#92400e";
+
+                if ($bulkMessage["type"] === "success") {
+                    $bulkBg = "#dcfce7";
+                    $bulkColor = "#166534";
+                } elseif ($bulkMessage["type"] === "error") {
+                    $bulkBg = "#fee2e2";
+                    $bulkColor = "#991b1b";
+                }
+                ?>
+
+                <div
+                    class="auto-dismiss"
+                    style="
+                        background:<?= $bulkBg ?>;
+                        color:<?= $bulkColor ?>;
+                        padding:14px;
+                        border-radius:8px;
+                        margin-bottom:20px;
+                    "
+                >
+
+                    <?= htmlspecialchars($bulkMessage["text"]) ?>
+
+                    <?php if (!empty($bulkMessage["skipped"])): ?>
+
+                        <ul
+                            style="
+                                margin:8px 0 0 20px;
+                                padding:0;
+                            "
+                        >
+
+                            <?php foreach ($bulkMessage["skipped"] as $item): ?>
+
+                                <li>
+                                    <?= htmlspecialchars($item) ?>
+                                </li>
+
+                            <?php endforeach; ?>
+
+                        </ul>
+
+                    <?php endif; ?>
+
+                </div>
+
+            <?php endif; ?>
+
+
             <!-- USERS CARD -->
 
             <div class="card">
@@ -388,7 +473,7 @@ require_once "../includes/head.php";
                             color:#6b7280;
                             margin:6px 0 0 0;
                         ">
-                            <?= count($users) ?> user(s) registered
+                            <?= $pagination["totalRows"] ?> user(s) registered
                         </p>
 
                     </div>
@@ -441,274 +526,390 @@ require_once "../includes/head.php";
                 <?php else: ?>
 
 
-                    <!-- USERS TABLE -->
+                    <form
+                        method="POST"
+                        action="bulk_delete.php"
+                        id="bulkForm"
+                    >
 
-                    <div style="overflow-x:auto;">
-
-                        <table
-                            id="usersTable"
-                            style="
-                                width:100%;
-                                border-collapse:collapse;
-                            "
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= htmlspecialchars(generateCSRFToken()) ?>"
                         >
 
-                            <thead>
 
-                                <tr>
+                        <!-- BULK ACTION BAR -->
 
-                                    <th style="
-                                        text-align:left;
-                                        padding:14px;
-                                        border-bottom:1px solid #e5e7eb;
-                                    ">
-                                        Name
-                                    </th>
+                        <div
+                            class="bulk-action-bar"
+                            id="bulkActionBar"
+                        >
 
-
-                                    <th style="
-                                        text-align:left;
-                                        padding:14px;
-                                        border-bottom:1px solid #e5e7eb;
-                                    ">
-                                        Email
-                                    </th>
+                            <span class="bulk-action-count">
+                                <strong id="bulkSelectedCount">0</strong>
+                                selected
+                            </span>
 
 
-                                    <th style="
-                                        text-align:left;
-                                        padding:14px;
-                                        border-bottom:1px solid #e5e7eb;
-                                    ">
-                                        Role
-                                    </th>
+                            <div class="bulk-action-buttons">
+
+                                <button
+                                    type="button"
+                                    class="button button-secondary"
+                                    id="bulkClearSelection"
+                                >
+                                    Clear
+                                </button>
 
 
-                                    <th style="
-                                        text-align:left;
-                                        padding:14px;
-                                        border-bottom:1px solid #e5e7eb;
-                                    ">
-                                        Created
-                                    </th>
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    style="background:#991b1b;"
+                                    onclick="return confirmBulkDelete();"
+                                >
+                                    Delete Selected
+                                </button>
+
+                            </div>
+
+                        </div>
 
 
-                                    <th style="
-                                        text-align:right;
-                                        padding:14px;
-                                        border-bottom:1px solid #e5e7eb;
-                                    ">
-                                        Actions
-                                    </th>
+                        <!-- USERS TABLE -->
 
-                                </tr>
+                        <div style="overflow-x:auto; margin-top:15px;">
 
-                            </thead>
+                            <table
+                                id="usersTable"
+                                style="
+                                    width:100%;
+                                    border-collapse:collapse;
+                                "
+                            >
 
-
-                            <tbody>
-
-                                <?php foreach ($users as $user): ?>
-
-                                    <?php
-
-                                    /*
-                                     * Determine role badge.
-                                     */
-
-                                    $roleClass =
-                                        "user-role user-role-default";
-
-
-                                    if (
-                                        $user["Role"] === "Admin"
-                                    ) {
-
-                                        $roleClass =
-                                            "user-role user-role-admin";
-
-                                    } elseif (
-                                        $user["Role"] === "Police"
-                                    ) {
-
-                                        $roleClass =
-                                            "user-role user-role-police";
-
-                                    } elseif (
-                                        $user["Role"] === "Seller"
-                                    ) {
-
-                                        $roleClass =
-                                            "user-role user-role-seller";
-
-                                    }
-
-
-                                    $listedUserID =
-                                        (int) $user["UserID"];
-
-                                    ?>
-
+                                <thead>
 
                                     <tr>
 
-
-                                        <!-- NAME -->
-
-                                        <td style="
+                                        <th style="
+                                            text-align:left;
                                             padding:14px;
-                                            border-bottom:1px solid #f1f5f9;
+                                            border-bottom:1px solid #e5e7eb;
+                                            width:36px;
                                         ">
 
-                                            <strong>
-                                                <?= htmlspecialchars(
-                                                    $user["FirstName"]
-                                                    . " "
-                                                    . $user["LastName"]
-                                                ) ?>
-                                            </strong>
-
-                                        </td>
-
-
-                                        <!-- EMAIL -->
-
-                                        <td style="
-                                            padding:14px;
-                                            border-bottom:1px solid #f1f5f9;
-                                        ">
-
-                                            <?= htmlspecialchars(
-                                                $user["Email"]
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- ROLE -->
-
-                                        <td style="
-                                            padding:14px;
-                                            border-bottom:1px solid #f1f5f9;
-                                        ">
-
-                                            <span
-                                                class="<?= htmlspecialchars($roleClass) ?>"
+                                            <input
+                                                type="checkbox"
+                                                id="selectAll"
+                                                aria-label="Select all users"
                                             >
 
-                                                <?php
-
-                                                if (
-                                                    $user["Role"] === "Admin"
-                                                ) {
-
-                                                    echo "Administrator";
-
-                                                } else {
-
-                                                    echo htmlspecialchars(
-                                                        $user["Role"]
-                                                    );
-
-                                                }
-
-                                                ?>
-
-                                            </span>
-
-                                        </td>
+                                        </th>
 
 
-                                        <!-- CREATED -->
-
-                                        <td style="
+                                        <th style="
+                                            text-align:left;
                                             padding:14px;
-                                            border-bottom:1px solid #f1f5f9;
+                                            border-bottom:1px solid #e5e7eb;
                                         ">
-
-                                            <?= htmlspecialchars(
-                                                date(
-                                                    "M d, Y",
-                                                    strtotime(
-                                                        $user["CreatedAt"]
-                                                    )
-                                                )
-                                            ) ?>
-
-                                        </td>
+                                            Name
+                                        </th>
 
 
-                                        <!-- ACTIONS -->
-
-                                        <td style="
+                                        <th style="
+                                            text-align:left;
                                             padding:14px;
-                                            border-bottom:1px solid #f1f5f9;
+                                            border-bottom:1px solid #e5e7eb;
+                                        ">
+                                            Email
+                                        </th>
+
+
+                                        <th style="
+                                            text-align:left;
+                                            padding:14px;
+                                            border-bottom:1px solid #e5e7eb;
+                                        ">
+                                            Role
+                                        </th>
+
+
+                                        <th style="
+                                            text-align:left;
+                                            padding:14px;
+                                            border-bottom:1px solid #e5e7eb;
+                                        ">
+                                            Created
+                                        </th>
+
+
+                                        <th style="
                                             text-align:right;
-                                            white-space:nowrap;
+                                            padding:14px;
+                                            border-bottom:1px solid #e5e7eb;
                                         ">
+                                            Actions
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
 
 
-                                            <!-- VIEW -->
+                                <tbody>
 
-                                            <a
-                                                href="view.php?id=<?= $listedUserID ?>"
-                                                class="button button-secondary"
-                                                style="
-                                                    padding:8px 12px;
-                                                    font-size:13px;
-                                                "
-                                            >
-                                                View
-                                            </a>
+                                    <?php foreach ($users as $user): ?>
 
+                                        <?php
 
-                                            <!-- EDIT -->
+                                        /*
+                                         * Determine role badge.
+                                         */
 
-                                            <a
-                                                href="edit.php?id=<?= $listedUserID ?>"
-                                                class="button"
-                                                style="
-                                                    padding:8px 12px;
-                                                    font-size:13px;
-                                                "
-                                            >
-                                                Edit
-                                            </a>
+                                        $roleClass =
+                                            "user-role user-role-default";
 
 
-                                            <?php if (
-                                                $listedUserID !==
-                                                $currentUserID
-                                            ): ?>
+                                        if (
+                                            $user["Role"] === "Admin"
+                                        ) {
 
-                                                <!-- DELETE -->
+                                            $roleClass =
+                                                "user-role user-role-admin";
+
+                                        } elseif (
+                                            $user["Role"] === "Police"
+                                        ) {
+
+                                            $roleClass =
+                                                "user-role user-role-police";
+
+                                        } elseif (
+                                            $user["Role"] === "Seller"
+                                        ) {
+
+                                            $roleClass =
+                                                "user-role user-role-seller";
+
+                                        }
+
+
+                                        $listedUserID =
+                                            (int) $user["UserID"];
+
+                                        $isSelf =
+                                            $listedUserID === $currentUserID;
+
+                                        ?>
+
+
+                                        <tr>
+
+
+                                            <!-- SELECT CHECKBOX -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <?php if ($isSelf): ?>
+
+                                                    <input
+                                                        type="checkbox"
+                                                        disabled
+                                                        title="You cannot delete your own account"
+                                                        aria-label="Cannot select your own account"
+                                                    >
+
+                                                <?php else: ?>
+
+                                                    <input
+                                                        type="checkbox"
+                                                        name="selected_ids[]"
+                                                        value="<?= $listedUserID ?>"
+                                                        class="row-checkbox"
+                                                        aria-label="Select this user"
+                                                    >
+
+                                                <?php endif; ?>
+
+                                            </td>
+
+
+                                            <!-- NAME -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <strong>
+                                                    <?= htmlspecialchars(
+                                                        $user["FirstName"]
+                                                        . " "
+                                                        . $user["LastName"]
+                                                    ) ?>
+                                                </strong>
+
+                                                <?php if ($isSelf): ?>
+
+                                                    <span
+                                                        style="
+                                                            margin-left:6px;
+                                                            color:#6b7280;
+                                                            font-size:12px;
+                                                        "
+                                                    >
+                                                        (You)
+                                                    </span>
+
+                                                <?php endif; ?>
+
+                                            </td>
+
+
+                                            <!-- EMAIL -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <?= htmlspecialchars(
+                                                    $user["Email"]
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <!-- ROLE -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <span
+                                                    class="<?= htmlspecialchars($roleClass) ?>"
+                                                >
+
+                                                    <?php
+
+                                                    if (
+                                                        $user["Role"] === "Admin"
+                                                    ) {
+
+                                                        echo "Administrator";
+
+                                                    } else {
+
+                                                        echo htmlspecialchars(
+                                                            $user["Role"]
+                                                        );
+
+                                                    }
+
+                                                    ?>
+
+                                                </span>
+
+                                            </td>
+
+
+                                            <!-- CREATED -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <?= htmlspecialchars(
+                                                    date(
+                                                        "M d, Y",
+                                                        strtotime(
+                                                            $user["CreatedAt"]
+                                                        )
+                                                    )
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <!-- ACTIONS -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                                text-align:right;
+                                                white-space:nowrap;
+                                            ">
+
+
+                                                <!-- VIEW -->
 
                                                 <a
-                                                    href="delete.php?id=<?= $listedUserID ?>"
+                                                    href="view.php?id=<?= $listedUserID ?>"
+                                                    class="button button-secondary"
+                                                    style="
+                                                        padding:8px 12px;
+                                                        font-size:13px;
+                                                    "
+                                                >
+                                                    View
+                                                </a>
+
+
+                                                <!-- EDIT -->
+
+                                                <a
+                                                    href="edit.php?id=<?= $listedUserID ?>"
                                                     class="button"
                                                     style="
                                                         padding:8px 12px;
                                                         font-size:13px;
-                                                        background:#991b1b;
                                                     "
                                                 >
-                                                    Delete
+                                                    Edit
                                                 </a>
 
-                                            <?php endif; ?>
+
+                                                <?php if (!$isSelf): ?>
+
+                                                    <!-- DELETE -->
+
+                                                    <a
+                                                        href="delete.php?id=<?= $listedUserID ?>"
+                                                        class="button"
+                                                        style="
+                                                            padding:8px 12px;
+                                                            font-size:13px;
+                                                            background:#991b1b;
+                                                        "
+                                                    >
+                                                        Delete
+                                                    </a>
+
+                                                <?php endif; ?>
 
 
-                                        </td>
+                                            </td>
 
-                                    </tr>
+                                        </tr>
 
-                                <?php endforeach; ?>
+                                    <?php endforeach; ?>
 
-                            </tbody>
+                                </tbody>
 
-                        </table>
+                            </table>
 
-                    </div>
+                        </div>
+
+                    </form>
+
+                    <?php renderPagination($pagination); ?>
 
                 <?php endif; ?>
 
@@ -726,3 +927,26 @@ require_once "../includes/head.php";
 include __DIR__ . "/../includes/footer.php";
 
 ?>
+
+
+<script>
+
+function confirmBulkDelete() {
+
+    var count = document.querySelectorAll(".row-checkbox:checked").length;
+
+    if (count === 0) {
+        alert("Please select at least one user to delete.");
+        return false;
+    }
+
+    return confirm(
+        "Delete " + count + " selected user(s)?\n\n" +
+        "Rules applied automatically:\n" +
+        "• Your own account cannot be selected\n" +
+        "• Users with audit logs will be skipped\n\n" +
+        "This action cannot be undone."
+    );
+}
+
+</script>

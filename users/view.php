@@ -471,6 +471,18 @@ require_once "../includes/head.php";
                         <?php endif; ?>
 
 
+                        <!-- PRINT / SAVE AS PDF -->
+
+                        <button
+                            type="button"
+                            onclick="window.print()"
+                            class="button"
+                            style="background:#15803d;"
+                        >
+                            🖨 Print / Save as PDF
+                        </button>
+
+
                         <!-- BACK -->
 
                         <a

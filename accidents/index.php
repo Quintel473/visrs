@@ -2,6 +2,7 @@
 
 require_once "../includes/auth.php";
 require_once "../includes/database.php";
+require_once "../includes/functions.php";
 
 $basePath = "../";
 $activePage = "accidents";
@@ -11,10 +12,22 @@ $pageSubtitle = "Manage and review vehicle accident records.";
 
 
 /*
- * Load accident records.
+ * Pagination setup.
  */
 
-$stmt = $pdo->query("
+$perPage = 25;
+
+$countStmt = $pdo->query("SELECT COUNT(*) FROM accidents");
+$totalAccidents = (int) $countStmt->fetchColumn();
+
+$pagination = paginationMeta($totalAccidents, $perPage);
+
+
+/*
+ * Load accident records for current page.
+ */
+
+$stmt = $pdo->prepare("
     SELECT
         a.AccidentID,
         a.VehicleID,
@@ -38,7 +51,13 @@ $stmt = $pdo->query("
     ORDER BY
         a.AccidentDate DESC,
         a.AccidentID DESC
+
+    LIMIT ? OFFSET ?
 ");
+
+$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+$stmt->execute();
 
 $accidents = $stmt->fetchAll();
 
@@ -50,6 +69,14 @@ $canManage =
         ["Admin", "Police"],
         true
     );
+
+
+/*
+ * Bulk Action Flash Message
+ */
+
+$bulkMessage = $_SESSION["bulk_message"] ?? null;
+unset($_SESSION["bulk_message"]);
 
 
 /*
@@ -95,6 +122,41 @@ require_once "../includes/head.php";
                 <?php endif; ?>
 
 
+                <!-- BULK ACTION MESSAGE -->
+
+                <?php if ($bulkMessage): ?>
+
+                    <?php
+                    $bulkBg = "#fef3c7";
+                    $bulkColor = "#92400e";
+
+                    if ($bulkMessage["type"] === "success") {
+                        $bulkBg = "#dcfce7";
+                        $bulkColor = "#166534";
+                    } elseif ($bulkMessage["type"] === "error") {
+                        $bulkBg = "#fee2e2";
+                        $bulkColor = "#991b1b";
+                    }
+                    ?>
+
+                    <div
+                        class="auto-dismiss"
+                        style="
+                            background:<?= $bulkBg ?>;
+                            color:<?= $bulkColor ?>;
+                            padding:14px;
+                            border-radius:8px;
+                            margin-bottom:20px;
+                        "
+                    >
+
+                        <?= htmlspecialchars($bulkMessage["text"]) ?>
+
+                    </div>
+
+                <?php endif; ?>
+
+
                 <div
                     style="
                         display:flex;
@@ -112,7 +174,7 @@ require_once "../includes/head.php";
                         </h2>
 
                         <p>
-                            <?= count($accidents) ?>
+                            <?= $pagination["totalRows"] ?>
                             accident record(s) found.
                         </p>
 
@@ -169,238 +231,342 @@ require_once "../includes/head.php";
 
                 <?php else: ?>
 
-                    <div
-                        style="
-                            overflow-x:auto;
-                        "
+
+                    <form
+                        method="POST"
+                        action="bulk_delete.php"
+                        id="bulkForm"
                     >
 
-                        <table
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="<?= htmlspecialchars(generateCSRFToken()) ?>"
+                        >
+
+
+                        <!-- BULK ACTION BAR -->
+
+                        <?php if ($canManage): ?>
+
+                            <div
+                                class="bulk-action-bar"
+                                id="bulkActionBar"
+                            >
+
+                                <span class="bulk-action-count">
+                                    <strong id="bulkSelectedCount">0</strong>
+                                    selected
+                                </span>
+
+
+                                <div class="bulk-action-buttons">
+
+                                    <button
+                                        type="button"
+                                        class="button button-secondary"
+                                        id="bulkClearSelection"
+                                    >
+                                        Clear
+                                    </button>
+
+
+                                    <button
+                                        type="submit"
+                                        class="button"
+                                        style="background:#991b1b;"
+                                        onclick="return confirmBulkDelete();"
+                                    >
+                                        Delete Selected
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        <?php endif; ?>
+
+
+                        <div
                             style="
-                                width:100%;
-                                border-collapse:collapse;
+                                overflow-x:auto;
                             "
                         >
 
-                            <thead>
+                            <table
+                                style="
+                                    width:100%;
+                                    border-collapse:collapse;
+                                "
+                            >
 
-                                <tr>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Date
-                                    </th>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Vehicle
-                                    </th>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Location
-                                    </th>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Damage Level
-                                    </th>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Report Number
-                                    </th>
-
-                                    <th
-                                        style="
-                                            text-align:left;
-                                            padding:12px;
-                                        "
-                                    >
-                                        Actions
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                <?php foreach (
-                                    $accidents
-                                    as $accident
-                                ): ?>
+                                <thead>
 
                                     <tr>
 
-                                        <td
-                                            style="
-                                                padding:12px;
-                                            "
-                                        >
+                                        <?php if ($canManage): ?>
 
-                                            <?= htmlspecialchars(
-                                                date(
-                                                    "M j, Y",
-                                                    strtotime(
-                                                        $accident["AccidentDate"]
-                                                    )
-                                                )
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <td
-                                            style="
-                                                padding:12px;
-                                            "
-                                        >
-
-                                            <strong>
-
-                                                <?= htmlspecialchars(
-                                                    $accident["PlateNumber"]
-                                                ) ?>
-
-                                            </strong>
-
-                                            <br>
-
-                                            <small>
-
-                                                <?= htmlspecialchars(
-                                                    $accident["Make"]
-                                                ) ?>
-
-                                                <?= htmlspecialchars(
-                                                    $accident["Model"]
-                                                ) ?>
-
-                                                <?= htmlspecialchars(
-                                                    "(" .
-                                                    $accident["VehicleYear"] .
-                                                    ")"
-                                                ) ?>
-
-                                            </small>
-
-                                        </td>
-
-
-                                        <td
-                                            style="
-                                                padding:12px;
-                                            "
-                                        >
-
-                                            <?= $accident["Location"]
-                                                ? htmlspecialchars(
-                                                    $accident["Location"]
-                                                )
-                                                : "Not specified"
-                                            ?>
-
-                                        </td>
-
-
-                                        <td
-                                            style="
-                                                padding:12px;
-                                            "
-                                        >
-
-                                            <?= htmlspecialchars(
-                                                $accident["DamageLevel"]
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <td
-                                            style="
-                                                padding:12px;
-                                            "
-                                        >
-
-                                            <?= $accident["ReportNumber"]
-                                                ? htmlspecialchars(
-                                                    $accident["ReportNumber"]
-                                                )
-                                                : "Not specified"
-                                            ?>
-
-                                        </td>
-
-
-                                        <td
-                                            style="
-                                                padding:12px;
-                                                white-space:nowrap;
-                                            "
-                                        >
-
-                                            <a
-                                                href="view.php?id=<?= (int) $accident["AccidentID"] ?>"
-                                                class="button button-secondary"
+                                            <th
+                                                style="
+                                                    text-align:left;
+                                                    padding:12px;
+                                                    width:36px;
+                                                "
                                             >
-                                                View
-                                            </a>
+
+                                                <input
+                                                    type="checkbox"
+                                                    id="selectAll"
+                                                    aria-label="Select all accident records"
+                                                >
+
+                                            </th>
+
+                                        <?php endif; ?>
+
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Date
+                                        </th>
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Vehicle
+                                        </th>
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Location
+                                        </th>
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Damage Level
+                                        </th>
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Report Number
+                                        </th>
+
+                                        <th
+                                            style="
+                                                text-align:left;
+                                                padding:12px;
+                                            "
+                                        >
+                                            Actions
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    <?php foreach (
+                                        $accidents
+                                        as $accident
+                                    ): ?>
+
+                                        <tr>
 
 
                                             <?php if ($canManage): ?>
 
-                                                <a
-                                                    href="edit.php?id=<?= (int) $accident["AccidentID"] ?>"
-                                                    class="button button-secondary"
-                                                >
-                                                    Edit
-                                                </a>
-
-                                                <a
-                                                    href="delete.php?id=<?= (int) $accident["AccidentID"] ?>"
-                                                    class="button"
+                                                <td
                                                     style="
-                                                        background:#991b1b;
-                                                        margin-left:5px;
+                                                        padding:12px;
                                                     "
                                                 >
-                                                    Delete
-                                                </a>
+
+                                                    <input
+                                                        type="checkbox"
+                                                        name="selected_ids[]"
+                                                        value="<?= (int) $accident["AccidentID"] ?>"
+                                                        class="row-checkbox"
+                                                        aria-label="Select this accident record"
+                                                    >
+
+                                                </td>
 
                                             <?php endif; ?>
 
-                                        </td>
 
-                                    </tr>
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                "
+                                            >
 
-                                <?php endforeach; ?>
+                                                <?= htmlspecialchars(
+                                                    date(
+                                                        "M j, Y",
+                                                        strtotime(
+                                                            $accident["AccidentDate"]
+                                                        )
+                                                    )
+                                                ) ?>
 
-                            </tbody>
+                                            </td>
 
-                        </table>
 
-                    </div>
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                "
+                                            >
+
+                                                <strong>
+
+                                                    <?= htmlspecialchars(
+                                                        $accident["PlateNumber"]
+                                                    ) ?>
+
+                                                </strong>
+
+                                                <br>
+
+                                                <small>
+
+                                                    <?= htmlspecialchars(
+                                                        $accident["Make"]
+                                                    ) ?>
+
+                                                    <?= htmlspecialchars(
+                                                        $accident["Model"]
+                                                    ) ?>
+
+                                                    <?= htmlspecialchars(
+                                                        "(" .
+                                                        $accident["VehicleYear"] .
+                                                        ")"
+                                                    ) ?>
+
+                                                </small>
+
+                                            </td>
+
+
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                "
+                                            >
+
+                                                <?= $accident["Location"]
+                                                    ? htmlspecialchars(
+                                                        $accident["Location"]
+                                                    )
+                                                    : "Not specified"
+                                                ?>
+
+                                            </td>
+
+
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                "
+                                            >
+
+                                                <?= htmlspecialchars(
+                                                    $accident["DamageLevel"]
+                                                ) ?>
+
+                                            </td>
+
+
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                "
+                                            >
+
+                                                <?= $accident["ReportNumber"]
+                                                    ? htmlspecialchars(
+                                                        $accident["ReportNumber"]
+                                                    )
+                                                    : "Not specified"
+                                                ?>
+
+                                            </td>
+
+
+                                            <td
+                                                style="
+                                                    padding:12px;
+                                                    white-space:nowrap;
+                                                "
+                                            >
+
+                                                <a
+                                                    href="view.php?id=<?= (int) $accident["AccidentID"] ?>"
+                                                    class="button button-secondary"
+                                                >
+                                                    View
+                                                </a>
+
+
+                                                <?php if ($canManage): ?>
+
+                                                    <a
+                                                        href="edit.php?id=<?= (int) $accident["AccidentID"] ?>"
+                                                        class="button button-secondary"
+                                                    >
+                                                        Edit
+                                                    </a>
+
+                                                    <a
+                                                        href="delete.php?id=<?= (int) $accident["AccidentID"] ?>"
+                                                        class="button"
+                                                        style="
+                                                            background:#991b1b;
+                                                            margin-left:5px;
+                                                        "
+                                                    >
+                                                        Delete
+                                                    </a>
+
+                                                <?php endif; ?>
+
+                                            </td>
+
+                                        </tr>
+
+                                    <?php endforeach; ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </form>
+
+                    <?php renderPagination($pagination); ?>
+
 
                 <?php endif; ?>
 
@@ -412,4 +578,25 @@ require_once "../includes/head.php";
 
 </div>
 
+
 <?php require_once "../includes/footer.php"; ?>
+
+
+<script>
+
+function confirmBulkDelete() {
+
+    var count = document.querySelectorAll(".row-checkbox:checked").length;
+
+    if (count === 0) {
+        alert("Please select at least one accident record to delete.");
+        return false;
+    }
+
+    return confirm(
+        "Delete " + count + " selected accident record(s)?\n\n" +
+        "This action cannot be undone."
+    );
+}
+
+</script>

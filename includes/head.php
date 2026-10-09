@@ -6,10 +6,13 @@
  *   - correct <!DOCTYPE>, <html>, <head>
  *   - anti-FOUC theme loader (runs before CSS paints)
  *   - global stylesheet link
+ *   - print stylesheet for PDF export
+ *   - Chart.js (only when $loadCharts is true)
  *
  * Set BEFORE including this file:
  *   $pageTitle  — string, shown in <title>
  *   $basePath   — "" at root, "../" in subfolders
+ *   $loadCharts — bool (optional), loads Chart.js CDN
  *
  * The page is responsible for opening <body>.
  */
@@ -52,5 +55,28 @@ $basePath  = $basePath  ?? "";
         rel="stylesheet"
         href="<?= htmlspecialchars($basePath) ?>css/style.css"
     >
+
+    <!--
+        Print stylesheet.
+        Loaded with media="print" so it only applies when
+        the user prints or saves a page as PDF.
+    -->
+    <link
+        rel="stylesheet"
+        href="<?= htmlspecialchars($basePath) ?>css/print.css"
+        media="print"
+    >
+
+    <?php if (!empty($loadCharts)): ?>
+
+        <!--
+            Chart.js — loaded only when the page sets
+            $loadCharts = true. Currently used by dashboard.php.
+        -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+        ></script>
+
+    <?php endif; ?>
 
 </head>

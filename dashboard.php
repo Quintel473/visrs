@@ -41,6 +41,75 @@ $stmt = $pdo->query("
 $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
 
+/*
+|--------------------------------------------------------------------------
+| Chart Data — Vehicles by Status
+|--------------------------------------------------------------------------
+*/
+
+$statusStmt = $pdo->query("
+    SELECT
+        Status,
+        COUNT(*) AS Count
+    FROM vehicles
+    GROUP BY Status
+");
+
+$vehicleStatusData = [
+    "Active"   => 0,
+    "Inactive" => 0,
+    "Stolen"   => 0,
+    "Sold"     => 0,
+];
+
+while ($row = $statusStmt->fetch()) {
+    $vehicleStatusData[$row["Status"]] = (int) $row["Count"];
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Chart Data — Accidents Over Time (last 6 months)
+|--------------------------------------------------------------------------
+*/
+
+$accidentStmt = $pdo->query("
+    SELECT
+        DATE_FORMAT(AccidentDate, '%Y-%m') AS Month,
+        COUNT(*) AS Count
+    FROM accidents
+    WHERE AccidentDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(AccidentDate, '%Y-%m')
+    ORDER BY Month ASC
+");
+
+$accidentMonthsRaw = [];
+while ($row = $accidentStmt->fetch()) {
+    $accidentMonthsRaw[$row["Month"]] = (int) $row["Count"];
+}
+
+/* Build a full 6-month series even for empty months */
+$accidentMonthLabels = [];
+$accidentMonthCounts = [];
+
+for ($i = 5; $i >= 0; $i--) {
+
+    $monthKey = date("Y-m", strtotime("-$i months"));
+
+    $accidentMonthLabels[] = date("M Y", strtotime($monthKey . "-01"));
+    $accidentMonthCounts[] = $accidentMonthsRaw[$monthKey] ?? 0;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Enable Chart.js in head.php
+|--------------------------------------------------------------------------
+*/
+
+$loadCharts = true;
+
+
 $pageTitle = "VISRS - Dashboard";
 
 require_once "includes/head.php";
@@ -549,6 +618,58 @@ require_once "includes/head.php";
             </section>
 
 
+            <!-- ========================= -->
+            <!-- CHARTS -->
+            <!-- ========================= -->
+
+            <div class="charts-grid">
+
+
+                <!-- VEHICLES BY STATUS -->
+
+                <div class="chart-card">
+
+                    <h2>
+                        Vehicles by Status
+                    </h2>
+
+                    <p>
+                        Distribution of all registered vehicles by their current status.
+                    </p>
+
+                    <div class="chart-canvas-wrapper">
+
+                        <canvas id="vehicleStatusChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACCIDENTS OVER TIME -->
+
+                <div class="chart-card">
+
+                    <h2>
+                        Accidents Over Time
+                    </h2>
+
+                    <p>
+                        Number of recorded accidents per month over the last 6 months.
+                    </p>
+
+                    <div class="chart-canvas-wrapper">
+
+                        <canvas id="accidentsChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
         </main>
 
     </div>
@@ -557,6 +678,205 @@ require_once "includes/head.php";
 
 
 <script src="js/app.js"></script>
+
+
+<!-- =========================================================
+     Dashboard Charts (Chart.js)
+     ========================================================= -->
+<script>
+
+(function () {
+
+    'use strict';
+
+    /* Data from PHP */
+    var vehicleStatusData = <?= json_encode($vehicleStatusData) ?>;
+    var accidentLabels    = <?= json_encode($accidentMonthLabels) ?>;
+    var accidentCounts    = <?= json_encode($accidentMonthCounts) ?>;
+
+
+    /* Color palette that adapts to the current theme */
+    function getThemeColors() {
+
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        return {
+            text:      isDark ? '#e2e8f0' : '#374151',
+            textMuted: isDark ? '#94a3b8' : '#6b7280',
+            grid:      isDark ? '#334155' : '#e5e7eb',
+            border:    isDark ? '#1e293b' : '#ffffff'
+        };
+    }
+
+
+    var vehicleStatusChart = null;
+    var accidentsChart = null;
+
+
+    function buildVehicleStatusChart() {
+
+        var ctx = document.getElementById('vehicleStatusChart');
+        if (!ctx) return;
+
+        var colors = getThemeColors();
+
+        if (vehicleStatusChart) {
+            vehicleStatusChart.destroy();
+        }
+
+        vehicleStatusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    'Active',
+                    'Inactive',
+                    'Stolen',
+                    'Sold'
+                ],
+                datasets: [{
+                    data: [
+                        vehicleStatusData.Active,
+                        vehicleStatusData.Inactive,
+                        vehicleStatusData.Stolen,
+                        vehicleStatusData.Sold
+                    ],
+                    backgroundColor: [
+                        '#16a34a',
+                        '#94a3b8',
+                        '#dc2626',
+                        '#f59e0b'
+                    ],
+                    borderColor: colors.border,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.text,
+                            padding: 14,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif',
+                                size: 13
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.label + ': ' + context.parsed;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+
+    function buildAccidentsChart() {
+
+        var ctx = document.getElementById('accidentsChart');
+        if (!ctx) return;
+
+        var colors = getThemeColors();
+
+        if (accidentsChart) {
+            accidentsChart.destroy();
+        }
+
+        accidentsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: accidentLabels,
+                datasets: [{
+                    label: 'Accidents',
+                    data: accidentCounts,
+                    backgroundColor: '#2563eb',
+                    borderRadius: 6,
+                    maxBarThickness: 46
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.parsed.y + ' accident(s)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: colors.textMuted,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: colors.textMuted,
+                            precision: 0,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif'
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    function buildCharts() {
+        buildVehicleStatusChart();
+        buildAccidentsChart();
+    }
+
+
+    /* Initial build */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildCharts);
+    } else {
+        buildCharts();
+    }
+
+
+    /* Rebuild when theme toggles */
+    document.addEventListener('click', function (e) {
+
+        var toggle = e.target.closest('#theme-toggle');
+        if (!toggle) return;
+
+        /* Small delay so the theme attribute is set first */
+        setTimeout(buildCharts, 50);
+
+    });
+
+})();
+
+</script>
+
 
 </body>
 

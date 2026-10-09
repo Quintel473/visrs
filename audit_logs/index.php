@@ -4,6 +4,7 @@ require_once __DIR__ . "/../includes/auth.php";
 requireRole(["Admin"]);
 
 require_once __DIR__ . "/../includes/database.php";
+require_once __DIR__ . "/../includes/functions.php";
 
 $basePath = "../";
 $activePage = "audit_logs";
@@ -24,8 +25,43 @@ $search = trim($_GET["search"] ?? "");
  * can see which user performed each action.
  */
 
+/* Pagination setup */
+$perPage = 25;
+
 if ($search !== "") {
 
+    $searchValue = "%" . $search . "%";
+
+    /* Count matching rows */
+    $countStmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM audit_logs a
+        LEFT JOIN users u
+            ON a.UserID = u.UserID
+        WHERE
+            a.Action LIKE ?
+            OR a.TableAffected LIKE ?
+            OR a.IPAddress LIKE ?
+            OR u.FirstName LIKE ?
+            OR u.LastName LIKE ?
+            OR u.Email LIKE ?
+    ");
+
+    $countStmt->execute([
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue,
+        $searchValue
+    ]);
+
+    $totalMatchingLogs = (int) $countStmt->fetchColumn();
+
+    /* Pagination metadata */
+    $pagination = paginationMeta($totalMatchingLogs, $perPage);
+
+    /* Load current page */
     $stmt = $pdo->prepare("
         SELECT
             a.LogID,
@@ -50,22 +86,31 @@ if ($search !== "") {
             OR u.LastName LIKE ?
             OR u.Email LIKE ?
         ORDER BY a.CreatedAt DESC, a.LogID DESC
+        LIMIT ? OFFSET ?
     ");
 
-    $searchValue = "%" . $search . "%";
+    $stmt->bindValue(1, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(2, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(3, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(4, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(5, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(6, $searchValue, PDO::PARAM_STR);
+    $stmt->bindValue(7, $pagination["perPage"], PDO::PARAM_INT);
+    $stmt->bindValue(8, $pagination["offset"],  PDO::PARAM_INT);
 
-    $stmt->execute([
-        $searchValue,
-        $searchValue,
-        $searchValue,
-        $searchValue,
-        $searchValue,
-        $searchValue
-    ]);
+    $stmt->execute();
 
 } else {
 
-    $stmt = $pdo->query("
+    /* Count all rows */
+    $countStmt = $pdo->query("SELECT COUNT(*) FROM audit_logs");
+    $totalAllLogs = (int) $countStmt->fetchColumn();
+
+    /* Pagination metadata */
+    $pagination = paginationMeta($totalAllLogs, $perPage);
+
+    /* Load current page */
+    $stmt = $pdo->prepare("
         SELECT
             a.LogID,
             a.UserID,
@@ -82,7 +127,13 @@ if ($search !== "") {
         LEFT JOIN users u
             ON a.UserID = u.UserID
         ORDER BY a.CreatedAt DESC, a.LogID DESC
+        LIMIT ? OFFSET ?
     ");
+
+    $stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
+    $stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+
+    $stmt->execute();
 
 }
 
@@ -588,6 +639,8 @@ require_once "../includes/head.php";
                         </table>
 
                     </div>
+
+                    <?php renderPagination($pagination); ?>
 
 
                 <?php else: ?>

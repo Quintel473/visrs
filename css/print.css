@@ -1,0 +1,392 @@
+/* =========================================================
+   VISRS
+   PRINT STYLESHEET
+   ---------------------------------------------------------
+   Loaded with media="print" so it only applies when
+   the user prints or saves as PDF.
+
+   Hides: sidebar, topbar, buttons, navigation, footer.
+   Reformats: content into a clean, ink-friendly report.
+   ========================================================= */
+
+
+/* =========================================================
+   1. GLOBAL PRINT RESET
+   ========================================================= */
+
+@page {
+    margin: 1.5cm 1.5cm 1.8cm 1.5cm;
+    size: A4 portrait;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+
+/* =========================================================
+   2. HIDE INTERACTIVE UI
+   ---------------------------------------------------------
+   These elements don't belong in a printed report.
+   ========================================================= */
+
+.sidebar,
+.topbar,
+footer,
+.theme-toggle,
+.sidebar-toggle,
+.language-switcher,
+.profile-link,
+.user-info,
+.no-print,
+.button,
+button,
+input[type="submit"],
+.button-group,
+.sidebar-reopen {
+    display: none !important;
+}
+
+
+/* =========================================================
+   3. RESET LAYOUT FOR PRINT
+   ---------------------------------------------------------
+   Remove the sidebar offset so the content fills the page.
+   ========================================================= */
+
+html,
+body {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+}
+
+.layout,
+.main-content,
+.content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: #ffffff !important;
+
+    display: block !important;
+}
+
+
+/* =========================================================
+   4. TYPOGRAPHY
+   ========================================================= */
+
+h1 {
+    font-size: 22pt;
+    color: #000000;
+    margin: 0 0 4pt 0;
+    page-break-after: avoid;
+}
+
+h2 {
+    font-size: 14pt;
+    color: #000000;
+    margin: 0 0 8pt 0;
+    page-break-after: avoid;
+    border-bottom: 1px solid #cccccc;
+    padding-bottom: 4pt;
+}
+
+h3 {
+    font-size: 12pt;
+    color: #000000;
+    margin: 0 0 6pt 0;
+    page-break-after: avoid;
+}
+
+p,
+td,
+li,
+div {
+    color: #000000 !important;
+    font-size: 10pt;
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   5. PRINT HEADER (auto-inserted by @media print)
+   ---------------------------------------------------------
+   A visible title bar at the top of every printed page.
+   ========================================================= */
+
+body::before {
+    content: "VISRS — Vehicle Information System";
+    display: block;
+
+    padding: 6pt 0 10pt 0;
+    margin: 0 0 12pt 0;
+
+    border-bottom: 2px solid #000000;
+
+    font-size: 12pt;
+    font-weight: 700;
+    color: #000000;
+    letter-spacing: 0.5pt;
+
+    text-align: left;
+}
+
+
+/* =========================================================
+   6. PRINT FOOTER (auto-inserted)
+   ---------------------------------------------------------
+   Printed at the bottom of the report.
+   ========================================================= */
+
+body::after {
+    content: "Generated on " attr(data-print-date) " — VISRS";
+    display: block;
+
+    margin-top: 20pt;
+    padding-top: 8pt;
+
+    border-top: 1px solid #cccccc;
+
+    font-size: 9pt;
+    color: #555555;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   7. CARDS
+   ---------------------------------------------------------
+   Remove shadows and border-radius, add thin borders.
+   ========================================================= */
+
+.card,
+.stat-card,
+.detail-item {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+
+    padding: 10pt !important;
+    margin-bottom: 12pt !important;
+
+    page-break-inside: avoid;
+}
+
+
+/* =========================================================
+   8. STATS GRID
+   ---------------------------------------------------------
+   Keep as a grid but simplify borders.
+   ========================================================= */
+
+.stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8pt !important;
+    margin-bottom: 12pt !important;
+}
+
+.stat-card .number,
+.stat-number {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #000000;
+}
+
+.stat-label,
+.stat-card h3 {
+    color: #555555;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+}
+
+
+/* =========================================================
+   9. TABLES
+   ---------------------------------------------------------
+   Clean black-and-white tables.
+   ========================================================= */
+
+table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 8pt 0 !important;
+    background: #ffffff !important;
+    font-size: 9pt;
+}
+
+th {
+    background: #f0f0f0 !important;
+    color: #000000 !important;
+    border: 1px solid #999999 !important;
+
+    padding: 5pt 6pt !important;
+
+    font-size: 9pt;
+    font-weight: 700;
+    text-align: left;
+}
+
+td {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cccccc !important;
+
+    padding: 5pt 6pt !important;
+    font-size: 9pt;
+    vertical-align: top;
+}
+
+
+/* =========================================================
+   10. BADGES
+   ---------------------------------------------------------
+   Convert colored badges to plain text with a border.
+   ========================================================= */
+
+.status-badge,
+.user-role,
+.record-status,
+.damage-level,
+.listing-status-badge,
+.listing-status {
+    display: inline-block !important;
+
+    background: #ffffff !important;
+    color: #000000 !important;
+
+    border: 1px solid #666666 !important;
+    border-radius: 0 !important;
+
+    padding: 2pt 6pt !important;
+
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   11. LINKS
+   ---------------------------------------------------------
+   Show URLs in parentheses after link text.
+   ========================================================= */
+
+a {
+    color: #000000 !important;
+    text-decoration: underline;
+}
+
+a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666666;
+}
+
+a[href^="/"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666666;
+}
+
+
+/* =========================================================
+   12. IMAGES
+   ---------------------------------------------------------
+   Cap image size and prevent page breaks inside.
+   ========================================================= */
+
+img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+}
+
+.vehicle-primary-image {
+    height: 300pt !important;
+    background: #ffffff;
+}
+
+.vehicle-thumbnails,
+.listing-image-container img {
+    display: none !important; /* hide thumbnails in print */
+}
+
+
+/* =========================================================
+   13. PAGE BREAKS
+   ---------------------------------------------------------
+   Force page breaks between major sections.
+   ========================================================= */
+
+.vehicle-section,
+.detail-section {
+    page-break-inside: avoid;
+}
+
+.page-break-before {
+    page-break-before: always;
+}
+
+
+/* =========================================================
+   14. UTILITY CLASSES
+   ---------------------------------------------------------
+   Add class="no-print" to anything you want hidden in print.
+   Add class="print-only" to anything only for print.
+   ========================================================= */
+
+.print-only {
+    display: block;
+}
+
+@media screen {
+    .print-only {
+        display: none;
+    }
+}
+
+
+/* =========================================================
+   15. FORM ELEMENTS
+   ---------------------------------------------------------
+   Show form values but hide the inputs themselves.
+   ========================================================= */
+
+input,
+select,
+textarea {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cccccc !important;
+    padding: 4pt 6pt !important;
+    font-size: 10pt !important;
+}
+
+
+/* =========================================================
+   16. DARK MODE — OVERRIDE TO WHITE
+   ---------------------------------------------------------
+   Force everything to print in light mode.
+   ========================================================= */
+
+[data-theme="dark"] * {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #cccccc !important;
+}

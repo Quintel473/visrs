@@ -2621,13 +2621,16 @@ require_once "../includes/head.php";
 
 
             <!-- =================================================
-                 BACK TO MARKETPLACE
+                 BACK TO MARKETPLACE + PRINT
                  ================================================= -->
 
             <div
                 style="
+                    display:flex;
+                    gap:10px;
                     margin-top:10px;
                     margin-bottom:20px;
+                    flex-wrap:wrap;
                 "
             >
 
@@ -2639,6 +2642,20 @@ require_once "../includes/head.php";
                     ← Back to Marketplace
 
                 </a>
+
+
+                <button
+                    type="button"
+                    onclick="window.print()"
+                    class="button"
+                    style="
+                        background:#15803d;
+                    "
+                >
+
+                    🖨 Print / Save as PDF
+
+                </button>
 
             </div>
 

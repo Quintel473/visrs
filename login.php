@@ -374,6 +374,31 @@ require_once "includes/head.php";
             </div>
 
 
+            <!-- FORGOT PASSWORD LINK -->
+
+            <div
+                style="
+                    text-align:right;
+                    margin-top:-10px;
+                    margin-bottom:15px;
+                "
+            >
+
+                <a
+                    href="/visrs/forgot-password.php"
+                    style="
+                        color:#2563eb;
+                        font-size:13px;
+                        font-weight:600;
+                        text-decoration:none;
+                    "
+                >
+                    Forgot password?
+                </a>
+
+            </div>
+
+
             <!-- LOGIN BUTTON -->
 
             <button
