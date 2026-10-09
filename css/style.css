@@ -117,6 +117,8 @@ textarea {
    ========================================================= */
 
 .sidebar-logo {
+    display: block;
+
     width: 250px;
     min-width: 250px;
     max-width: 250px;
@@ -134,6 +136,16 @@ textarea {
     flex-shrink: 0;
 
     box-sizing: border-box;
+
+    text-decoration: none;
+
+    cursor: pointer;
+
+    transition: background-color 0.15s ease;
+}
+
+.sidebar-logo:hover {
+    background: #1f2937;
 }
 
 .sidebar-logo h2 {
@@ -1485,6 +1497,10 @@ footer {
     border-color: #334155;
 }
 
+[data-theme="dark"] .sidebar-logo:hover {
+    background: #334155;
+}
+
 [data-theme="dark"] .sidebar-logo h2 {
     color: #f1f5f9;
 }
@@ -1827,11 +1843,11 @@ footer {
    cleanly. The avatar container already has overflow:hidden
    and border-radius:50%, so the image just needs to fill it.
 
-   object-position: center top
-   → for portraits, shows the top (head/face) rather than
-     cropping to the middle
-   → for landscapes, shows the top portion (usually the
-     meaningful part) rather than a middle slice
+   object-position: center 30%
+   → for portraits, shows the face area rather than the top
+     or the middle
+   → for landscapes, shows the upper portion which usually
+     contains the meaningful part
    ========================================================= */
 
 .user-avatar-image {
@@ -1841,4 +1857,418 @@ footer {
     object-position: center 30%;
     display: block;
     border-radius: 50%;
+}
+
+
+/* =========================================================
+   43. COLLAPSIBLE SIDEBAR — NARROW ICON STRIP
+   ---------------------------------------------------------
+   When <html data-sidebar="collapsed"> is set:
+   - Sidebar shrinks from 250px to 64px
+   - Text labels hide, only icons remain
+   - Logo shows just "V"
+   - Toggle button stays visible at the top
+   - Main content expands to fill the remaining space
+   ========================================================= */
+
+/* Smooth transitions */
+.sidebar {
+    transition: width 0.2s ease;
+}
+
+.sidebar-logo {
+    transition: padding 0.2s ease;
+}
+
+.sidebar-nav {
+    transition: padding 0.2s ease;
+}
+
+.sidebar-nav a {
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        padding 0.2s ease;
+}
+
+.main-content {
+    transition: margin-left 0.2s ease;
+}
+
+/* ---------- EXPANDED (default) ---------- */
+
+/* Logo shows "VISRS", hides "V" */
+.sidebar-logo .logo-short {
+    display: none;
+}
+
+
+/* ---------- COLLAPSED ---------- */
+
+/* Sidebar becomes a narrow strip */
+[data-sidebar="collapsed"] .sidebar {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+}
+
+[data-sidebar="collapsed"] .sidebar-logo {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    padding: 25px 0 22px 0;
+    text-align: center;
+}
+
+/* Logo: hide "VISRS", show "V" */
+[data-sidebar="collapsed"] .sidebar-logo .logo-full {
+    display: none;
+}
+
+[data-sidebar="collapsed"] .sidebar-logo .logo-short {
+    display: inline;
+    font-size: 26px;
+}
+
+/* Hide the tagline text in the logo */
+[data-sidebar="collapsed"] .sidebar-logo p {
+    display: none;
+}
+
+/* Nav container shrinks */
+[data-sidebar="collapsed"] .sidebar-nav {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    padding: 14px 8px 20px 8px;
+}
+
+/* Nav links: hide text, center icon */
+[data-sidebar="collapsed"] .sidebar-nav a {
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    margin: 0 auto;
+    padding: 11px 0;
+    justify-content: center;
+    gap: 0;
+}
+
+[data-sidebar="collapsed"] .sidebar-nav a .sidebar-text {
+    display: none;
+}
+
+[data-sidebar="collapsed"] .sidebar-nav a .sidebar-icon {
+    font-size: 20px;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+/* Toggle button: center it in the narrow sidebar */
+[data-sidebar="collapsed"] .sidebar-toggle {
+    margin: 14px auto 0 auto;
+    display: flex;
+}
+
+/* Main content expands */
+[data-sidebar="collapsed"] .main-content {
+    width: calc(100% - 64px);
+    margin-left: 64px;
+}
+
+
+/* ---------- SIDEBAR TOGGLE BUTTON STYLING ---------- */
+
+.sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    margin: 14px 12px 0 12px;
+    padding: 0;
+
+    background: transparent;
+    color: #d1d5db;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
+
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+    background: #1f2937;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.sidebar-toggle:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+
+/* ---------- DARK MODE ---------- */
+
+[data-theme="dark"] .sidebar-toggle {
+    color: #cbd5e1;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .sidebar-toggle:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.30);
+}
+
+
+/* ---------- MOBILE: disable collapse on small screens ---------- */
+
+@media (max-width: 700px) {
+
+    /* Force full-width sidebar on mobile regardless of state */
+    [data-sidebar="collapsed"] .sidebar,
+    [data-sidebar="collapsed"] .sidebar-logo,
+    [data-sidebar="collapsed"] .sidebar-nav,
+    [data-sidebar="collapsed"] .sidebar-nav a {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-logo {
+        padding: 25px 22px 22px 22px;
+        text-align: left;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-logo .logo-full {
+        display: inline;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-logo .logo-short {
+        display: none;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-logo p {
+        display: block;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-nav {
+        padding: 14px 12px 20px 12px;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-nav a {
+        width: 100%;
+        padding: 11px 14px;
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    [data-sidebar="collapsed"] .sidebar-nav a .sidebar-text {
+        display: block;
+    }
+
+    [data-sidebar="collapsed"] .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    /* Hide the toggle button on mobile */
+    .sidebar-toggle {
+        display: none;
+    }
+}
+
+/* =========================================================
+   44. LANGUAGE SWITCHER
+   ---------------------------------------------------------
+   Round button in the topbar that opens a small dropdown
+   with the four supported languages.
+   ========================================================= */
+
+.language-switcher {
+    position: relative;
+    display: inline-block;
+    margin-right: 12px;
+}
+
+.language-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    padding: 0 12px;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
+
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.language-toggle:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.language-toggle:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.language-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.language-current {
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+/* Dropdown menu */
+.language-menu {
+    display: none;
+
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+
+    min-width: 170px;
+
+    padding: 6px;
+
+    background: #ffffff;
+    color: #111827;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+
+    z-index: 5000;
+}
+
+.language-menu.open {
+    display: block;
+}
+
+.language-option {
+    display: block;
+
+    width: 100%;
+
+    padding: 9px 12px;
+
+    background: transparent;
+    color: inherit;
+
+    border: none;
+    border-radius: 6px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition: background-color 0.15s ease;
+}
+
+.language-option:hover {
+    background: #f3f4f6;
+}
+
+.language-option.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+/* Dark mode */
+[data-theme="dark"] .language-toggle {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .language-toggle:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .language-toggle:focus-visible {
+    outline: 2px solid #60a5fa;
+}
+
+[data-theme="dark"] .language-menu {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .language-option:hover {
+    background: #334155;
+}
+
+[data-theme="dark"] .language-option.active {
+    background: #1e3a8a;
+    color: #bfdbfe;
+}
+
+/* =========================================================
+   i18n — Temporarily disable transitions during text swaps
+   ---------------------------------------------------------
+   Prevents layout "stutter" when changing languages.
+   The class is added by JS, applied for one frame, then removed.
+   ========================================================= */
+
+html.i18n-changing *,
+html.i18n-changing *::before,
+html.i18n-changing *::after {
+    transition: none !important;
+    animation-duration: 0s !important;
 }

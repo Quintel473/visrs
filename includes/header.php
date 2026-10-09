@@ -4,6 +4,7 @@
  *
  * Provides the same topbar on every page, including:
  *   - page title
+ *   - language switcher
  *   - dark mode toggle button
  *   - user name + avatar linking to profile
  *
@@ -23,6 +24,67 @@ $headerFullName     = trim($headerFirstName . " " . $headerLastName);
     </div>
 
     <div class="user-info">
+
+        <!-- ========================= -->
+        <!-- LANGUAGE SWITCHER -->
+        <!-- ========================= -->
+        <div class="language-switcher" id="language-switcher">
+
+            <button
+                type="button"
+                class="language-toggle"
+                id="language-toggle"
+                aria-label="Change language"
+                title="Change language"
+                aria-haspopup="true"
+                aria-expanded="false"
+            >
+                <span class="language-icon" aria-hidden="true">🌐</span>
+                <span class="language-current" id="language-current">EN</span>
+            </button>
+
+            <div class="language-menu" id="language-menu" role="menu">
+
+                <button
+                    type="button"
+                    class="language-option"
+                    data-lang="en"
+                    role="menuitem"
+                >
+                    🇬🇧 English
+                </button>
+
+                <button
+                    type="button"
+                    class="language-option"
+                    data-lang="es"
+                    role="menuitem"
+                >
+                    🇪🇸 Español
+                </button>
+
+                <button
+                    type="button"
+                    class="language-option"
+                    data-lang="fr"
+                    role="menuitem"
+                >
+                    🇫🇷 Français
+                </button>
+
+                <button
+                    type="button"
+                    class="language-option"
+                    data-lang="ja"
+                    role="menuitem"
+                >
+                    🇯🇵 日本語
+                </button>
+
+            </div>
+
+        </div>
+
 
         <!-- ========================= -->
         <!-- DARK MODE TOGGLE -->
@@ -60,7 +122,6 @@ $headerFullName     = trim($headerFirstName . " " . $headerLastName);
 
                 <?php if ($headerProfileImage !== ""): ?>
 
-                    <!-- FIX: Show profile picture when user has uploaded one -->
                     <img
                         src="/visrs/<?= htmlspecialchars($headerProfileImage) ?>"
                         alt="<?= htmlspecialchars($headerFullName ?: "User") ?>"
