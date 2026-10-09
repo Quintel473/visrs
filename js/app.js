@@ -59,6 +59,59 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /*
     |--------------------------------------------------------------------------
+    | RESTORE SUBMIT BUTTONS ON BFCACHE RESTORE
+    |--------------------------------------------------------------------------
+    | When the user navigates back to a form (e.g., after a failed POST),
+    | some browsers restore the page from the back/forward cache with
+    | buttons still disabled and text stuck at "Processing...".
+    | This listener undoes that on bfcache restore.
+    */
+
+    window.addEventListener("pageshow", function (event) {
+
+        if (!event.persisted) return;
+
+        document.querySelectorAll(
+            'form button[type="submit"], form input[type="submit"]'
+        ).forEach(function (button) {
+
+            button.disabled = false;
+
+            const buttonText = (
+                button.textContent ||
+                button.value ||
+                ""
+            ).trim().toLowerCase();
+
+            if (
+                buttonText === "processing..." ||
+                buttonText === ""
+            ) {
+
+                /*
+                 * Cannot know the original label safely, so only
+                 * clear the "Processing..." state if the label
+                 * still matches. Otherwise leave as-is.
+                 *
+                 * Most submissions re-render server-side and
+                 * never hit this path.
+                 */
+
+                if (button.tagName.toLowerCase() === "button") {
+                    button.textContent = "Submit";
+                } else {
+                    button.value = "Submit";
+                }
+
+            }
+
+        });
+
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
     | AUTO DISMISS ALERTS
     |--------------------------------------------------------------------------
     */
@@ -105,10 +158,6 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     | AUTO FOCUS
     |--------------------------------------------------------------------------
-    | FIX: Match the .auto-focus class used on login/register/forgot
-    |      password inputs. Previously looked for [data-autofocus]
-    |      which no element uses.
-    |--------------------------------------------------------------------------
     */
 
     const autofocusElement =
@@ -122,10 +171,6 @@ document.addEventListener("DOMContentLoaded", function () {
     /*
     |--------------------------------------------------------------------------
     | PASSWORD VISIBILITY TOGGLE
-    |--------------------------------------------------------------------------
-    | FIX: Match the [data-toggle-password] attribute used on the
-    |      login, register, and reset-password forms. Previously
-    |      looked for [data-password-toggle], which no element uses.
     |--------------------------------------------------------------------------
     */
 
@@ -310,10 +355,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* =========================================================
    VISRS Dark Mode Toggle
-   =========================================================
-   - Reads the theme set by the inline anti-FOUC script.
-   - Updates the toggle button state (icon + ARIA).
-   - Persists choice to localStorage under 'visrs-theme'.
    ========================================================= */
 (function () {
     'use strict';
@@ -385,10 +426,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* =========================================================
    VISRS Sidebar Collapse Toggle
-   =========================================================
-   - Toggles <html data-sidebar="collapsed"> on click
-   - Persists state in localStorage under 'visrs-sidebar'
-   - One button inside the sidebar does the toggling
    ========================================================= */
 (function () {
     'use strict';
@@ -439,15 +476,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* =========================================================
    VISRS Multi-Language (i18n) — Auto-Translate
-   =========================================================
-   - Loads JSON translation files from /visrs/lang/
-   - Translates:
-       * [data-i18n] elements (explicit key lookup)
-       * [data-i18n-placeholder] attributes
-       * [data-i18n-title] attributes
-       * Any text node inside an [data-i18n-auto] container
-         (matched by reverse dictionary)
-   - Persists choice in localStorage under 'visrs-lang'
    ========================================================= */
 (function () {
     'use strict';
@@ -456,12 +484,10 @@ document.addEventListener("DOMContentLoaded", function () {
     var DEFAULT_LANG = 'en';
     var STORAGE_KEY = 'visrs-lang';
 
-    var translations = {};      // key-based translations
-    var reverseDict = {};       // english-text -> target-text
+    var translations = {};
+    var reverseDict = {};
     var currentLang = DEFAULT_LANG;
 
-    /* Store original English text for every translated node so we can
-       re-translate from English when the user changes language again. */
     var originalTextMap = new WeakMap();
 
     /* ---------- Storage helpers ---------- */
@@ -486,10 +512,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* ---------- Translation core ---------- */
 
-    /**
-     * Translate every text node inside [data-i18n-auto] containers
-     * using the reverse dictionary.
-     */
     function translateAutoContainers() {
 
         var containers = document.querySelectorAll('[data-i18n-auto]');
@@ -501,11 +523,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 NodeFilter.SHOW_TEXT,
                 {
                     acceptNode: function (node) {
-                        /* Skip empty/whitespace-only text */
                         if (!node.nodeValue || !node.nodeValue.trim()) {
                             return NodeFilter.FILTER_REJECT;
                         }
-                        /* Skip script/style contents */
                         var parent = node.parentNode;
                         if (parent) {
                             var tag = parent.nodeName;
@@ -521,7 +541,6 @@ document.addEventListener("DOMContentLoaded", function () {
             var node;
             while ((node = walker.nextNode())) {
 
-                /* Preserve original English text on first pass */
                 var original = originalTextMap.get(node);
                 if (original === undefined) {
                     original = node.nodeValue;
@@ -531,7 +550,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 var trimmed = original.trim();
                 if (trimmed === '') continue;
 
-                /* English target — restore original */
                 if (currentLang === DEFAULT_LANG) {
                     if (node.nodeValue !== original) {
                         node.nodeValue = original;
@@ -539,16 +557,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     continue;
                 }
 
-                /* Look up in reverse dictionary */
                 var translated = reverseDict[trimmed];
 
                 if (translated !== undefined) {
-                    /* Preserve leading/trailing whitespace */
                     var leading = original.match(/^\s*/)[0];
                     var trailing = original.match(/\s*$/)[0];
                     node.nodeValue = leading + translated + trailing;
                 } else {
-                    /* No translation found → restore English */
                     if (node.nodeValue !== original) {
                         node.nodeValue = original;
                     }
@@ -557,9 +572,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /**
-     * Explicit [data-i18n] translation (key-based, existing system).
-     */
     function applyKeyedTranslations() {
 
         var textNodes = document.querySelectorAll('[data-i18n]');
@@ -587,12 +599,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    /**
-     * Master translate function.
-     */
     function applyTranslations() {
 
-        /* Suppress transitions during the swap to prevent jank */
         document.documentElement.classList.add('i18n-changing');
 
         document.documentElement.setAttribute('lang', currentLang);
@@ -600,7 +608,6 @@ document.addEventListener("DOMContentLoaded", function () {
         applyKeyedTranslations();
         translateAutoContainers();
 
-        /* Restore transitions after paint */
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
                 document.documentElement.classList.remove('i18n-changing');
@@ -701,18 +708,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* ---------- Auto-tagging fallback ---------- */
 
-    /**
-     * If a page author forgot to add [data-i18n-auto], we
-     * auto-tag the main content area once the DOM is ready.
-     * This means NO page edits are needed.
-     */
     function autoTagContentAreas() {
+
+        /*
+         * Add new selectors here to opt additional page
+         * regions into automatic i18n translation.
+         *
+         * .login-page covers the split-screen login layout
+         * (both hero and form panels).
+         */
 
         var candidates = [
             'main.content',
             '.content',
             '.card',
-            '.page-title'
+            '.page-title',
+            '.login-page'
         ];
 
         candidates.forEach(function (selector) {
@@ -742,10 +753,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* =========================================================
    VISRS Bulk Selection
-   =========================================================
-   - Toggles the bulk action bar based on row checkboxes
-   - Handles the "Select All" checkbox
-   - Clears the selection when the "Clear" button is clicked
    ========================================================= */
 (function () {
     'use strict';
@@ -784,7 +791,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-            /* Sync "Select All" indeterminate state */
             if (selectAll) {
                 var total = rowCheckboxes.length;
                 if (checked === 0) {
@@ -800,7 +806,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        /* Select All toggle */
         if (selectAll) {
             selectAll.addEventListener('change', function () {
                 var isChecked = selectAll.checked;
@@ -811,12 +816,10 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        /* Individual row toggles */
         rowCheckboxes.forEach(function (cb) {
             cb.addEventListener('change', updateBar);
         });
 
-        /* Clear button */
         if (clearBtn) {
             clearBtn.addEventListener('click', function () {
                 rowCheckboxes.forEach(function (cb) {
@@ -830,16 +833,12 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
 
-        /* Initial state */
         updateBar();
     });
 })();
 
 /* =========================================================
    VISRS Notification Badge Polling
-   =========================================================
-   Refreshes the unread count in the topbar every 60 seconds.
-   Only runs if the badge exists on the page.
    ========================================================= */
 (function () {
     'use strict';
@@ -851,10 +850,12 @@ document.addEventListener("DOMContentLoaded", function () {
         var badge = document.getElementById('notifications-badge');
         if (!badge) return;
 
+        var stopped = false;
+
         /* Fetch unread count via a lightweight endpoint */
         function refresh() {
 
-            fetch('/visrs/notifications/unread_count.php', {
+            return fetch('/visrs/notifications/unread_count.php', {
                 cache: 'no-store'
             })
                 .then(function (res) { return res.json(); })
@@ -872,11 +873,44 @@ document.addEventListener("DOMContentLoaded", function () {
                 .catch(function () { /* silent */ });
         }
 
+        /* Recursive setTimeout — schedules the next poll only
+           after the previous one finishes, avoiding request
+           pile-up if the server is slow. */
+
+        function loop() {
+
+            if (stopped) return;
+
+            refresh().then(function () {
+                if (stopped) return;
+                setTimeout(loop, REFRESH_INTERVAL);
+            });
+        }
+
         /* Refresh on page focus (in case another tab made changes) */
         window.addEventListener('focus', refresh);
 
-        /* Poll every 60s */
-        setInterval(refresh, REFRESH_INTERVAL);
+        /* Stop polling when the page is hidden to save resources,
+           resume when visible again. */
+
+        document.addEventListener('visibilitychange', function () {
+
+            if (document.hidden) {
+                stopped = true;
+            } else {
+                if (stopped) {
+                    stopped = false;
+                    refresh().then(function () {
+                        if (!stopped) {
+                            setTimeout(loop, REFRESH_INTERVAL);
+                        }
+                    });
+                }
+            }
+        });
+
+        /* Kick off the loop */
+        setTimeout(loop, REFRESH_INTERVAL);
     }
 
     if (document.readyState === 'loading') {
@@ -886,3 +920,122 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 })();
 
+/* =========================================================
+   VISRS Password Strength Meter
+   =========================================================
+   Visual feedback while typing. Does NOT replace server-side
+   validation — password_policy_check() in PHP remains the
+   authority. This is purely UX.
+
+   Hooks onto any input with [data-password-strength].
+   The meter is injected below the input on init.
+   ========================================================= */
+(function () {
+    'use strict';
+
+    function init() {
+
+        var inputs = document.querySelectorAll('[data-password-strength]');
+
+        if (!inputs.length) return;
+
+        inputs.forEach(function (input) {
+
+            /* Skip if already initialized */
+            if (input.dataset.strengthInit === '1') return;
+            input.dataset.strengthInit = '1';
+
+            /* ----- Build the meter ----- */
+
+            var wrapper = document.createElement('div');
+            wrapper.className = 'pw-strength';
+            wrapper.setAttribute('aria-hidden', 'true');
+
+            var bar = document.createElement('div');
+            bar.className = 'pw-strength-bar';
+
+            var fill = document.createElement('div');
+            fill.className = 'pw-strength-fill';
+
+            bar.appendChild(fill);
+            wrapper.appendChild(bar);
+
+            var label = document.createElement('span');
+            label.className = 'pw-strength-label';
+
+            /* Insert right after the input's parent (.login-password-wrapper
+               or .settings-field, whichever wraps it) */
+            var anchor = input.parentNode;
+            anchor.parentNode.insertBefore(wrapper, anchor.nextSibling);
+            anchor.parentNode.insertBefore(label, wrapper.nextSibling);
+
+            /* ----- Scoring ----- */
+
+            function scorePassword(pw) {
+
+                var score = 0;
+
+                if (pw.length >= 8)  score++;
+                if (pw.length >= 12) score++;
+                if (pw.length >= 16) score++;
+                if (pw.length >= 20) score++;
+
+                if (/[a-z]/.test(pw)) score++;
+                if (/[A-Z]/.test(pw)) score++;
+                if (/[0-9]/.test(pw)) score++;
+                if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+                /* Penalties */
+                if (/(.)\1{2,}/.test(pw)) score -= 1;         // 3+ repeated chars
+                if (/^[a-z]+$/.test(pw)) score -= 1;          // all lowercase
+                if (/^[0-9]+$/.test(pw)) score -= 2;          // all digits
+                if (pw.length < 8) score -= 2;
+
+                return Math.max(0, Math.min(8, score));
+            }
+
+            function bandFor(score) {
+                if (score <= 2) return { label: 'Weak',   cls: 'pw-strength-weak',   pct: 25 };
+                if (score <= 4) return { label: 'Fair',   cls: 'pw-strength-fair',   pct: 50 };
+                if (score <= 6) return { label: 'Good',   cls: 'pw-strength-good',   pct: 75 };
+                return           { label: 'Strong', cls: 'pw-strength-strong', pct: 100 };
+            }
+
+            function update() {
+
+                var pw = input.value;
+
+                /* Empty — hide everything */
+                if (pw === '') {
+                    wrapper.style.display = 'none';
+                    label.style.display = 'none';
+                    fill.style.width = '0';
+                    return;
+                }
+
+                wrapper.style.display = '';
+                label.style.display = '';
+
+                var score = scorePassword(pw);
+                var band = bandFor(score);
+
+                fill.style.width = band.pct + '%';
+                fill.className = 'pw-strength-fill ' + band.cls;
+                label.textContent = band.label;
+                label.className = 'pw-strength-label ' + band.cls;
+            }
+
+            input.addEventListener('input', update);
+            input.addEventListener('focus', update);
+
+            /* Initial state (in case the browser autofills) */
+            update();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();

@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . "/includes/database.php";
+require_once __DIR__ . "/includes/password_policy.php";
 
 $error = "";
 $success = "";
@@ -9,12 +10,14 @@ $firstName = "";
 $lastName = "";
 $email = "";
 
+$justRegistered = false;
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $firstName = trim($_POST["FirstName"] ?? "");
-    $lastName = trim($_POST["LastName"] ?? "");
-    $email = trim($_POST["Email"] ?? "");
-    $password = $_POST["Password"] ?? "";
+    $lastName  = trim($_POST["LastName"] ?? "");
+    $email     = trim($_POST["Email"] ?? "");
+    $password  = $_POST["Password"] ?? "";
     $confirmPassword = $_POST["ConfirmPassword"] ?? "";
 
 
@@ -47,13 +50,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
     /*
-     * Check password length
+     * Check password against policy
      */
 
-    elseif (strlen($password) < 8) {
+    else {
 
-        $error = "Password must be at least 8 characters long.";
+        $policyError = password_policy_check($password, [
+            "email"      => $email,
+            "first name" => $firstName,
+            "last name"  => $lastName
+        ]);
 
+        if ($policyError !== null) {
+            $error = $policyError;
+        }
     }
 
 
@@ -61,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
      * Check password confirmation
      */
 
-    elseif ($password !== $confirmPassword) {
+    if ($error === "" && $password !== $confirmPassword) {
 
         $error = "Passwords do not match.";
 
@@ -72,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
      * Check whether email already exists
      */
 
-    else {
+    if ($error === "") {
 
         $stmt = $pdo->prepare("
             SELECT UserID
@@ -101,20 +111,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($error === "") {
 
-        /*
-         * Never allow public registration to choose
-         * an administrative or privileged role.
-         *
-         * Every public registration receives the
-         * standard User role.
-         */
-
         $role = "User";
 
-
-        /*
-         * Securely hash the password.
-         */
 
         $hashedPassword = password_hash(
             $password,
@@ -153,26 +151,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ]);
 
 
-            /*
-             * Registration successful.
-             */
+            $success = "Your account has been created successfully. Redirecting to sign in…";
 
-            $success = "Your account has been created successfully. You can now log in.";
-
-            /*
-             * Clear the form fields.
-             */
+            $justRegistered = true;
 
             $firstName = "";
             $lastName = "";
             $email = "";
 
         } catch (PDOException $e) {
-
-            /*
-             * Handle duplicate email or other database errors
-             * without exposing database information to the user.
-             */
 
             $error = "Unable to create your account. Please try again.";
 
@@ -199,389 +186,350 @@ require_once "includes/head.php";
 <body>
 
 
-<div
-    style="
-        min-height:100vh;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:40px 20px;
-        background:#f3f4f6;
-    "
->
+<div class="login-page">
 
 
-    <div
-        class="card"
-        style="
-            width:100%;
-            max-width:520px;
-        "
-    >
+    <!-- =====================================================
+         LEFT — HERO / BRANDING
+         ===================================================== -->
 
+    <div class="login-hero">
 
-        <!-- VISRS Branding -->
+        <div class="login-hero-overlay"></div>
 
-        <div
-            style="
-                text-align:center;
-                margin-bottom:30px;
-            "
-        >
+        <div class="login-hero-content">
 
-            <h1
-                style="
-                    margin:0;
-                    font-size:32px;
-                    font-weight:700;
-                "
-            >
+            <h1 class="login-hero-title">
                 VISRS
             </h1>
 
-            <p
-                style="
-                    margin:8px 0 0 0;
-                    color:#6b7280;
-                    font-size:14px;
-                "
-            >
+            <p class="login-hero-subtitle">
                 Vehicle Information Search & Retrieval System
             </p>
 
-        </div>
+            <ul class="login-hero-features">
 
+                <li>
+                    <span class="login-hero-icon">🔍</span>
+                    <span>Search vehicle records</span>
+                </li>
 
-        <!-- Page Heading -->
+                <li>
+                    <span class="login-hero-icon">🛡️</span>
+                    <span>Report stolen vehicles</span>
+                </li>
 
-        <div
-            style="
-                margin-bottom:25px;
-            "
-        >
+                <li>
+                    <span class="login-hero-icon">📋</span>
+                    <span>Track ownership history</span>
+                </li>
 
-            <h2
-                style="
-                    margin:0 0 8px 0;
-                "
-            >
-                Create Account
-            </h2>
-
-            <p
-                style="
-                    margin:0;
-                    color:#6b7280;
-                "
-            >
-                Create a VISRS account to access the system.
-            </p>
+            </ul>
 
         </div>
 
+    </div>
 
-        <!-- Error Message -->
 
-        <?php if ($error !== ""): ?>
+    <!-- =====================================================
+         RIGHT — REGISTER FORM
+         ===================================================== -->
 
-            <div
-                style="
-                    background:#fee2e2;
-                    color:#991b1b;
-                    padding:14px;
-                    border-radius:8px;
-                    margin-bottom:20px;
-                "
-            >
+    <div class="login-form-panel">
 
-                <strong>
-                    Registration Error
-                </strong>
+        <div class="login-form-wrapper">
 
-                <p
-                    style="
-                        margin:6px 0 0 0;
-                    "
-                >
-                    <?= htmlspecialchars($error) ?>
+
+            <div class="login-brandmark">
+
+                <span class="login-brandmark-text">
+                    VISRS
+                </span>
+
+            </div>
+
+
+            <div class="login-heading">
+
+                <h2>
+                    Create an account
+                </h2>
+
+                <p>
+                    Join VISRS to search vehicle records and manage ownership.
                 </p>
 
             </div>
 
-        <?php endif; ?>
 
+            <!-- ERROR -->
 
-        <!-- Success Message -->
+            <?php if ($error !== ""): ?>
 
-        <?php if ($success !== ""): ?>
+                <div class="error-box">
 
-            <div
-                style="
-                    background:#dcfce7;
-                    color:#166534;
-                    padding:14px;
-                    border-radius:8px;
-                    margin-bottom:20px;
-                "
-            >
+                    <strong>
+                        Registration Error
+                    </strong>
 
-                <strong>
-                    Account Created
-                </strong>
-
-                <p
-                    style="
-                        margin:6px 0 0 0;
-                    "
-                >
-                    <?= htmlspecialchars($success) ?>
-                </p>
-
-            </div>
-
-        <?php endif; ?>
-
-
-        <!-- Registration Form -->
-
-        <form
-            method="POST"
-            action=""
-        >
-
-
-            <!-- First Name -->
-
-            <div class="form-group">
-
-                <label for="FirstName">
-                    First Name
-                </label>
-
-                <input
-                    type="text"
-                    id="FirstName"
-                    name="FirstName"
-                    value="<?= htmlspecialchars($firstName) ?>"
-                    required
-                    maxlength="100"
-                    autocomplete="given-name"
-                    class="auto-focus"
-                >
-
-            </div>
-
-
-            <!-- Last Name -->
-
-            <div class="form-group">
-
-                <label for="LastName">
-                    Last Name
-                </label>
-
-                <input
-                    type="text"
-                    id="LastName"
-                    name="LastName"
-                    value="<?= htmlspecialchars($lastName) ?>"
-                    required
-                    maxlength="100"
-                    autocomplete="family-name"
-                >
-
-            </div>
-
-
-            <!-- Email -->
-
-            <div class="form-group">
-
-                <label for="Email">
-                    Email Address
-                </label>
-
-                <input
-                    type="email"
-                    id="Email"
-                    name="Email"
-                    value="<?= htmlspecialchars($email) ?>"
-                    required
-                    maxlength="150"
-                    autocomplete="email"
-                >
-
-            </div>
-
-
-            <!-- Password -->
-
-            <div class="form-group">
-
-                <label for="Password">
-                    Password
-                </label>
-
-                <div
-                    style="
-                        position:relative;
-                    "
-                >
-
-                    <input
-                        type="password"
-                        id="Password"
-                        name="Password"
-                        required
-                        minlength="8"
-                        autocomplete="new-password"
+                    <p
                         style="
-                            padding-right:80px;
+                            margin:6px 0 0 0;
                         "
                     >
-
-                    <button
-                        type="button"
-                        data-toggle-password="Password"
-                        style="
-                            position:absolute;
-                            right:10px;
-                            top:50%;
-                            transform:translateY(-50%);
-                            border:none;
-                            background:transparent;
-                            cursor:pointer;
-                            color:#374151;
-                            font-weight:600;
-                        "
-                    >
-                        Show
-                    </button>
+                        <?= htmlspecialchars($error) ?>
+                    </p>
 
                 </div>
 
-                <small
-                    style="
-                        display:block;
-                        margin-top:6px;
-                        color:#6b7280;
-                    "
-                >
-                    Password must contain at least 8 characters.
-                </small>
-
-            </div>
+            <?php endif; ?>
 
 
-            <!-- Confirm Password -->
+            <!-- SUCCESS -->
 
-            <div class="form-group">
+            <?php if ($success !== ""): ?>
 
-                <label for="ConfirmPassword">
-                    Confirm Password
-                </label>
+                <div class="settings-alert settings-alert-success" style="margin-bottom:20px;">
 
-                <div
-                    style="
-                        position:relative;
-                    "
-                >
+                    <strong>
+                        Account Created
+                    </strong>
 
-                    <input
-                        type="password"
-                        id="ConfirmPassword"
-                        name="ConfirmPassword"
-                        required
-                        minlength="8"
-                        autocomplete="new-password"
+                    <p
                         style="
-                            padding-right:80px;
+                            margin:6px 0 0 0;
                         "
                     >
-
-                    <button
-                        type="button"
-                        data-toggle-password="ConfirmPassword"
-                        style="
-                            position:absolute;
-                            right:10px;
-                            top:50%;
-                            transform:translateY(-50%);
-                            border:none;
-                            background:transparent;
-                            cursor:pointer;
-                            color:#374151;
-                            font-weight:600;
-                        "
-                    >
-                        Show
-                    </button>
+                        <?= htmlspecialchars($success) ?>
+                    </p>
 
                 </div>
 
-            </div>
+            <?php endif; ?>
 
 
-            <!-- Account Role Information -->
+            <!-- REGISTRATION FORM -->
 
-            <div
-                style="
-                    background:#f3f4f6;
-                    padding:14px;
-                    border-radius:8px;
-                    margin-top:20px;
-                    margin-bottom:25px;
-                "
+            <form
+                method="POST"
+                action=""
             >
 
-                <strong>
-                    Account Type
-                </strong>
 
-                <p
-                    style="
-                        margin:6px 0 0 0;
-                        color:#6b7280;
-                        font-size:14px;
-                    "
-                >
-                    New accounts are registered as standard User accounts.
-                    Administrative and staff roles can only be assigned by
-                    an authorized administrator.
-                </p>
+                <!-- FIRST NAME -->
 
-            </div>
+                <div class="form-group">
+
+                    <label for="FirstName">
+                        First Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="FirstName"
+                        name="FirstName"
+                        value="<?= htmlspecialchars($firstName) ?>"
+                        required
+                        maxlength="100"
+                        autocomplete="given-name"
+                        class="auto-focus"
+                    >
+
+                </div>
 
 
-            <!-- Buttons -->
+                <!-- LAST NAME -->
 
-            <div
-                style="
-                    display:flex;
-                    gap:12px;
-                    flex-wrap:wrap;
-                "
-            >
+                <div class="form-group">
+
+                    <label for="LastName">
+                        Last Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="LastName"
+                        name="LastName"
+                        value="<?= htmlspecialchars($lastName) ?>"
+                        required
+                        maxlength="100"
+                        autocomplete="family-name"
+                    >
+
+                </div>
+
+
+                <!-- EMAIL -->
+
+                <div class="form-group">
+
+                    <label for="Email">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="Email"
+                        name="Email"
+                        value="<?= htmlspecialchars($email) ?>"
+                        required
+                        maxlength="150"
+                        autocomplete="email"
+                    >
+
+                </div>
+
+
+                <!-- PASSWORD -->
+
+                <div class="form-group">
+
+                    <label for="Password">
+                        Password
+                    </label>
+
+                    <div class="login-password-wrapper">
+
+                        <input
+                            type="password"
+                            id="Password"
+                            name="Password"
+                            required
+                            minlength="8"
+                            maxlength="128"
+                            autocomplete="new-password"
+                            data-password-strength
+                        >
+
+                        <button
+                            type="button"
+                            data-toggle-password="Password"
+                            class="login-show-password"
+                        >
+                            Show
+                        </button>
+
+                    </div>
+
+                    <small
+                        style="
+                            display:block;
+                            margin-top:6px;
+                            color:#6b7280;
+                            font-size:12px;
+                        "
+                    >
+                        At least 8 characters. Avoid common passwords
+                        and don't include your name or email.
+                    </small>
+
+                </div>
+
+
+                <!-- CONFIRM PASSWORD -->
+
+                <div class="form-group">
+
+                    <label for="ConfirmPassword">
+                        Confirm Password
+                    </label>
+
+                    <div class="login-password-wrapper">
+
+                        <input
+                            type="password"
+                            id="ConfirmPassword"
+                            name="ConfirmPassword"
+                            required
+                            minlength="8"
+                            maxlength="128"
+                            autocomplete="new-password"
+                        >
+
+                        <button
+                            type="button"
+                            data-toggle-password="ConfirmPassword"
+                            class="login-show-password"
+                        >
+                            Show
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ROLE NOTE -->
+
+                <div class="login-roles" style="margin-top:8px;">
+
+                    <p class="login-roles-label">
+                        Account Type
+                    </p>
+
+                    <p
+                        style="
+                            margin:0;
+                            color:#64748b;
+                            font-size:13px;
+                            line-height:1.5;
+                        "
+                    >
+                        New accounts are registered as standard User
+                        accounts. Administrative and staff roles can
+                        only be assigned by an authorized administrator.
+                    </p>
+
+                </div>
+
+
+                <!-- SUBMIT -->
 
                 <button
                     type="submit"
-                    class="button"
+                    class="button login-submit"
                 >
                     Create Account
                 </button>
 
 
-                <a
-                    href="/visrs/login.php"
-                    class="button button-secondary"
-                >
-                    Back to Login
-                </a>
+            </form>
+
+
+            <!-- DIVIDER -->
+
+            <div class="login-divider">
+
+                <span>Already have an account?</span>
 
             </div>
 
 
-        </form>
+            <!-- BACK TO LOGIN -->
+
+            <a
+                href="/visrs/login.php"
+                class="button button-secondary login-register-btn"
+            >
+                Back to Sign In
+            </a>
+
+
+        </div>
+
+
+        <!-- FOOTER -->
+
+        <div class="login-footer">
+
+            <p>
+                &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
+                <a href="/visrs/support.php">Support</a>
+                &nbsp;·&nbsp;
+                <a href="/visrs/privacy.php">Privacy</a>
+            </p>
+
+        </div>
 
 
     </div>
@@ -590,12 +538,23 @@ require_once "includes/head.php";
 </div>
 
 
-<!-- Global VISRS JavaScript -->
+<!-- VISRS GLOBAL JAVASCRIPT -->
 
 <script
     src="/visrs/js/app.js"
     defer
 ></script>
+
+
+<?php if ($justRegistered): ?>
+
+<script>
+setTimeout(function () {
+    window.location.href = "/visrs/login.php";
+}, 2500);
+</script>
+
+<?php endif; ?>
 
 
 </body>

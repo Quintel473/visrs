@@ -22,6 +22,29 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . "/includes/database.php";
 
+require_once __DIR__ . "/includes/remember.php";
+
+require_once __DIR__ . "/includes/csrf.php";
+
+require_once __DIR__ . "/includes/ratelimit.php";
+
+
+/*
+ * Housekeeping: purge expired remember-me tokens
+ * and old rate-limit attempts.
+ *
+ * Runs on roughly 1 in 20 page loads so the cost is
+ * negligible and no cron job is required.
+ */
+
+if (random_int(1, 20) === 1) {
+
+    remember_cleanup($pdo);
+
+    rate_limit_cleanup($pdo);
+
+}
+
 
 $error = "";
 
@@ -47,119 +70,178 @@ if (isset($_SESSION["UserID"])) {
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $email = trim($_POST["Email"] ?? "");
-
-    $password = $_POST["Password"] ?? "";
-
-
     /*
-     * Validate required fields.
+     * Validate CSRF token on the login form.
      */
 
-    if ($email === "" || $password === "") {
+    if (!verifyCSRFToken($_POST["csrf_token"] ?? "")) {
 
-        $error = "Please enter your email address and password.";
+        $error = "Session expired. Please try again.";
 
     }
-
-
-    /*
-     * Validate email format.
-     */
-
-    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-
-        $error = "Please enter a valid email address.";
-
-    }
-
-
-    /*
-     * Look up the account.
-     */
 
     else {
 
-        $stmt = $pdo->prepare("
-            SELECT
-                UserID,
-                FirstName,
-                LastName,
-                Email,
-                Password,
-                Role,
-                ProfileImage
-            FROM users
-            WHERE Email = ?
-            LIMIT 1
-        ");
+        $email = trim($_POST["Email"] ?? "");
 
-        $stmt->execute([
-            $email
-        ]);
-
-        $user = $stmt->fetch();
+        $password = $_POST["Password"] ?? "";
 
 
         /*
-         * Verify the account and password.
+         * Check rate limit before doing anything else.
          */
 
-        if (
-            $user &&
-            password_verify(
-                $password,
-                $user["Password"]
-            )
-        ) {
+        $clientIP = rate_limit_client_ip();
+
+        $lock = rate_limit_check($pdo, $email, $clientIP);
+
+        if ($lock !== null) {
+
+            $error = $lock["message"];
+
+        }
+
+        else {
+
+        /*
+         * Validate required fields.
+         */
+
+        if ($email === "" || $password === "") {
+
+            $error = "Please enter your email address and password.";
+
+        }
+
+
+        /*
+         * Validate email format.
+         */
+
+        elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+            $error = "Please enter a valid email address.";
+
+        }
+
+
+        /*
+         * Look up the account.
+         */
+
+        else {
+
+            $stmt = $pdo->prepare("
+                SELECT
+                    UserID,
+                    FirstName,
+                    LastName,
+                    Email,
+                    Password,
+                    Role,
+                    ProfileImage
+                FROM users
+                WHERE Email = ?
+                LIMIT 1
+            ");
+
+            $stmt->execute([
+                $email
+            ]);
+
+            $user = $stmt->fetch();
+
 
             /*
-             * Regenerate the session ID after
-             * successful authentication.
+             * Verify the account and password.
              */
 
-            session_regenerate_id(true);
+            if (
+                $user &&
+                password_verify(
+                    $password,
+                    $user["Password"]
+                )
+            ) {
+
+                /*
+                 * Clear failed attempts on success.
+                 */
+
+                rate_limit_clear($pdo, $email);
 
 
-            /*
-             * Store the user's information in
-             * the session.
-             */
+                /*
+                 * Regenerate the session ID after
+                 * successful authentication.
+                 */
 
-            $_SESSION["UserID"] = (int) $user["UserID"];
-
-            $_SESSION["FirstName"] = $user["FirstName"];
-
-            $_SESSION["LastName"] = $user["LastName"];
-
-            $_SESSION["Email"] = $user["Email"];
-
-            $_SESSION["Role"] = $user["Role"];
-
-            /*
-             * FIX: Store profile picture in session so the
-             * topbar can show it immediately after login.
-             */
-
-            $_SESSION["ProfileImage"] = $user["ProfileImage"] ?? "";
+                session_regenerate_id(true);
 
 
-            /*
-             * Redirect to dashboard.
-             */
+                /*
+                 * Remember-me: issue a persistent token
+                 * if the user asked to be remembered.
+                 */
 
-            header("Location: /visrs/dashboard.php");
+                if (!empty($_POST["RememberMe"])) {
 
-            exit;
+                    remember_issue($pdo, (int) $user["UserID"]);
 
-        } else {
+                }
 
-            /*
-             * Do not reveal whether the email
-             * or password was incorrect.
-             */
 
-            $error = "Invalid email address or password.";
+                /*
+                 * Store the user's information in
+                 * the session.
+                 */
+
+                $_SESSION["UserID"] = (int) $user["UserID"];
+
+                $_SESSION["FirstName"] = $user["FirstName"];
+
+                $_SESSION["LastName"] = $user["LastName"];
+
+                $_SESSION["Email"] = $user["Email"];
+
+                $_SESSION["Role"] = $user["Role"];
+
+                /*
+                 * FIX: Store profile picture in session so the
+                 * topbar can show it immediately after login.
+                 */
+
+                $_SESSION["ProfileImage"] = $user["ProfileImage"] ?? "";
+
+
+                /*
+                 * Redirect to dashboard.
+                 */
+
+                header("Location: /visrs/dashboard.php");
+
+                exit;
+
+            } else {
+
+                /*
+                 * Record the failed attempt.
+                 */
+
+                rate_limit_record_failure($pdo, $email, $clientIP);
+
+
+                /*
+                 * Do not reveal whether the email
+                 * or password was incorrect.
+                 */
+
+                $error = "Invalid email address or password.";
+
+            }
+
+        }
+
 
         }
 
@@ -184,264 +266,268 @@ require_once "includes/head.php";
 <body>
 
 
-<div
-    style="
-        min-height:100vh;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:40px 20px;
-        background:#f3f4f6;
-    "
->
+<div class="login-page">
 
 
-    <div
-        class="card"
-        style="
-            width:100%;
-            max-width:450px;
-        "
-    >
+    <!-- =====================================================
+         LEFT — HERO / BRANDING
+         ===================================================== -->
 
+    <div class="login-hero">
 
-        <!-- VISRS BRANDING -->
+        <div class="login-hero-overlay"></div>
 
-        <div
-            style="
-                text-align:center;
-                margin-bottom:30px;
-            "
-        >
+        <div class="login-hero-content">
 
-            <h1
-                style="
-                    margin:0;
-                    font-size:34px;
-                    font-weight:700;
-                "
-            >
+            <h1 class="login-hero-title">
                 VISRS
             </h1>
 
-            <p
-                style="
-                    margin:8px 0 0 0;
-                    color:#6b7280;
-                    font-size:14px;
-                "
-            >
+            <p class="login-hero-subtitle">
                 Vehicle Information Search & Retrieval System
             </p>
 
-        </div>
+            <ul class="login-hero-features">
 
+                <li>
+                    <span class="login-hero-icon">🔍</span>
+                    <span>Search vehicle records</span>
+                </li>
 
-        <!-- LOGIN HEADING -->
+                <li>
+                    <span class="login-hero-icon">🛡️</span>
+                    <span>Report stolen vehicles</span>
+                </li>
 
-        <div
-            style="
-                margin-bottom:25px;
-            "
-        >
+                <li>
+                    <span class="login-hero-icon">📋</span>
+                    <span>Track ownership history</span>
+                </li>
 
-            <h2
-                style="
-                    margin:0 0 8px 0;
-                "
-            >
-                Welcome Back
-            </h2>
-
-            <p
-                style="
-                    margin:0;
-                    color:#6b7280;
-                "
-            >
-                Sign in to access the VISRS system.
-            </p>
+            </ul>
 
         </div>
 
+    </div>
 
-        <!-- ERROR -->
 
-        <?php if ($error !== ""): ?>
+    <!-- =====================================================
+         RIGHT — LOGIN FORM
+         ===================================================== -->
 
-            <div
-                style="
-                    background:#fee2e2;
-                    color:#991b1b;
-                    padding:14px;
-                    border-radius:8px;
-                    margin-bottom:20px;
-                "
-            >
+    <div class="login-form-panel">
 
-                <strong>
-                    Login Error
-                </strong>
+        <div class="login-form-wrapper">
 
-                <p
-                    style="
-                        margin:6px 0 0 0;
-                    "
-                >
-                    <?= htmlspecialchars($error) ?>
+
+            <!-- BRAND MARK (visible on mobile, subtle on desktop) -->
+
+            <div class="login-brandmark">
+
+                <span class="login-brandmark-text">
+                    VISRS
+                </span>
+
+            </div>
+
+
+            <!-- HEADING -->
+
+            <div class="login-heading">
+
+                <h2>
+                    Welcome back
+                </h2>
+
+                <p>
+                    Sign in to continue to your dashboard.
                 </p>
 
             </div>
 
-        <?php endif; ?>
+
+            <!-- ERROR -->
+
+            <?php if ($error !== ""): ?>
+
+                <div class="error-box">
+
+                    <strong>
+                        Login Error
+                    </strong>
+
+                    <p
+                        style="
+                            margin:6px 0 0 0;
+                        "
+                    >
+                        <?= htmlspecialchars($error) ?>
+                    </p>
+
+                </div>
+
+            <?php endif; ?>
 
 
-        <!-- LOGIN FORM -->
+            <!-- LOGIN FORM -->
 
-        <form
-            method="POST"
-            action=""
-        >
+            <form
+                method="POST"
+                action=""
+            >
 
-
-            <!-- EMAIL -->
-
-            <div class="form-group">
-
-                <label for="Email">
-                    Email Address
-                </label>
+                <!-- CSRF TOKEN -->
 
                 <input
-                    type="email"
-                    id="Email"
-                    name="Email"
-                    value="<?= htmlspecialchars($email) ?>"
-                    required
-                    maxlength="150"
-                    autocomplete="email"
-                    class="auto-focus"
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars(generateCSRFToken()) ?>"
                 >
+
+
+                <!-- EMAIL -->
+
+                <div class="form-group">
+
+                    <label for="Email">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="Email"
+                        name="Email"
+                        value="<?= htmlspecialchars($email) ?>"
+                        required
+                        maxlength="150"
+                        autocomplete="email"
+                        class="auto-focus"
+                    >
+
+                </div>
+
+
+                <!-- PASSWORD -->
+
+                <div class="form-group">
+
+                    <label for="Password">
+                        Password
+                    </label>
+
+                    <div class="login-password-wrapper">
+
+                        <input
+                            type="password"
+                            id="Password"
+                            name="Password"
+                            required
+                            autocomplete="current-password"
+                        >
+
+                        <button
+                            type="button"
+                            data-toggle-password="Password"
+                            class="login-show-password"
+                        >
+                            Show
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REMEMBER / FORGOT -->
+
+                <div class="login-options">
+
+                    <label class="login-remember">
+
+                        <input
+                            type="checkbox"
+                            name="RememberMe"
+                            value="1"
+                        >
+
+                        <span>Remember me</span>
+
+                    </label>
+
+                    <a
+                        href="/visrs/forgot-password.php"
+                        class="login-forgot"
+                    >
+                        Forgot password?
+                    </a>
+
+                </div>
+
+
+                <!-- LOGIN BUTTON -->
+
+                <button
+                    type="submit"
+                    class="button login-submit"
+                >
+                    Sign in
+                </button>
+
+
+            </form>
+
+
+            <!-- DIVIDER -->
+
+            <div class="login-divider">
+
+                <span>New to VISRS?</span>
 
             </div>
 
 
-            <!-- PASSWORD -->
+            <!-- REGISTRATION -->
 
-            <div class="form-group">
+            <a
+                href="/visrs/register.php"
+                class="button button-secondary login-register-btn"
+            >
+                Create an account
+            </a>
 
-                <label for="Password">
-                    Password
-                </label>
 
-                <div
-                    style="
-                        position:relative;
-                    "
-                >
+            <!-- ROLE STRIP -->
 
-                    <input
-                        type="password"
-                        id="Password"
-                        name="Password"
-                        required
-                        autocomplete="current-password"
-                        style="
-                            padding-right:80px;
-                        "
-                    >
+            <div class="login-roles">
 
-                    <button
-                        type="button"
-                        data-toggle-password="Password"
-                        style="
-                            position:absolute;
-                            right:10px;
-                            top:50%;
-                            transform:translateY(-50%);
-                            border:none;
-                            background:transparent;
-                            cursor:pointer;
-                            color:#374151;
-                            font-weight:600;
-                        "
-                    >
-                        Show
-                    </button>
+                <p class="login-roles-label">
+                    Built for
+                </p>
+
+                <div class="login-roles-list">
+
+                    <span class="login-role-badge">Admin</span>
+                    <span class="login-role-badge">Police</span>
+                    <span class="login-role-badge">Seller</span>
 
                 </div>
 
             </div>
 
 
-            <!-- FORGOT PASSWORD LINK -->
-
-            <div
-                style="
-                    text-align:right;
-                    margin-top:-10px;
-                    margin-bottom:15px;
-                "
-            >
-
-                <a
-                    href="/visrs/forgot-password.php"
-                    style="
-                        color:#2563eb;
-                        font-size:13px;
-                        font-weight:600;
-                        text-decoration:none;
-                    "
-                >
-                    Forgot password?
-                </a>
-
-            </div>
+        </div>
 
 
-            <!-- LOGIN BUTTON -->
+        <!-- FOOTER -->
 
-            <button
-                type="submit"
-                class="button"
-                style="
-                    width:100%;
-                    margin-top:10px;
-                "
-            >
-                Login
-            </button>
+        <div class="login-footer">
 
-
-        </form>
-
-
-        <!-- REGISTRATION -->
-
-        <div
-            style="
-                text-align:center;
-                margin-top:25px;
-                padding-top:20px;
-                border-top:1px solid #e5e7eb;
-            "
-        >
-
-            <p
-                style="
-                    margin:0 0 10px 0;
-                    color:#6b7280;
-                "
-            >
-                Don't have an account?
+            <p>
+                &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
+                <a href="/visrs/support.php">Support</a>
+                &nbsp;·&nbsp;
+                <a href="/visrs/privacy.php">Privacy</a>
             </p>
-
-            <a
-                href="/visrs/register.php"
-                class="button button-secondary"
-            >
-                Create Account
-            </a>
 
         </div>
 

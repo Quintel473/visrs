@@ -2816,3 +2816,643 @@ html[data-fontsize="4"]  { font-size: 132%; }
 [data-theme="dark"] .notifications-badge {
     border-color: #1e293b;
 }
+
+/* =========================================================
+   52. LOGIN PAGE — SPLIT SCREEN LAYOUT
+   ---------------------------------------------------------
+   Two-column layout:
+     Left  → hero image with VISRS branding
+     Right → login form panel
+   Stacks vertically on mobile.
+   ========================================================= */
+
+.login-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    min-height: 100vh;
+    width: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    background: #ffffff;
+}
+
+
+/* =========================================================
+   52a. LEFT — HERO PANEL
+   ========================================================= */
+
+.login-hero {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 60px 50px;
+
+    background-color: #1e3a8a;
+
+    background-image:
+        url("https://images.unsplash.com/photo-1485291571150-772bcfc10da5?q=80&w=2128&auto=format&fit=crop");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    overflow: hidden;
+}
+
+.login-hero-overlay {
+    position: absolute;
+    inset: 0;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(15, 23, 42, 0.85) 0%,
+            rgba(15, 23, 42, 0.55) 100%
+        );
+
+    z-index: 1;
+}
+
+.login-hero-content {
+    position: relative;
+    z-index: 2;
+
+    max-width: 420px;
+    width: 100%;
+
+    color: #ffffff;
+}
+
+.login-hero-title {
+    margin: 0 0 12px 0;
+
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: 2px;
+
+    color: #ffffff;
+    line-height: 1;
+}
+
+.login-hero-subtitle {
+    margin: 0 0 40px 0;
+
+    font-size: 16px;
+    font-weight: 400;
+
+    color: rgba(255, 255, 255, 0.82);
+
+    line-height: 1.5;
+}
+
+.login-hero-features {
+    list-style: none;
+
+    margin: 0;
+    padding: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 18px;
+}
+
+.login-hero-features li {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    font-size: 15px;
+    font-weight: 500;
+
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.login-hero-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+
+    background: rgba(255, 255, 255, 0.12);
+
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+
+    font-size: 17px;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   52b. RIGHT — FORM PANEL
+   ========================================================= */
+
+.login-form-panel {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 60px 50px 100px 50px;
+
+    background: #ffffff;
+}
+
+.login-form-wrapper {
+    width: 100%;
+    max-width: 400px;
+}
+
+
+/* Brand mark — hidden on desktop (hero already shows VISRS),
+   shown on mobile where the hero is hidden */
+
+.login-brandmark {
+    display: none;
+
+    margin-bottom: 24px;
+
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+
+    color: #2563eb;
+}
+
+.login-brandmark-text {
+    display: inline-block;
+}
+
+
+/* Heading */
+
+.login-heading {
+    margin-bottom: 30px;
+}
+
+.login-heading h2 {
+    margin: 0 0 8px 0;
+
+    font-size: 28px;
+    font-weight: 700;
+
+    color: #111827;
+
+    line-height: 1.2;
+}
+
+.login-heading p {
+    margin: 0;
+
+    color: #6b7280;
+    font-size: 15px;
+
+    line-height: 1.5;
+}
+
+
+/* Password field + Show button */
+
+.login-password-wrapper {
+    position: relative;
+}
+
+.login-password-wrapper input {
+    padding-right: 80px;
+}
+
+.login-show-password {
+    position: absolute;
+
+    right: 10px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    border: none;
+    background: transparent;
+
+    color: #374151;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    padding: 4px 6px;
+    border-radius: 5px;
+
+    transition: background-color 0.15s ease;
+}
+
+.login-show-password:hover {
+    background: #f3f4f6;
+}
+
+
+/* Remember + Forgot row */
+
+.login-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin: -5px 0 22px 0;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+}
+
+.login-remember {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    color: #374151;
+    font-size: 14px;
+
+    cursor: pointer;
+
+    user-select: none;
+}
+
+.login-remember input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+
+    accent-color: #2563eb;
+
+    cursor: pointer;
+
+    margin: 0;
+}
+
+.login-forgot {
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition: color 0.15s ease;
+}
+
+.login-forgot:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+
+/* Submit button */
+
+.login-submit {
+    width: 100%;
+
+    min-height: 46px;
+
+    font-size: 15px;
+}
+
+
+/* Divider — "New to VISRS?" */
+
+.login-divider {
+    position: relative;
+
+    margin: 28px 0 20px 0;
+
+    text-align: center;
+}
+
+.login-divider::before {
+    content: "";
+
+    position: absolute;
+
+    top: 50%;
+    left: 0;
+    right: 0;
+
+    height: 1px;
+
+    background: #e5e7eb;
+}
+
+.login-divider span {
+    position: relative;
+
+    display: inline-block;
+
+    padding: 0 14px;
+
+    background: #ffffff;
+
+    color: #9ca3af;
+    font-size: 12px;
+    font-weight: 500;
+
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+
+/* Register button */
+
+.login-register-btn {
+    width: 100%;
+    min-height: 46px;
+
+    font-size: 15px;
+}
+
+
+/* Role strip */
+
+.login-roles {
+    margin-top: 32px;
+    padding-top: 24px;
+
+    border-top: 1px solid #e5e7eb;
+
+    text-align: center;
+}
+
+.login-roles-label {
+    margin: 0 0 12px 0;
+
+    color: #9ca3af;
+    font-size: 11px;
+    font-weight: 600;
+
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.login-roles-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+.login-role-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 6px 14px;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    line-height: 1;
+}
+
+
+/* Footer — pinned to bottom of right panel */
+
+.login-footer {
+    position: absolute;
+
+    bottom: 25px;
+    left: 0;
+    right: 0;
+
+    padding: 0 50px;
+
+    text-align: center;
+}
+
+.login-footer p {
+    margin: 0;
+
+    color: #9ca3af;
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+.login-footer a {
+    color: #6b7280;
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition: color 0.15s ease;
+}
+
+.login-footer a:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+
+/* =========================================================
+   52c. DARK MODE
+   ---------------------------------------------------------
+   Hero already has its own dark overlay; only the right
+   panel needs theme adjustments.
+   ========================================================= */
+
+[data-theme="dark"] .login-page {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .login-form-panel {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .login-brandmark {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .login-heading h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .login-heading p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .login-show-password {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .login-show-password:hover {
+    background: #334155;
+}
+
+[data-theme="dark"] .login-remember {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .login-forgot {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .login-forgot:hover {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .login-divider::before {
+    background: #334155;
+}
+
+[data-theme="dark"] .login-divider span {
+    background: #0f172a;
+    color: #64748b;
+}
+
+[data-theme="dark"] .login-roles {
+    border-top-color: #334155;
+}
+
+[data-theme="dark"] .login-roles-label {
+    color: #64748b;
+}
+
+[data-theme="dark"] .login-role-badge {
+    background: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .login-footer p {
+    color: #64748b;
+}
+
+[data-theme="dark"] .login-footer a {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .login-footer a:hover {
+    color: #60a5fa;
+}
+
+
+/* =========================================================
+   52d. RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .login-page {
+        grid-template-columns: 1fr;
+    }
+
+    .login-hero {
+        display: none;
+    }
+
+    .login-brandmark {
+        display: block;
+    }
+
+    .login-form-panel {
+        padding: 40px 24px 90px 24px;
+    }
+
+    .login-footer {
+        padding: 0 24px;
+    }
+
+}
+
+@media (min-width: 1600px) {
+
+    .login-hero-content {
+        max-width: 500px;
+    }
+
+    .login-form-wrapper {
+        max-width: 440px;
+    }
+
+}
+
+/* =========================================================
+   53. PASSWORD STRENGTH METER
+   ---------------------------------------------------------
+   Purely visual feedback for [data-password-strength]
+   inputs. Injected by app.js.
+   ========================================================= */
+
+.pw-strength {
+    margin-top: 8px;
+    height: 6px;
+    border-radius: 3px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.pw-strength-bar {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+.pw-strength-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 3px;
+    background: #dc2626;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.pw-strength-fill.pw-strength-weak   { background: #dc2626; }
+.pw-strength-fill.pw-strength-fair   { background: #d97706; }
+.pw-strength-fill.pw-strength-good   { background: #0891b2; }
+.pw-strength-fill.pw-strength-strong { background: #16a34a; }
+
+.pw-strength-label {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.pw-strength-label.pw-strength-weak   { color: #dc2626; }
+.pw-strength-label.pw-strength-fair   { color: #d97706; }
+.pw-strength-label.pw-strength-good   { color: #0891b2; }
+.pw-strength-label.pw-strength-strong { color: #16a34a; }
+
+/* Dark mode */
+
+[data-theme="dark"] .pw-strength {
+    background: #334155;
+}
+
+[data-theme="dark"] .pw-strength-fill.pw-strength-weak   { background: #ef4444; }
+[data-theme="dark"] .pw-strength-fill.pw-strength-fair   { background: #f59e0b; }
+[data-theme="dark"] .pw-strength-fill.pw-strength-good   { background: #06b6d4; }
+[data-theme="dark"] .pw-strength-fill.pw-strength-strong { background: #22c55e; }
+
+[data-theme="dark"] .pw-strength-label.pw-strength-weak   { color: #ef4444; }
+[data-theme="dark"] .pw-strength-label.pw-strength-fair   { color: #f59e0b; }
+[data-theme="dark"] .pw-strength-label.pw-strength-good   { color: #06b6d4; }
+[data-theme="dark"] .pw-strength-label.pw-strength-strong { color: #22c55e; }

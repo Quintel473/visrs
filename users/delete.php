@@ -5,6 +5,7 @@ requireRole(["Admin"]);
 
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
+require_once __DIR__ . "/../includes/remember.php";
 
 $basePath = "../";
 $activePage = "users";
@@ -217,6 +218,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
 
         $pdo->beginTransaction();
+
+
+        /*
+         * Revoke all remember-me tokens for this user.
+         *
+         * Runs inside the transaction so that if the
+         * user deletion fails and rolls back, the
+         * tokens are restored as well.
+         */
+
+        remember_revoke_all($pdo, $userID);
 
 
         $deleteStmt = $pdo->prepare("

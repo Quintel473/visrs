@@ -3,6 +3,8 @@
 require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
+require_once __DIR__ . "/../includes/remember.php";
+require_once __DIR__ . "/../includes/password_policy.php";
 
 $basePath = "../";
 $activePage = "settings";
@@ -228,18 +230,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         /*
-         * Validate
+         * Validate current password is provided
          */
 
         if ($currentPassword === "") {
             $errors[] = "Please enter your current password.";
         }
 
+
+        /*
+         * Validate new password against policy
+         */
+
         if ($newPassword === "") {
+
             $errors[] = "Please enter a new password.";
-        } elseif (strlen($newPassword) < 8) {
-            $errors[] = "New password must be at least 8 characters long.";
+
+        } else {
+
+            $policyError = password_policy_check($newPassword, [
+                "email"      => $user["Email"],
+                "first name" => $user["FirstName"],
+                "last name"  => $user["LastName"]
+            ]);
+
+            if ($policyError !== null) {
+                $errors[] = $policyError;
+            }
         }
+
+
+        /*
+         * Confirm new passwords match
+         */
 
         if ($newPassword !== $confirmPassword) {
             $errors[] = "New passwords do not match.";
@@ -290,6 +313,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ");
 
                 $updateStmt->execute([$hashed, $currentUserID]);
+
+
+                /*
+                 * Revoke all remember-me tokens.
+                 *
+                 * A password change should log the user out
+                 * everywhere else, so any stolen "Remember me"
+                 * cookies are invalidated.
+                 */
+
+                remember_revoke_all($pdo, $currentUserID);
 
 
                 logAudit(
@@ -596,6 +630,90 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $errors[] = "Unable to remove your profile picture. Please try again.";
         }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTION: Log out of all devices
+    |--------------------------------------------------------------------------
+    |
+    | Deletes every remember-me token for this user, then
+    | destroys the current session so this device logs out
+    | as well. The visitor is redirected to the login page.
+    |
+    */
+
+    elseif ($action === "logout_all_devices") {
+
+        /*
+         * Revoke every persistent remember-me token.
+         */
+
+        remember_revoke_all($pdo, $currentUserID);
+
+
+        /*
+         * Audit
+         */
+
+        logAudit(
+            $pdo,
+            "Logged out of all devices",
+            "users",
+            $currentUserID
+        );
+
+
+        /*
+         * Clear the remember-me cookie on this device.
+         */
+
+        setcookie(
+            "VISRS_REMEMBER",
+            "",
+            [
+                "expires"  => time() - 3600,
+                "path"     => "/visrs/",
+                "httponly" => true,
+                "samesite" => "Lax"
+            ]
+        );
+
+
+        /*
+         * Destroy the active session.
+         */
+
+        $_SESSION = [];
+
+        if (ini_get("session.use_cookies")) {
+
+            $params = session_get_cookie_params();
+
+            setcookie(
+                session_name(),
+                "",
+                [
+                    "expires"  => time() - 42000,
+                    "path"     => $params["path"],
+                    "domain"   => $params["domain"],
+                    "secure"   => $params["secure"],
+                    "httponly" => $params["httponly"],
+                    "samesite" => "Lax"
+                ]
+            );
+        }
+
+        session_destroy();
+
+
+        /*
+         * Redirect to login.
+         */
+
+        header("Location: /visrs/login.php");
+        exit;
     }
 }
 
@@ -1240,12 +1358,15 @@ require_once "../includes/head.php";
                                     id="new_password"
                                     name="new_password"
                                     minlength="8"
+                                    maxlength="128"
                                     required
                                     autocomplete="new-password"
                                 >
 
                                 <span class="settings-field-help">
-                                    Minimum 8 characters.
+                                    At least 8 characters. Avoid common
+                                    passwords and don't include your name
+                                    or email.
                                 </span>
 
                             </div>
@@ -1260,6 +1381,7 @@ require_once "../includes/head.php";
                                     id="confirm_password"
                                     name="confirm_password"
                                     minlength="8"
+                                    maxlength="128"
                                     required
                                     autocomplete="new-password"
                                 >
@@ -1274,6 +1396,68 @@ require_once "../includes/head.php";
                                 </button>
 
                             </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =============================================
+                     ACTIVE SESSIONS / LOG OUT ALL DEVICES
+                     ============================================= -->
+
+                <div class="settings-card">
+
+                    <div class="settings-card-header">
+
+                        <h2>Active Sessions</h2>
+
+                        <p>
+                            Manage devices where you've chosen to stay signed in.
+                        </p>
+
+                    </div>
+
+                    <div class="settings-card-body">
+
+                        <p
+                            style="
+                                margin:0 0 16px 0;
+                                color:#64748b;
+                                font-size:14px;
+                                line-height:1.55;
+                            "
+                        >
+                            Logging out of all devices will end every
+                            "Remember me" session on your account,
+                            including this one. You will be returned
+                            to the login page and will need to sign
+                            in again.
+                        </p>
+
+                        <form method="POST">
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= e(generateCSRFToken()) ?>"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="logout_all_devices"
+                            >
+
+                            <button
+                                type="submit"
+                                class="button button-danger"
+                                onclick="return confirm('Log out of all devices? You will need to sign in again everywhere.');"
+                            >
+                                Log out of all devices
+                            </button>
 
                         </form>
 
