@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 10, 2026 at 12:01 AM
+-- Generation Time: Oct 10, 2026 at 12:18 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -307,6 +307,25 @@ INSERT INTO `vehicles` (`VehicleID`, `PlateNumber`, `VIN`, `OwnerID`, `SellerID`
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `vehicle_documents`
+--
+
+CREATE TABLE `vehicle_documents` (
+  `DocumentID` int(11) NOT NULL,
+  `VehicleID` int(11) NOT NULL,
+  `UploadedBy` int(11) DEFAULT NULL,
+  `DocType` varchar(50) NOT NULL,
+  `OriginalName` varchar(255) NOT NULL,
+  `FileName` varchar(255) NOT NULL,
+  `FilePath` varchar(255) NOT NULL,
+  `FileSize` int(11) NOT NULL,
+  `MimeType` varchar(100) NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `vehicle_images`
 --
 
@@ -472,6 +491,15 @@ ALTER TABLE `vehicles`
   ADD KEY `OwnerID` (`OwnerID`);
 
 --
+-- Indexes for table `vehicle_documents`
+--
+ALTER TABLE `vehicle_documents`
+  ADD PRIMARY KEY (`DocumentID`),
+  ADD KEY `UploadedBy` (`UploadedBy`),
+  ADD KEY `idx_vehicle` (`VehicleID`),
+  ADD KEY `idx_type` (`DocType`);
+
+--
 -- Indexes for table `vehicle_images`
 --
 ALTER TABLE `vehicle_images`
@@ -573,6 +601,12 @@ ALTER TABLE `vehicles`
   MODIFY `VehicleID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
+-- AUTO_INCREMENT for table `vehicle_documents`
+--
+ALTER TABLE `vehicle_documents`
+  MODIFY `DocumentID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `vehicle_images`
 --
 ALTER TABLE `vehicle_images`
@@ -642,6 +676,13 @@ ALTER TABLE `password_resets`
 --
 ALTER TABLE `vehicles`
   ADD CONSTRAINT `vehicles_ibfk_1` FOREIGN KEY (`OwnerID`) REFERENCES `owners` (`OwnerID`);
+
+--
+-- Constraints for table `vehicle_documents`
+--
+ALTER TABLE `vehicle_documents`
+  ADD CONSTRAINT `vehicle_documents_ibfk_1` FOREIGN KEY (`VehicleID`) REFERENCES `vehicles` (`VehicleID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `vehicle_documents_ibfk_2` FOREIGN KEY (`UploadedBy`) REFERENCES `users` (`UserID`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `vehicle_images`
