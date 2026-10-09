@@ -2551,3 +2551,170 @@ html.i18n-changing *::after {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================
+   50. FONT SIZE ADJUSTER
+   ---------------------------------------------------------
+   Sleek segmented pill: [A− | A | A+]
+   Also controls the base font size of the entire document
+   based on <html data-fontsize="...">.
+   ========================================================= */
+
+
+/* ---------- Base font size scaling ---------- */
+
+/*
+   Levels:
+     -2  → very small
+     -1  → small
+      0  → default (no attribute)
+      1  → large
+      2  → larger
+      3  → very large
+      4  → extra large
+*/
+
+html[data-fontsize="-2"] { font-size: 82%; }
+html[data-fontsize="-1"] { font-size: 91%; }
+html[data-fontsize="1"]  { font-size: 108%; }
+html[data-fontsize="2"]  { font-size: 116%; }
+html[data-fontsize="3"]  { font-size: 124%; }
+html[data-fontsize="4"]  { font-size: 132%; }
+
+
+/* ---------- The control itself ---------- */
+
+.font-size-control {
+    display: inline-flex;
+    align-items: stretch;
+
+    height: 40px;
+    min-height: 40px;
+
+    margin: 0 12px 0 0;
+    padding: 0;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+
+    overflow: hidden;
+
+    flex-shrink: 0;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+.font-size-control:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.font-size-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 40px;
+    padding: 0 12px;
+
+    background: transparent;
+    color: inherit;
+
+    border: none;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.font-size-btn:hover {
+    background: rgba(37, 99, 235, 0.10);
+    color: #2563eb;
+}
+
+.font-size-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+/* Thin divider between segments */
+.font-size-btn + .font-size-btn {
+    border-left: 1px solid #e5e7eb;
+}
+
+/* Active state — shows current level is applied */
+.font-size-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.font-size-btn.active:hover {
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+
+/* ---------- Dark mode ---------- */
+
+[data-theme="dark"] .font-size-control {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .font-size-control:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .font-size-btn + .font-size-btn {
+    border-left-color: #475569;
+}
+
+[data-theme="dark"] .font-size-btn:hover {
+    background: rgba(96, 165, 250, 0.15);
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .font-size-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .font-size-btn.active:hover {
+    background: #3b82f6;
+}
+
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+
+    /* Shrink the control on tablets */
+    .font-size-btn {
+        min-width: 34px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+
+    /* Hide entirely on mobile — users can pinch-zoom there */
+    .font-size-control {
+        display: none;
+    }
+}
