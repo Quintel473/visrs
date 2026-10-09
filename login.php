@@ -87,7 +87,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 LastName,
                 Email,
                 Password,
-                Role
+                Role,
+                ProfileImage
             FROM users
             WHERE Email = ?
             LIMIT 1
@@ -134,6 +135,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["Email"] = $user["Email"];
 
             $_SESSION["Role"] = $user["Role"];
+
+            /*
+             * FIX: Store profile picture in session so the
+             * topbar can show it immediately after login.
+             */
+
+            $_SESSION["ProfileImage"] = $user["ProfileImage"] ?? "";
 
 
             /*

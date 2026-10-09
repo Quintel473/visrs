@@ -1818,3 +1818,27 @@ footer {
         border-bottom: 1px solid #334155;
     }
 }
+
+
+/* =========================================================
+   42. PROFILE PICTURE IN TOPBAR AVATAR
+   ---------------------------------------------------------
+   Ensures uploaded profile pictures fill the avatar circle
+   cleanly. The avatar container already has overflow:hidden
+   and border-radius:50%, so the image just needs to fill it.
+
+   object-position: center top
+   → for portraits, shows the top (head/face) rather than
+     cropping to the middle
+   → for landscapes, shows the top portion (usually the
+     meaningful part) rather than a middle slice
+   ========================================================= */
+
+.user-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    display: block;
+    border-radius: 50%;
+}

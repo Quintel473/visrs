@@ -78,6 +78,12 @@ $activePage = $activePage ?? "";
             </a>
         <?php endif; ?>
 
+        <!-- MY SETTINGS (available to all logged-in users) -->
+        <a href="/visrs/users/settings.php" class="<?= $activePage === 'settings' ? 'active' : '' ?>">
+            <span class="sidebar-icon"></span>
+            <span class="sidebar-text" data-i18n="my_settings">My Settings</span>
+        </a>
+
         <!-- LOGOUT -->
         <a href="/visrs/logout.php">
             <span class="sidebar-icon"></span>

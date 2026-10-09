@@ -9,6 +9,11 @@
  *
  * The global JavaScript file is loaded from footer.php.
  */
+
+$headerProfileImage = $_SESSION["ProfileImage"] ?? "";
+$headerFirstName    = $_SESSION["FirstName"] ?? "";
+$headerLastName     = $_SESSION["LastName"] ?? "";
+$headerFullName     = trim($headerFirstName . " " . $headerLastName);
 ?>
 
 <header class="topbar">
@@ -44,23 +49,38 @@
         >
 
             <span class="profile-name">
-                <?php
-                if (isset($_SESSION["FirstName"]) && isset($_SESSION["LastName"])) {
-                    echo htmlspecialchars($_SESSION["FirstName"] . " " . $_SESSION["LastName"]);
-                } else {
-                    echo "User";
-                }
-                ?>
+                <?= htmlspecialchars(
+                    $headerFullName !== ""
+                        ? $headerFullName
+                        : "User"
+                ) ?>
             </span>
 
             <div class="user-avatar">
-                <?php
-                if (!empty($_SESSION["FirstName"])) {
-                    echo htmlspecialchars(strtoupper(substr($_SESSION["FirstName"], 0, 1)));
-                } else {
-                    echo "U";
-                }
-                ?>
+
+                <?php if ($headerProfileImage !== ""): ?>
+
+                    <!-- FIX: Show profile picture when user has uploaded one -->
+                    <img
+                        src="/visrs/<?= htmlspecialchars($headerProfileImage) ?>"
+                        alt="<?= htmlspecialchars($headerFullName ?: "User") ?>"
+                        class="user-avatar-image"
+                    >
+
+                <?php elseif ($headerFirstName !== ""): ?>
+
+                    <?= htmlspecialchars(
+                        strtoupper(
+                            substr($headerFirstName, 0, 1)
+                        )
+                    ) ?>
+
+                <?php else: ?>
+
+                    U
+
+                <?php endif; ?>
+
             </div>
 
         </a>
