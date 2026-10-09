@@ -5,6 +5,8 @@
  * Provides the same topbar on every page.
  */
 
+require_once __DIR__ . "/functions.php";
+
 $headerProfileImage = $_SESSION["ProfileImage"] ?? "";
 $headerFirstName    = $_SESSION["FirstName"] ?? "";
 $headerLastName     = $_SESSION["LastName"] ?? "";
