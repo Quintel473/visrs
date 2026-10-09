@@ -470,6 +470,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                     /*
                     |--------------------------------------------------------------------------
+                    | Notify the buyer about the status change
+                    |--------------------------------------------------------------------------
+                    */
+
+                    notifyUser(
+                        $pdo,
+                        (int) $inquiry["BuyerID"],
+                        "status",
+                        "Inquiry status updated",
+                        "Your inquiry for "
+                            . $inquiry["Make"]
+                            . " "
+                            . $inquiry["Model"]
+                            . " is now marked as "
+                            . $newStatus
+                            . ".",
+                        "/visrs/marketplace/inquiry.php?interest_id="
+                            . (int) $interestID
+                    );
+
+
+                    /*
+                    |--------------------------------------------------------------------------
                     | Update Current Page Data
                     |--------------------------------------------------------------------------
                     */

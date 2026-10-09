@@ -2,19 +2,19 @@
 /*
  * VISRS Global Header
  *
- * Provides the same topbar on every page, including:
- *   - page title
- *   - language switcher
- *   - dark mode toggle button
- *   - user name + avatar linking to profile
- *
- * The global JavaScript file is loaded from footer.php.
+ * Provides the same topbar on every page.
  */
 
 $headerProfileImage = $_SESSION["ProfileImage"] ?? "";
 $headerFirstName    = $_SESSION["FirstName"] ?? "";
 $headerLastName     = $_SESSION["LastName"] ?? "";
 $headerFullName     = trim($headerFirstName . " " . $headerLastName);
+
+/* Unread notifications count (with graceful fallback if PDO not available) */
+$headerUnreadCount = 0;
+if (isset($pdo) && isset($_SESSION["UserID"])) {
+    $headerUnreadCount = unreadNotificationCount($pdo, (int) $_SESSION["UserID"]);
+}
 ?>
 
 <header class="topbar">
@@ -45,45 +45,44 @@ $headerFullName     = trim($headerFirstName . " " . $headerLastName);
 
             <div class="language-menu" id="language-menu" role="menu">
 
-                <button
-                    type="button"
-                    class="language-option"
-                    data-lang="en"
-                    role="menuitem"
-                >
+                <button type="button" class="language-option" data-lang="en" role="menuitem">
                     🇬🇧 English
                 </button>
-
-                <button
-                    type="button"
-                    class="language-option"
-                    data-lang="es"
-                    role="menuitem"
-                >
+                <button type="button" class="language-option" data-lang="es" role="menuitem">
                     🇪🇸 Español
                 </button>
-
-                <button
-                    type="button"
-                    class="language-option"
-                    data-lang="fr"
-                    role="menuitem"
-                >
+                <button type="button" class="language-option" data-lang="fr" role="menuitem">
                     🇫🇷 Français
                 </button>
-
-                <button
-                    type="button"
-                    class="language-option"
-                    data-lang="ja"
-                    role="menuitem"
-                >
+                <button type="button" class="language-option" data-lang="ja" role="menuitem">
                     🇯🇵 日本語
                 </button>
 
             </div>
 
         </div>
+
+
+        <!-- ========================= -->
+        <!-- NOTIFICATIONS -->
+        <!-- ========================= -->
+        <a
+            href="/visrs/notifications/index.php"
+            class="notifications-button"
+            id="notifications-button"
+            aria-label="Notifications"
+            title="Notifications"
+        >
+            <span class="notifications-icon" aria-hidden="true">🔔</span>
+
+            <span
+                class="notifications-badge"
+                id="notifications-badge"
+                <?= $headerUnreadCount > 0 ? "" : "style=\"display:none;\"" ?>
+            >
+                <?= (int) $headerUnreadCount ?>
+            </span>
+        </a>
 
 
         <!-- ========================= -->

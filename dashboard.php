@@ -6,6 +6,14 @@ require_once "includes/database.php";
 $basePath = "";
 $activePage = "dashboard";
 
+/*
+ * Lazy-cron: generate scheduled notifications (insurance expiry,
+ * etc.) the first time a user loads the dashboard each day.
+ */
+require_once "includes/functions.php";
+
+generateScheduledNotifications($pdo);
+
 
 /* Dashboard statistics */
 

@@ -835,3 +835,54 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 })();
 
+/* =========================================================
+   VISRS Notification Badge Polling
+   =========================================================
+   Refreshes the unread count in the topbar every 60 seconds.
+   Only runs if the badge exists on the page.
+   ========================================================= */
+(function () {
+    'use strict';
+
+    var REFRESH_INTERVAL = 60000; // 60 seconds
+
+    function init() {
+
+        var badge = document.getElementById('notifications-badge');
+        if (!badge) return;
+
+        /* Fetch unread count via a lightweight endpoint */
+        function refresh() {
+
+            fetch('/visrs/notifications/unread_count.php', {
+                cache: 'no-store'
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+
+                    if (typeof data.unread !== 'number') return;
+
+                    if (data.unread > 0) {
+                        badge.textContent = data.unread;
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(function () { /* silent */ });
+        }
+
+        /* Refresh on page focus (in case another tab made changes) */
+        window.addEventListener('focus', refresh);
+
+        /* Poll every 60s */
+        setInterval(refresh, REFRESH_INTERVAL);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+

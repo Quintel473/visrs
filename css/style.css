@@ -2718,3 +2718,101 @@ html[data-fontsize="4"]  { font-size: 132%; }
         display: none;
     }
 }
+
+/* =========================================================
+   51. NOTIFICATIONS BELL
+   ---------------------------------------------------------
+   Bell icon in the topbar with an unread-count badge.
+   ========================================================= */
+
+.notifications-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+
+    margin: 0 12px 0 0;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
+
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.notifications-button:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+.notifications-button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.notifications-icon {
+    font-size: 17px;
+    line-height: 1;
+}
+
+/* Red badge with count */
+.notifications-badge {
+    position: absolute;
+
+    top: -2px;
+    right: -4px;
+
+    min-width: 18px;
+    height: 18px;
+
+    padding: 0 5px;
+
+    background: #dc2626;
+    color: #ffffff;
+
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 14px;
+
+    text-align: center;
+
+    box-sizing: content-box;
+}
+
+/* Dark mode */
+[data-theme="dark"] .notifications-button {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .notifications-button:hover {
+    background: #475569;
+    border-color: #64748b;
+}
+
+[data-theme="dark"] .notifications-badge {
+    border-color: #1e293b;
+}

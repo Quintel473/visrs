@@ -576,11 +576,48 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 /*
                 |--------------------------------------------------------------------------
-                | Audit Log
+                | Notify the recipient of the new message
                 |--------------------------------------------------------------------------
                 */
 
+                $senderName = trim(
+                    ($_SESSION["FirstName"] ?? "")
+                    . " "
+                    . ($_SESSION["LastName"] ?? "")
+                );
+
+                if ($senderName === "") {
+                    $senderName = "Someone";
+                }
+
+                notifyUser(
+                    $pdo,
+                    (int) $recipientID,
+                    "message",
+                    "New message",
+                    $senderName
+                        . " sent you a message about the "
+                        . $inquiry["Make"]
+                        . " "
+                        . $inquiry["Model"]
+                        . ".",
+                    "/visrs/marketplace/message.php?interest_id="
+                        . (int) $interestID
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Audit Log
+                |--------------------------------------------------------------------------
+                |
+                | FIX: pass $pdo as the first argument — was missing,
+                | which would have thrown a fatal error on send.
+                |
+                */
+
                 logAudit(
+                    $pdo,
                     "Sent marketplace message",
                     "vehicle_messages",
                     $messageID

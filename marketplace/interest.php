@@ -344,6 +344,39 @@ if (!$listingId || $listingId <= 0) {
 
                         /*
                         |--------------------------------------------------------------------------
+                        | Notify Seller
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $buyerName = trim(
+                            ($_SESSION["FirstName"] ?? "")
+                            . " "
+                            . ($_SESSION["LastName"] ?? "")
+                        );
+
+                        if ($buyerName === "") {
+                            $buyerName = "A buyer";
+                        }
+
+                        notifyUser(
+                            $pdo,
+                            (int) $listing["SellerID"],
+                            "inquiry",
+                            "New inquiry received",
+                            $buyerName
+                                . " submitted an inquiry for your "
+                                . $listing["Make"]
+                                . " "
+                                . $listing["Model"]
+                                . " ("
+                                . $listing["PlateNumber"]
+                                . ").",
+                            "/visrs/marketplace/inquiry.php?interest_id=" . $interestId
+                        );
+
+
+                        /*
+                        |--------------------------------------------------------------------------
                         | Audit Log
                         |--------------------------------------------------------------------------
                         */

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 09, 2026 at 11:30 PM
+-- Generation Time: Oct 10, 2026 at 12:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -150,6 +150,24 @@ CREATE TABLE `insurance` (
 
 INSERT INTO `insurance` (`InsuranceID`, `VehicleID`, `ProviderName`, `PolicyNumber`, `CoverageType`, `StartDate`, `ExpiryDate`, `Status`, `CreatedAt`) VALUES
 (1, 4, 'Grenada Insurance Services Ltd.', 'GIS-2025-004821', 'Comprehensive', '2025-10-22', '2026-09-14', 'Active', '2026-09-14 15:21:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `NotificationID` int(11) NOT NULL,
+  `UserID` int(11) NOT NULL,
+  `Type` varchar(50) NOT NULL,
+  `Title` varchar(150) NOT NULL,
+  `Message` text NOT NULL,
+  `Link` varchar(255) DEFAULT NULL,
+  `IsRead` tinyint(1) NOT NULL DEFAULT 0,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
+  `ReadAt` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -407,6 +425,14 @@ ALTER TABLE `insurance`
   ADD KEY `VehicleID` (`VehicleID`);
 
 --
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`NotificationID`),
+  ADD KEY `idx_user_unread` (`UserID`,`IsRead`),
+  ADD KEY `idx_created` (`CreatedAt`);
+
+--
 -- Indexes for table `owners`
 --
 ALTER TABLE `owners`
@@ -511,6 +537,12 @@ ALTER TABLE `insurance`
   MODIFY `InsuranceID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `NotificationID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `owners`
 --
 ALTER TABLE `owners`
@@ -585,6 +617,12 @@ ALTER TABLE `audit_logs`
 --
 ALTER TABLE `insurance`
   ADD CONSTRAINT `insurance_ibfk_1` FOREIGN KEY (`VehicleID`) REFERENCES `vehicles` (`VehicleID`);
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `ownership_history`

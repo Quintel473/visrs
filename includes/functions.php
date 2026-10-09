@@ -837,3 +837,225 @@ function renderPagination($meta, $params = null)
 
     <?php
 }
+
+/* =========================================================
+   NOTIFICATION HELPERS
+   ========================================================= */
+
+/**
+ * Create a notification for a user.
+ *
+ * @param PDO    $pdo
+ * @param int    $userId   Recipient
+ * @param string $type     Short category: inquiry, message, status, insurance, vehicle
+ * @param string $title    Headline
+ * @param string $message  Body text
+ * @param string $link     Optional URL to open when clicked
+ */
+function notifyUser(
+    PDO $pdo,
+    int $userId,
+    string $type,
+    string $title,
+    string $message,
+    string $link = ""
+): void {
+    if ($userId <= 0) return;
+
+    $stmt = $pdo->prepare("
+        INSERT INTO notifications
+        (UserID, Type, Title, Message, Link)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+
+    $stmt->execute([
+        $userId,
+        $type,
+        $title,
+        $message,
+        $link !== "" ? $link : null
+    ]);
+}
+
+
+/**
+ * Notify every user with a given role.
+ */
+function notifyRole(
+    PDO $pdo,
+    string $role,
+    string $type,
+    string $title,
+    string $message,
+    string $link = ""
+): void {
+    $stmt = $pdo->prepare("
+        SELECT UserID FROM users WHERE Role = ?
+    ");
+    $stmt->execute([$role]);
+
+    while ($row = $stmt->fetch()) {
+        notifyUser(
+            $pdo,
+            (int) $row["UserID"],
+            $type,
+            $title,
+            $message,
+            $link
+        );
+    }
+}
+
+
+/**
+ * Count unread notifications for a user.
+ */
+function unreadNotificationCount(PDO $pdo, int $userId): int
+{
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM notifications
+        WHERE UserID = ?
+          AND IsRead = 0
+    ");
+    $stmt->execute([$userId]);
+    return (int) $stmt->fetchColumn();
+}
+
+
+/**
+ * Fetch a user's most recent notifications.
+ */
+function fetchNotifications(PDO $pdo, int $userId, int $limit = 10): array
+{
+    $stmt = $pdo->prepare("
+        SELECT
+            NotificationID,
+            Type,
+            Title,
+            Message,
+            Link,
+            IsRead,
+            CreatedAt
+        FROM notifications
+        WHERE UserID = ?
+        ORDER BY CreatedAt DESC
+        LIMIT ?
+    ");
+
+    $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+    $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll();
+}
+
+
+/**
+ * Mark all of a user's unread notifications as read.
+ */
+function markAllNotificationsRead(PDO $pdo, int $userId): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE notifications
+        SET IsRead = 1,
+            ReadAt = NOW()
+        WHERE UserID = ?
+          AND IsRead = 0
+    ");
+    $stmt->execute([$userId]);
+}
+
+
+/**
+ * Mark a single notification as read.
+ */
+function markNotificationRead(PDO $pdo, int $notificationId, int $userId): void
+{
+    $stmt = $pdo->prepare("
+        UPDATE notifications
+        SET IsRead = 1,
+            ReadAt = NOW()
+        WHERE NotificationID = ?
+          AND UserID = ?
+    ");
+    $stmt->execute([$notificationId, $userId]);
+}
+
+
+/**
+ * Generate scheduled notifications.
+ * Called lazily on the dashboard — runs at most once per day.
+ *
+ * - Insurance expiring within 30 days (Admin + Police)
+ * - No scheduled trigger for vehicles — those happen on action.
+ */
+function generateScheduledNotifications(PDO $pdo): void
+{
+    /* Track when this last ran via a PHP session marker */
+    $today = date("Y-m-d");
+    if (($_SESSION["notif_scheduled_run"] ?? "") === $today) {
+        return;
+    }
+    $_SESSION["notif_scheduled_run"] = $today;
+
+    /*
+     * Insurance expiring in the next 30 days.
+     * Skip if a matching notification was already sent today.
+     */
+    $stmt = $pdo->prepare("
+        SELECT
+            i.InsuranceID,
+            i.PolicyNumber,
+            i.ExpiryDate,
+            v.PlateNumber,
+            DATEDIFF(i.ExpiryDate, CURDATE()) AS DaysLeft
+        FROM insurance i
+        INNER JOIN vehicles v
+            ON i.VehicleID = v.VehicleID
+        WHERE i.Status = 'Active'
+          AND i.ExpiryDate IS NOT NULL
+          AND i.ExpiryDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute();
+
+    $adminsAndPolice = $pdo->query("
+        SELECT UserID FROM users WHERE Role IN ('Admin', 'Police')
+    ")->fetchAll();
+
+    while ($row = $stmt->fetch()) {
+
+        $title = "Insurance expiring soon";
+        $message = "Policy " . $row["PolicyNumber"]
+                 . " for " . $row["PlateNumber"]
+                 . " expires in " . (int) $row["DaysLeft"]
+                 . " day(s).";
+        $link = "/visrs/insurance/view.php?id=" . (int) $row["InsuranceID"];
+
+        /* Skip if we already sent this exact notification today */
+        $check = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM notifications
+            WHERE Type = 'insurance'
+              AND Title = ?
+              AND Message = ?
+              AND DATE(CreatedAt) = CURDATE()
+        ");
+        $check->execute([$title, $message]);
+
+        if ((int) $check->fetchColumn() > 0) {
+            continue;
+        }
+
+        foreach ($adminsAndPolice as $recipient) {
+            notifyUser(
+                $pdo,
+                (int) $recipient["UserID"],
+                "insurance",
+                $title,
+                $message,
+                $link
+            );
+        }
+    }
+}

@@ -202,6 +202,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /*
     |--------------------------------------------------------------------------
+    | Notify the recipient of the new message
+    |--------------------------------------------------------------------------
+    */
+
+    $senderName = trim(
+        ($_SESSION['FirstName'] ?? '')
+        . ' '
+        . ($_SESSION['LastName'] ?? '')
+    );
+
+    if ($senderName === '') {
+        $senderName = 'Someone';
+    }
+
+    notifyUser(
+        $pdo,
+        (int) $otherUserId,
+        "message",
+        "New message",
+        $senderName
+            . " sent you a message about the "
+            . $inquiry['Make']
+            . " "
+            . $inquiry['Model']
+            . ".",
+        "/visrs/marketplace/chat.php?interest_id=" . (int) $inquiry['InterestID']
+    );
+
+    /*
+    |--------------------------------------------------------------------------
     | Seller response changes Pending -> Contacted
     |--------------------------------------------------------------------------
     */
