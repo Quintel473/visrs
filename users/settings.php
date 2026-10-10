@@ -1032,7 +1032,7 @@ require_once "../includes/head.php";
 
         <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
-        <main class="content">
+        <div class="content">
 
             <div class="settings-page">
 
@@ -1523,11 +1523,10 @@ require_once "../includes/head.php";
 
             </div>
 
-        </main>
+        </div>
+
+        <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
     </main>
 
 </div>
-
-
-<?php require_once __DIR__ . "/../includes/footer.php"; ?>
