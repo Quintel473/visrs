@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 10, 2026 at 12:18 AM
+-- Generation Time: Oct 10, 2026 at 03:38 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -154,6 +154,19 @@ INSERT INTO `insurance` (`InsuranceID`, `VehicleID`, `ProviderName`, `PolicyNumb
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `login_attempts`
+--
+
+CREATE TABLE `login_attempts` (
+  `AttemptID` int(10) UNSIGNED NOT NULL,
+  `Email` varchar(150) NOT NULL,
+  `IPAddress` varchar(45) NOT NULL,
+  `AttemptedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `notifications`
 --
 
@@ -239,6 +252,20 @@ CREATE TABLE `password_resets` (
 
 INSERT INTO `password_resets` (`ResetID`, `UserID`, `TokenHash`, `ExpiresAt`, `UsedAt`, `CreatedAt`, `IPAddress`) VALUES
 (1, 1, '08cbf5d2fb8bf740f44665143bb2ca35c86f05ff448e4ad822af8e863cb3486f', '2026-10-09 23:38:37', '2026-10-09 16:40:02', '2026-10-09 16:38:37', '::1');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `remember_tokens`
+--
+
+CREATE TABLE `remember_tokens` (
+  `TokenID` int(10) UNSIGNED NOT NULL,
+  `UserID` int(11) NOT NULL,
+  `TokenHash` char(64) NOT NULL,
+  `ExpiresAt` datetime NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -444,6 +471,15 @@ ALTER TABLE `insurance`
   ADD KEY `VehicleID` (`VehicleID`);
 
 --
+-- Indexes for table `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  ADD PRIMARY KEY (`AttemptID`),
+  ADD KEY `idx_email_time` (`Email`,`AttemptedAt`),
+  ADD KEY `idx_ip_time` (`IPAddress`,`AttemptedAt`),
+  ADD KEY `idx_time` (`AttemptedAt`);
+
+--
 -- Indexes for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -473,6 +509,14 @@ ALTER TABLE `password_resets`
   ADD KEY `idx_user` (`UserID`),
   ADD KEY `idx_token` (`TokenHash`),
   ADD KEY `idx_expires` (`ExpiresAt`);
+
+--
+-- Indexes for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  ADD PRIMARY KEY (`TokenID`),
+  ADD KEY `idx_token_hash` (`TokenHash`),
+  ADD KEY `idx_user_id` (`UserID`);
 
 --
 -- Indexes for table `users`
@@ -565,6 +609,12 @@ ALTER TABLE `insurance`
   MODIFY `InsuranceID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  MODIFY `AttemptID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -587,6 +637,12 @@ ALTER TABLE `ownership_history`
 --
 ALTER TABLE `password_resets`
   MODIFY `ResetID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  MODIFY `TokenID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -670,6 +726,12 @@ ALTER TABLE `ownership_history`
 --
 ALTER TABLE `password_resets`
   ADD CONSTRAINT `password_resets_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `remember_tokens`
+--
+ALTER TABLE `remember_tokens`
+  ADD CONSTRAINT `fk_remember_user` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `vehicles`
