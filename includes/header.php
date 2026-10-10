@@ -106,7 +106,7 @@ if (isset($pdo) && isset($_SESSION["UserID"])) {
         <!-- USER PROFILE LINK -->
         <!-- ========================= -->
         <a
-            href="/visrs/users/view.php?id=<?= (int) ($_SESSION["UserID"] ?? 0) ?>"
+            href="/visrs/users/settings.php?id=<?= (int) ($_SESSION["UserID"] ?? 0) ?>"
             class="profile-link"
             title="View profile"
         >

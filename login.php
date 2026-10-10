@@ -263,72 +263,72 @@ require_once "includes/head.php";
 ?>
 
 
-<body>
+<body class="login-body">
 
 
 <div class="login-page">
 
 
     <!-- =====================================================
-         LEFT — HERO / BRANDING
+         LANDSCAPE LOGIN CARD
          ===================================================== -->
 
-    <div class="login-hero">
-
-        <div class="login-hero-overlay"></div>
-
-        <div class="login-hero-content">
-
-            <h1 class="login-hero-title">
-                VISRS
-            </h1>
-
-            <p class="login-hero-subtitle">
-                Vehicle Information Search & Retrieval System
-            </p>
-
-            <ul class="login-hero-features">
-
-                <li>
-                    <span class="login-hero-icon">🔍</span>
-                    <span>Search vehicle records</span>
-                </li>
-
-                <li>
-                    <span class="login-hero-icon">🛡️</span>
-                    <span>Report stolen vehicles</span>
-                </li>
-
-                <li>
-                    <span class="login-hero-icon">📋</span>
-                    <span>Track ownership history</span>
-                </li>
-
-            </ul>
-
-        </div>
-
-    </div>
+    <div class="login-card">
 
 
-    <!-- =====================================================
-         RIGHT — LOGIN FORM
-         ===================================================== -->
+        <!-- =============================================
+             LEFT PANEL — BRANDING
+             ============================================= -->
 
-    <div class="login-form-panel">
+        <aside class="login-card-hero">
 
-        <div class="login-form-wrapper">
+            <div class="login-hero-top">
 
-
-            <!-- BRAND MARK (visible on mobile, subtle on desktop) -->
-
-            <div class="login-brandmark">
-
-                <span class="login-brandmark-text">
-                    VISRS
-                </span>
+                <span class="login-hero-badge">ADMIN</span>
 
             </div>
+
+            <div class="login-hero-body">
+
+                <h1 class="login-hero-title">VISRS</h1>
+
+                <p class="login-hero-subtitle">
+                    Vehicle Information Search &amp; Retrieval System
+                </p>
+
+                <ul class="login-hero-features">
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Search vehicle records</span>
+                    </li>
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Report stolen vehicles</span>
+                    </li>
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Track ownership history</span>
+                    </li>
+
+                </ul>
+
+            </div>
+
+            <p class="login-hero-footer">
+                &copy; <?= date("Y") ?> VISRS. All rights reserved.
+            </p>
+
+        </aside>
+
+
+        <!-- =============================================
+             RIGHT PANEL — LOGIN FORM
+             ============================================= -->
+
+        <main class="login-card-form">
 
 
             <!-- HEADING -->
@@ -350,19 +350,11 @@ require_once "includes/head.php";
 
             <?php if ($error !== ""): ?>
 
-                <div class="error-box">
+                <div class="login-error">
 
-                    <strong>
-                        Login Error
-                    </strong>
+                    <span class="login-error-icon">!</span>
 
-                    <p
-                        style="
-                            margin:6px 0 0 0;
-                        "
-                    >
-                        <?= htmlspecialchars($error) ?>
-                    </p>
+                    <span><?= htmlspecialchars($error) ?></span>
 
                 </div>
 
@@ -374,6 +366,7 @@ require_once "includes/head.php";
             <form
                 method="POST"
                 action=""
+                class="login-form"
             >
 
                 <!-- CSRF TOKEN -->
@@ -387,7 +380,7 @@ require_once "includes/head.php";
 
                 <!-- EMAIL -->
 
-                <div class="form-group">
+                <div class="login-field">
 
                     <label for="Email">
                         Email Address
@@ -398,6 +391,7 @@ require_once "includes/head.php";
                         id="Email"
                         name="Email"
                         value="<?= htmlspecialchars($email) ?>"
+                        placeholder="you@example.com"
                         required
                         maxlength="150"
                         autocomplete="email"
@@ -409,7 +403,7 @@ require_once "includes/head.php";
 
                 <!-- PASSWORD -->
 
-                <div class="form-group">
+                <div class="login-field">
 
                     <label for="Password">
                         Password
@@ -421,6 +415,7 @@ require_once "includes/head.php";
                             type="password"
                             id="Password"
                             name="Password"
+                            placeholder="Enter your password"
                             required
                             autocomplete="current-password"
                         >
@@ -429,6 +424,7 @@ require_once "includes/head.php";
                             type="button"
                             data-toggle-password="Password"
                             class="login-show-password"
+                            aria-label="Show password"
                         >
                             Show
                         </button>
@@ -468,7 +464,7 @@ require_once "includes/head.php";
 
                 <button
                     type="submit"
-                    class="button login-submit"
+                    class="login-submit"
                 >
                     Sign in
                 </button>
@@ -490,46 +486,27 @@ require_once "includes/head.php";
 
             <a
                 href="/visrs/register.php"
-                class="button button-secondary login-register-btn"
+                class="login-register-btn"
             >
                 Create an account
             </a>
 
 
-            <!-- ROLE STRIP -->
+            <!-- FOOTER -->
 
-            <div class="login-roles">
+            <div class="login-footer">
 
-                <p class="login-roles-label">
-                    Built for
+                <p>
+                    &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
+                    <a href="/visrs/support.php">Support</a>
+                    &nbsp;·&nbsp;
+                    <a href="/visrs/privacy.php">Privacy</a>
                 </p>
-
-                <div class="login-roles-list">
-
-                    <span class="login-role-badge">Admin</span>
-                    <span class="login-role-badge">Police</span>
-                    <span class="login-role-badge">Seller</span>
-
-                </div>
 
             </div>
 
 
-        </div>
-
-
-        <!-- FOOTER -->
-
-        <div class="login-footer">
-
-            <p>
-                &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
-                <a href="/visrs/support.php">Support</a>
-                &nbsp;·&nbsp;
-                <a href="/visrs/privacy.php">Privacy</a>
-            </p>
-
-        </div>
+        </main>
 
 
     </div>

@@ -183,71 +183,75 @@ require_once "includes/head.php";
 ?>
 
 
-<body>
+<body class="login-body">
 
 
 <div class="login-page">
 
 
     <!-- =====================================================
-         LEFT — HERO / BRANDING
+         LANDSCAPE REGISTER CARD
          ===================================================== -->
 
-    <div class="login-hero">
-
-        <div class="login-hero-overlay"></div>
-
-        <div class="login-hero-content">
-
-            <h1 class="login-hero-title">
-                VISRS
-            </h1>
-
-            <p class="login-hero-subtitle">
-                Vehicle Information Search & Retrieval System
-            </p>
-
-            <ul class="login-hero-features">
-
-                <li>
-                    <span class="login-hero-icon">🔍</span>
-                    <span>Search vehicle records</span>
-                </li>
-
-                <li>
-                    <span class="login-hero-icon">🛡️</span>
-                    <span>Report stolen vehicles</span>
-                </li>
-
-                <li>
-                    <span class="login-hero-icon">📋</span>
-                    <span>Track ownership history</span>
-                </li>
-
-            </ul>
-
-        </div>
-
-    </div>
+    <div class="login-card login-card-register">
 
 
-    <!-- =====================================================
-         RIGHT — REGISTER FORM
-         ===================================================== -->
+        <!-- =============================================
+             LEFT PANEL — BRANDING
+             ============================================= -->
 
-    <div class="login-form-panel">
+        <aside class="login-card-hero">
 
-        <div class="login-form-wrapper">
+            <div class="login-hero-top">
 
-
-            <div class="login-brandmark">
-
-                <span class="login-brandmark-text">
-                    VISRS
-                </span>
+                <span class="login-hero-badge">SIGN UP</span>
 
             </div>
 
+            <div class="login-hero-body">
+
+                <h1 class="login-hero-title">VISRS</h1>
+
+                <p class="login-hero-subtitle">
+                    Vehicle Information Search &amp; Retrieval System
+                </p>
+
+                <ul class="login-hero-features">
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Search vehicle records</span>
+                    </li>
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Report stolen vehicles</span>
+                    </li>
+
+                    <li>
+                        <span class="login-hero-check">✓</span>
+                        <span>Track ownership history</span>
+                    </li>
+
+                </ul>
+
+            </div>
+
+            <p class="login-hero-footer">
+                &copy; <?= date("Y") ?> VISRS. All rights reserved.
+            </p>
+
+        </aside>
+
+
+        <!-- =============================================
+             RIGHT PANEL — REGISTER FORM
+             ============================================= -->
+
+        <main class="login-card-form">
+
+
+            <!-- HEADING -->
 
             <div class="login-heading">
 
@@ -266,19 +270,11 @@ require_once "includes/head.php";
 
             <?php if ($error !== ""): ?>
 
-                <div class="error-box">
+                <div class="login-error">
 
-                    <strong>
-                        Registration Error
-                    </strong>
+                    <span class="login-error-icon">!</span>
 
-                    <p
-                        style="
-                            margin:6px 0 0 0;
-                        "
-                    >
-                        <?= htmlspecialchars($error) ?>
-                    </p>
+                    <span><?= htmlspecialchars($error) ?></span>
 
                 </div>
 
@@ -289,19 +285,11 @@ require_once "includes/head.php";
 
             <?php if ($success !== ""): ?>
 
-                <div class="settings-alert settings-alert-success" style="margin-bottom:20px;">
+                <div class="login-success">
 
-                    <strong>
-                        Account Created
-                    </strong>
+                    <span class="login-success-icon">✓</span>
 
-                    <p
-                        style="
-                            margin:6px 0 0 0;
-                        "
-                    >
-                        <?= htmlspecialchars($success) ?>
-                    </p>
+                    <span><?= htmlspecialchars($success) ?></span>
 
                 </div>
 
@@ -313,55 +301,64 @@ require_once "includes/head.php";
             <form
                 method="POST"
                 action=""
+                class="login-form"
             >
 
 
-                <!-- FIRST NAME -->
+                <!-- NAME ROW -->
 
-                <div class="form-group">
+                <div class="login-field-row">
 
-                    <label for="FirstName">
-                        First Name
-                    </label>
+                    <!-- FIRST NAME -->
 
-                    <input
-                        type="text"
-                        id="FirstName"
-                        name="FirstName"
-                        value="<?= htmlspecialchars($firstName) ?>"
-                        required
-                        maxlength="100"
-                        autocomplete="given-name"
-                        class="auto-focus"
-                    >
+                    <div class="login-field">
 
-                </div>
+                        <label for="FirstName">
+                            First Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="FirstName"
+                            name="FirstName"
+                            value="<?= htmlspecialchars($firstName) ?>"
+                            placeholder="Jane"
+                            required
+                            maxlength="100"
+                            autocomplete="given-name"
+                            class="auto-focus"
+                        >
+
+                    </div>
 
 
-                <!-- LAST NAME -->
+                    <!-- LAST NAME -->
 
-                <div class="form-group">
+                    <div class="login-field">
 
-                    <label for="LastName">
-                        Last Name
-                    </label>
+                        <label for="LastName">
+                            Last Name
+                        </label>
 
-                    <input
-                        type="text"
-                        id="LastName"
-                        name="LastName"
-                        value="<?= htmlspecialchars($lastName) ?>"
-                        required
-                        maxlength="100"
-                        autocomplete="family-name"
-                    >
+                        <input
+                            type="text"
+                            id="LastName"
+                            name="LastName"
+                            value="<?= htmlspecialchars($lastName) ?>"
+                            placeholder="Doe"
+                            required
+                            maxlength="100"
+                            autocomplete="family-name"
+                        >
+
+                    </div>
 
                 </div>
 
 
                 <!-- EMAIL -->
 
-                <div class="form-group">
+                <div class="login-field">
 
                     <label for="Email">
                         Email Address
@@ -372,6 +369,7 @@ require_once "includes/head.php";
                         id="Email"
                         name="Email"
                         value="<?= htmlspecialchars($email) ?>"
+                        placeholder="you@example.com"
                         required
                         maxlength="150"
                         autocomplete="email"
@@ -382,7 +380,7 @@ require_once "includes/head.php";
 
                 <!-- PASSWORD -->
 
-                <div class="form-group">
+                <div class="login-field">
 
                     <label for="Password">
                         Password
@@ -394,6 +392,7 @@ require_once "includes/head.php";
                             type="password"
                             id="Password"
                             name="Password"
+                            placeholder="At least 8 characters"
                             required
                             minlength="8"
                             maxlength="128"
@@ -405,22 +404,15 @@ require_once "includes/head.php";
                             type="button"
                             data-toggle-password="Password"
                             class="login-show-password"
+                            aria-label="Show password"
                         >
                             Show
                         </button>
 
                     </div>
 
-                    <small
-                        style="
-                            display:block;
-                            margin-top:6px;
-                            color:#6b7280;
-                            font-size:12px;
-                        "
-                    >
-                        At least 8 characters. Avoid common passwords
-                        and don't include your name or email.
+                    <small class="login-field-hint">
+                        At least 8 characters. Avoid common passwords and don't include your name or email.
                     </small>
 
                 </div>
@@ -428,7 +420,7 @@ require_once "includes/head.php";
 
                 <!-- CONFIRM PASSWORD -->
 
-                <div class="form-group">
+                <div class="login-field">
 
                     <label for="ConfirmPassword">
                         Confirm Password
@@ -440,6 +432,7 @@ require_once "includes/head.php";
                             type="password"
                             id="ConfirmPassword"
                             name="ConfirmPassword"
+                            placeholder="Re-enter your password"
                             required
                             minlength="8"
                             maxlength="128"
@@ -450,6 +443,7 @@ require_once "includes/head.php";
                             type="button"
                             data-toggle-password="ConfirmPassword"
                             class="login-show-password"
+                            aria-label="Show password"
                         >
                             Show
                         </button>
@@ -461,23 +455,15 @@ require_once "includes/head.php";
 
                 <!-- ROLE NOTE -->
 
-                <div class="login-roles" style="margin-top:8px;">
+                <div class="login-role-note">
 
-                    <p class="login-roles-label">
+                    <p class="login-role-note-label">
                         Account Type
                     </p>
 
-                    <p
-                        style="
-                            margin:0;
-                            color:#64748b;
-                            font-size:13px;
-                            line-height:1.5;
-                        "
-                    >
-                        New accounts are registered as standard User
-                        accounts. Administrative and staff roles can
-                        only be assigned by an authorized administrator.
+                    <p class="login-role-note-text">
+                        New accounts are registered as standard <strong>User</strong> accounts.
+                        Administrative and staff roles can only be assigned by an authorized administrator.
                     </p>
 
                 </div>
@@ -487,7 +473,7 @@ require_once "includes/head.php";
 
                 <button
                     type="submit"
-                    class="button login-submit"
+                    class="login-submit"
                 >
                     Create Account
                 </button>
@@ -509,27 +495,27 @@ require_once "includes/head.php";
 
             <a
                 href="/visrs/login.php"
-                class="button button-secondary login-register-btn"
+                class="login-register-btn"
             >
                 Back to Sign In
             </a>
 
 
-        </div>
+            <!-- FOOTER -->
+
+            <div class="login-footer">
+
+                <p>
+                    &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
+                    <a href="/visrs/support.php">Support</a>
+                    &nbsp;·&nbsp;
+                    <a href="/visrs/privacy.php">Privacy</a>
+                </p>
+
+            </div>
 
 
-        <!-- FOOTER -->
-
-        <div class="login-footer">
-
-            <p>
-                &copy; <?= date("Y") ?> VISRS &nbsp;·&nbsp;
-                <a href="/visrs/support.php">Support</a>
-                &nbsp;·&nbsp;
-                <a href="/visrs/privacy.php">Privacy</a>
-            </p>
-
-        </div>
+        </main>
 
 
     </div>
