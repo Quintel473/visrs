@@ -91,7 +91,7 @@ unset($_SESSION["bulk_message"]);
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "VISRS - Ownership History";
+$pageTitle = "Ownership History";
 
 require_once "../includes/head.php";
 

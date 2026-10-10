@@ -185,7 +185,7 @@ $canManageOwners = in_array(
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "VISRS - Owner Details";
+$pageTitle = "Owner Details";
 
 require_once "../includes/head.php";
 

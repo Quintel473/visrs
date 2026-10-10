@@ -294,7 +294,7 @@ if ($mileageUntilOilChange !== null) {
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "VISRS - " . $vehicle["PlateNumber"];
+$pageTitle = $vehicle["PlateNumber"];
 
 require_once "../includes/head.php";
 
