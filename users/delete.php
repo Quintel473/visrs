@@ -305,7 +305,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "Delete User - VISRS";
+$pageTitle = "Delete User";
 
 require_once "../includes/head.php";
 

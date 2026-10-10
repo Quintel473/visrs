@@ -589,7 +589,7 @@ $owners = $ownersStmt->fetchAll();
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "Edit Ownership Record - VISRS";
+$pageTitle = "Edit Ownership Record";
 
 require_once "../includes/head.php";
 

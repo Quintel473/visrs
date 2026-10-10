@@ -176,7 +176,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 $basePath  = "/visrs/";
 
-$pageTitle = "Create Account - VISRS";
+$pageTitle = "Create Account";
 
 require_once "includes/head.php";
 

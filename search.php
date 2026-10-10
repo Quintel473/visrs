@@ -59,7 +59,7 @@ if ($search !== "") {
  * Global <head>
  */
 
-$pageTitle = "VISRS - Vehicle Search";
+$pageTitle = "Vehicle Search";
 
 require_once "includes/head.php";
 

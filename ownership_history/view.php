@@ -196,7 +196,7 @@ $isCurrentOwner =
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "Ownership Record - VISRS";
+$pageTitle = "Ownership Record";
 
 require_once "../includes/head.php";
 

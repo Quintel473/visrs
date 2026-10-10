@@ -6,16 +6,28 @@ $activePage = $activePage ?? "";
 
     <!-- =====================================================
          VISRS LOGO (clickable — links to Dashboard)
-         Shows full branding when expanded, just "V" when collapsed
+         Shows full branding when expanded, icon only when collapsed
          ===================================================== -->
     <a href="/visrs/dashboard.php" class="sidebar-logo">
-        <h2>
-            <span class="logo-full">VISRS</span>
-            <span class="logo-short">V</span>
-        </h2>
+
+        <!-- Full logo — shown when sidebar is expanded -->
+        <img
+            src="/visrs/images/logo.png"
+            alt="VISRS"
+            class="logo-full"
+        >
+
+        <!-- Icon only — shown when sidebar is collapsed -->
+        <img
+            src="/visrs/images/favicon-96x96.png"
+            alt="VISRS"
+            class="logo-short"
+        >
+
         <p data-i18n="vehicle_information_system">
             Vehicle Information System
         </p>
+
     </a>
 
     <!-- =====================================================

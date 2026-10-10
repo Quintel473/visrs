@@ -31,7 +31,7 @@ if (!$interestID || $interestID <= 0) {
      * with hardcoded /visrs/css/style.css path).
      */
 
-    $pageTitle = "Invalid Inquiry - VISRS";
+    $pageTitle = "Invalid Inquiry";
 
     require_once "../includes/head.php";
 
@@ -258,7 +258,7 @@ if (!$inquiry) {
      * with hardcoded /visrs/css/style.css path).
      */
 
-    $pageTitle = "Inquiry Not Found - VISRS";
+    $pageTitle = "Inquiry Not Found";
 
     require_once "../includes/head.php";
 

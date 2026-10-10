@@ -92,7 +92,7 @@ if (!$interestID || $interestID <= 0) {
      * with hardcoded /visrs/css/style.css path).
      */
 
-    $pageTitle = "Message Seller - VISRS";
+    $pageTitle = "Message Seller";
 
     require_once "../includes/head.php";
 
@@ -379,7 +379,7 @@ if (!$inquiry) {
      * with hardcoded /visrs/css/style.css path).
      */
 
-    $pageTitle = "Access Denied - VISRS";
+    $pageTitle = "Access Denied";
 
     require_once "../includes/head.php";
 

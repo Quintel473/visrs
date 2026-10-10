@@ -25,7 +25,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $basePath  = "/visrs/";
 
-$pageTitle = "Privacy Policy - VISRS";
+$pageTitle = "Privacy Policy";
 
 require_once "includes/head.php";
 

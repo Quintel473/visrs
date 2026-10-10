@@ -118,7 +118,7 @@ for ($i = 5; $i >= 0; $i--) {
 $loadCharts = true;
 
 
-$pageTitle = "VISRS - Dashboard";
+$pageTitle = "Dashboard";
 
 require_once "includes/head.php";
 

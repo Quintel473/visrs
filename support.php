@@ -24,7 +24,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $basePath  = "/visrs/";
 
-$pageTitle = "Support - VISRS";
+$pageTitle = "Support";
 
 require_once "includes/head.php";
 

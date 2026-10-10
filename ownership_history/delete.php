@@ -267,7 +267,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "Delete Ownership Record - VISRS";
+$pageTitle = "Delete Ownership Record";
 
 require_once "../includes/head.php";
 

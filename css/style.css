@@ -117,17 +117,19 @@ textarea {
    ========================================================= */
 
 .sidebar-logo {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
     width: 250px;
     min-width: 250px;
     max-width: 250px;
 
-    height: 91px;
+    height: auto;
     min-height: 91px;
 
     margin: 0;
-    padding: 25px 22px 22px 22px;
+    padding: 22px 22px 20px 22px;
 
     background: #111827;
 
@@ -148,21 +150,8 @@ textarea {
     background: #1f2937;
 }
 
-.sidebar-logo h2 {
-    margin: 0;
-    padding: 0;
-
-    color: #ffffff;
-
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-
-    line-height: 1.2;
-}
-
 .sidebar-logo p {
-    margin: 6px 0 0 0;
+    margin: 12px 0 0 0;
     padding: 0;
 
     color: #9ca3af;
@@ -172,8 +161,9 @@ textarea {
     font-weight: 400;
 
     line-height: 1.4;
-}
 
+    text-align: center;
+}
 
 /* =========================================================
    5. SIDEBAR NAVIGATION
@@ -1362,10 +1352,6 @@ footer {
 
 /* =========================================================
    38. DARK MODE TOGGLE BUTTON
-   ---------------------------------------------------------
-   Round button in the topbar.
-   Light-mode defaults: matches the white topbar background.
-   Dark-mode overrides further down.
    ========================================================= */
 
 .theme-toggle {
@@ -1428,9 +1414,6 @@ footer {
 
 /* =========================================================
    39. SCREEN-READER-ONLY UTILITY
-   ---------------------------------------------------------
-   Hides content visually but keeps it accessible to screen
-   readers. Used for form labels that don't have visible text.
    ========================================================= */
 
 .sr-only {
@@ -1452,9 +1435,6 @@ footer {
 
 /* =========================================================
    40. PROFILE LINK
-   ---------------------------------------------------------
-   Styles the profile <a> in includes/header.php
-   (previously used inline styles).
    ========================================================= */
 
 .profile-link {
@@ -1470,9 +1450,6 @@ footer {
 
 /* =========================================================
    41. DARK MODE OVERRIDES
-   ---------------------------------------------------------
-   Applied only when <html data-theme="dark"> is set.
-   Overrides hardcoded colors without editing the rules above.
    ========================================================= */
 
 
@@ -1499,10 +1476,6 @@ footer {
 
 [data-theme="dark"] .sidebar-logo:hover {
     background: #334155;
-}
-
-[data-theme="dark"] .sidebar-logo h2 {
-    color: #f1f5f9;
 }
 
 [data-theme="dark"] .sidebar-logo p {
@@ -1838,16 +1811,6 @@ footer {
 
 /* =========================================================
    42. PROFILE PICTURE IN TOPBAR AVATAR
-   ---------------------------------------------------------
-   Ensures uploaded profile pictures fill the avatar circle
-   cleanly. The avatar container already has overflow:hidden
-   and border-radius:50%, so the image just needs to fill it.
-
-   object-position: center 30%
-   → for portraits, shows the face area rather than the top
-     or the middle
-   → for landscapes, shows the upper portion which usually
-     contains the meaningful part
    ========================================================= */
 
 .user-avatar-image {
@@ -1862,13 +1825,6 @@ footer {
 
 /* =========================================================
    43. COLLAPSIBLE SIDEBAR — NARROW ICON STRIP
-   ---------------------------------------------------------
-   When <html data-sidebar="collapsed"> is set:
-   - Sidebar shrinks from 250px to 64px
-   - Text labels hide, only icons remain
-   - Logo shows just "V"
-   - Toggle button stays visible at the top
-   - Main content expands to fill the remaining space
    ========================================================= */
 
 /* Smooth transitions */
@@ -1897,7 +1853,15 @@ footer {
 
 /* ---------- EXPANDED (default) ---------- */
 
-/* Logo shows "VISRS", hides "V" */
+.sidebar-logo .logo-full {
+    display: block;
+    width: 200px;
+    height: auto;
+    max-height: 70px;
+    object-fit: contain;
+    margin: 0 0 10px 0;
+}
+
 .sidebar-logo .logo-short {
     display: none;
 }
@@ -1916,21 +1880,23 @@ footer {
     width: 64px;
     min-width: 64px;
     max-width: 64px;
-    padding: 25px 0 22px 0;
+    height: auto;
+    min-height: auto;
+    padding: 16px 0;
     text-align: center;
 }
 
-/* Logo: hide "VISRS", show "V" */
 [data-sidebar="collapsed"] .sidebar-logo .logo-full {
     display: none;
 }
 
 [data-sidebar="collapsed"] .sidebar-logo .logo-short {
-    display: inline;
-    font-size: 26px;
+    display: block;
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
 }
 
-/* Hide the tagline text in the logo */
 [data-sidebar="collapsed"] .sidebar-logo p {
     display: none;
 }
@@ -2063,7 +2029,7 @@ footer {
     }
 
     [data-sidebar="collapsed"] .sidebar-logo .logo-full {
-        display: inline;
+        display: block;
     }
 
     [data-sidebar="collapsed"] .sidebar-logo .logo-short {
@@ -2102,9 +2068,6 @@ footer {
 
 /* =========================================================
    44. LANGUAGE SWITCHER
-   ---------------------------------------------------------
-   Round button in the topbar that opens a small dropdown
-   with the four supported languages.
    ========================================================= */
 
 .language-switcher {
@@ -2261,9 +2224,6 @@ footer {
 
 /* =========================================================
    i18n — Temporarily disable transitions during text swaps
-   ---------------------------------------------------------
-   Prevents layout "stutter" when changing languages.
-   The class is added by JS, applied for one frame, then removed.
    ========================================================= */
 
 html.i18n-changing *,
@@ -2275,8 +2235,6 @@ html.i18n-changing *::after {
 
 /* =========================================================
    45. PAGINATION CONTROLS
-   ---------------------------------------------------------
-   Shared pagination UI used across list pages.
    ========================================================= */
 
 .pagination-wrapper {
@@ -2412,9 +2370,6 @@ html.i18n-changing *::after {
 
 /* =========================================================
    46. BULK ACTION BAR
-   ---------------------------------------------------------
-   Appears at the top of the table when rows are selected.
-   Hidden by default; shown by JS when a checkbox is ticked.
    ========================================================= */
 
 .bulk-action-bar {
@@ -2475,9 +2430,6 @@ html.i18n-changing *::after {
 
 /* =========================================================
    47. DASHBOARD CHART CARDS
-   ---------------------------------------------------------
-   Two-column grid for chart containers on the dashboard.
-   Light mode defaults; dark mode overrides at the bottom.
    ========================================================= */
 
 .charts-grid {
@@ -2554,10 +2506,6 @@ html.i18n-changing *::after {
 
 /* =========================================================
    50. FONT SIZE ADJUSTER
-   ---------------------------------------------------------
-   Sleek segmented pill: [A− | A | A+]
-   Also controls the base font size of the entire document
-   based on <html data-fontsize="...">.
    ========================================================= */
 
 
@@ -2721,8 +2669,6 @@ html[data-fontsize="4"]  { font-size: 132%; }
 
 /* =========================================================
    51. NOTIFICATIONS BELL
-   ---------------------------------------------------------
-   Bell icon in the topbar with an unread-count badge.
    ========================================================= */
 
 .notifications-button {
@@ -2819,10 +2765,6 @@ html[data-fontsize="4"]  { font-size: 132%; }
 
 /* =========================================================
    52. LOGIN PAGE — LANDSCAPE CARD OVER GRADIENT
-   ---------------------------------------------------------
-   Wide landscape card with a branding panel on the left
-   and the login form on the right. Collapses to a single
-   column on mobile.
    ========================================================= */
 
 body.login-body {
@@ -3673,9 +3615,6 @@ body.login-body::after {
 
 /* =========================================================
    53. PASSWORD STRENGTH METER
-   ---------------------------------------------------------
-   Purely visual feedback for [data-password-strength]
-   inputs. Injected by app.js.
    ========================================================= */
 
 .pw-strength {
@@ -3736,9 +3675,6 @@ body.login-body::after {
 
 /* =========================================================
    54. LEGAL / INFO PAGES (Support, Privacy)
-   ---------------------------------------------------------
-   Reuses the same gradient background as the login page
-   and presents content inside a floating white card.
    ========================================================= */
 
 body.legal-body {
@@ -4495,10 +4431,6 @@ body.legal-body::after {
 
 /* =========================================================
    55. REGISTER PAGE — SPECIFIC OVERRIDES
-   ---------------------------------------------------------
-   Extends the login page layout with a slightly wider
-   card (to fit the extra fields) and a two-column name
-   row, plus success banner and field hint styles.
    ========================================================= */
 
 /* Wider register card to fit more fields comfortably */

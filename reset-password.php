@@ -207,7 +207,7 @@ if (empty($_SESSION["reset_csrf"])) {
  */
 
 $basePath  = "/visrs/";
-$pageTitle = "Reset Password - VISRS";
+$pageTitle = "Reset Password";
 
 require_once "includes/head.php";
 

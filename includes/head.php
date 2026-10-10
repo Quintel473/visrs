@@ -7,6 +7,7 @@
  *   - anti-FOUC theme loader (runs before CSS paints)
  *   - global stylesheet link
  *   - print stylesheet for PDF export
+ *   - favicon pack
  *   - Chart.js (only when $loadCharts is true)
  *
  * Set BEFORE including this file:
@@ -50,6 +51,18 @@ $basePath  = $basePath  ?? "";
     </script>
 
     <title><?= htmlspecialchars($pageTitle) ?></title>
+
+    <!--
+        Favicon pack.
+        Absolute paths so every page (root or subfolder)
+        resolves them identically.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/visrs/images/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/visrs/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="96x96" href="/visrs/images/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/visrs/images/apple-touch-icon.png">
+    <link rel="manifest" href="/visrs/images/site.webmanifest">
+    <meta name="theme-color" content="#1e3a8a">
 
     <link
         rel="stylesheet"

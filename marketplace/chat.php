@@ -326,7 +326,7 @@ $messages = $messageStmt->fetchAll(PDO::FETCH_ASSOC);
  * with hardcoded /visrs/css/style.css path).
  */
 
-$pageTitle = "Vehicle Chat - VISRS";
+$pageTitle = "Vehicle Chat";
 
 require_once "../includes/head.php";
 
