@@ -5,6 +5,8 @@
  *
  * Provides the shared footer and loads the global
  * JavaScript used throughout the VISRS application.
+ *
+ * Service worker registration lives in includes/head.php.
  */
 
 ?>

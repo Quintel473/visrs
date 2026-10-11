@@ -9,6 +9,51 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("VISRS JavaScript loaded successfully.");
 
 
+    /* =====================================================
+       SUBMIT OVERLAY
+       ---------------------------------------------------------
+       Shows a full-screen spinner while a form is submitting.
+       Skipped on forms flagged with data-no-overlay.
+
+       Includes an 8-second safety timeout: if the page hasn't
+       navigated by then (cancelled submit, slow server, target
+       _blank, etc.) the overlay removes itself so the user
+       isn't stuck behind it.
+       ===================================================== */
+
+    function showSubmitOverlay() {
+
+        if (document.getElementById("visrs-submit-overlay")) {
+            return;
+        }
+
+        var overlay = document.createElement("div");
+        overlay.id = "visrs-submit-overlay";
+        overlay.className = "submit-overlay";
+
+        overlay.innerHTML =
+            '<div class="submit-overlay-inner">' +
+            '  <div class="submit-spinner" aria-hidden="true"></div>' +
+            '  <p class="submit-overlay-text">Processing…</p>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        /*
+         * Safety net — remove the overlay after 8 seconds if
+         * the page hasn't navigated. Handles edge cases like
+         * cancelled confirm dialogs, failed submissions, and
+         * forms targeting new tabs.
+         */
+        setTimeout(function () {
+            var stuck = document.getElementById("visrs-submit-overlay");
+            if (stuck) {
+                stuck.remove();
+            }
+        }, 8000);
+    }
+
+
     /*
     |--------------------------------------------------------------------------
     | FORM SUBMISSION PROTECTION
@@ -51,6 +96,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
             });
+
+            /* Show full-page overlay (opt out with data-no-overlay) */
+            if (!form.hasAttribute("data-no-overlay")) {
+                showSubmitOverlay();
+            }
 
         });
 
@@ -106,6 +156,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
         });
+
+        /* Also remove any stuck submit overlay */
+        var overlay = document.getElementById("visrs-submit-overlay");
+        if (overlay) {
+            overlay.remove();
+        }
 
     });
 
@@ -710,14 +766,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function autoTagContentAreas() {
 
-        /*
-         * Add new selectors here to opt additional page
-         * regions into automatic i18n translation.
-         *
-         * .login-page covers the split-screen login layout
-         * (both hero and form panels).
-         */
-
         var candidates = [
             'main.content',
             '.content',
@@ -851,6 +899,23 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!badge) return;
 
         var stopped = false;
+        var firstLoadDone = false;
+
+        /* Show loading state only on the very first fetch */
+        function markLoading() {
+
+            if (firstLoadDone) return;
+
+            badge.classList.add('is-loading');
+            badge.textContent = '';
+            badge.style.display = '';
+        }
+
+        function markLoaded() {
+
+            firstLoadDone = true;
+            badge.classList.remove('is-loading');
+        }
 
         /* Fetch unread count via a lightweight endpoint */
         function refresh() {
@@ -861,6 +926,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then(function (res) { return res.json(); })
                 .then(function (data) {
 
+                    markLoaded();
+
                     if (typeof data.unread !== 'number') return;
 
                     if (data.unread > 0) {
@@ -870,7 +937,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         badge.style.display = 'none';
                     }
                 })
-                .catch(function () { /* silent */ });
+                .catch(function () {
+                    /* On error, also clear loading so it doesn't pulse forever */
+                    markLoaded();
+                });
         }
 
         /* Recursive setTimeout — schedules the next poll only
@@ -886,6 +956,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 setTimeout(loop, REFRESH_INTERVAL);
             });
         }
+
+        /* Show the loading dot immediately on page load */
+        markLoading();
+
+        /* Kick off the first fetch right away, then every 60s */
+        refresh().then(function () {
+            if (!stopped) {
+                setTimeout(loop, REFRESH_INTERVAL);
+            }
+        });
 
         /* Refresh on page focus (in case another tab made changes) */
         window.addEventListener('focus', refresh);
@@ -908,9 +988,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
         });
-
-        /* Kick off the loop */
-        setTimeout(loop, REFRESH_INTERVAL);
     }
 
     if (document.readyState === 'loading') {
@@ -963,8 +1040,7 @@ document.addEventListener("DOMContentLoaded", function () {
             var label = document.createElement('span');
             label.className = 'pw-strength-label';
 
-            /* Insert right after the input's parent (.login-password-wrapper
-               or .settings-field, whichever wraps it) */
+            /* Insert right after the input's parent */
             var anchor = input.parentNode;
             anchor.parentNode.insertBefore(wrapper, anchor.nextSibling);
             anchor.parentNode.insertBefore(label, wrapper.nextSibling);
@@ -986,9 +1062,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (/[^A-Za-z0-9]/.test(pw)) score++;
 
                 /* Penalties */
-                if (/(.)\1{2,}/.test(pw)) score -= 1;         // 3+ repeated chars
-                if (/^[a-z]+$/.test(pw)) score -= 1;          // all lowercase
-                if (/^[0-9]+$/.test(pw)) score -= 2;          // all digits
+                if (/(.)\1{2,}/.test(pw)) score -= 1;
+                if (/^[a-z]+$/.test(pw)) score -= 1;
+                if (/^[0-9]+$/.test(pw)) score -= 2;
                 if (pw.length < 8) score -= 2;
 
                 return Math.max(0, Math.min(8, score));
@@ -1005,7 +1081,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 var pw = input.value;
 
-                /* Empty — hide everything */
                 if (pw === '') {
                     wrapper.style.display = 'none';
                     label.style.display = 'none';
@@ -1028,7 +1103,6 @@ document.addEventListener("DOMContentLoaded", function () {
             input.addEventListener('input', update);
             input.addEventListener('focus', update);
 
-            /* Initial state (in case the browser autofills) */
             update();
         });
     }
@@ -1038,4 +1112,172 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
         init();
     }
+})();
+
+/* =========================================================
+   VISRS Top Progress Bar
+   =========================================================
+   Shows a thin progress bar at the top of the viewport
+   when a link click triggers navigation. Uses a delay-
+   before-show approach: if the new page loads in under
+   300ms, no bar appears at all.
+   ========================================================= */
+(function () {
+    'use strict';
+
+    var SHOW_DELAY_MS   = 300;   // wait this long before showing
+    var MIN_VISIBLE_MS  = 200;   // bar stays visible this long once shown
+
+    var barEl = null;
+    var barInner = null;
+    var showTimer = null;
+    var visibleAt = 0;
+    var isNavigating = false;
+
+    function ensureBar() {
+
+        if (barEl) return;
+
+        barEl = document.createElement('div');
+        barEl.className = 'page-progress';
+
+        barInner = document.createElement('div');
+        barInner.className = 'page-progress-bar';
+
+        barEl.appendChild(barInner);
+        document.body.appendChild(barEl);
+    }
+
+    function startProgress() {
+
+        if (isNavigating) return;
+
+        isNavigating = true;
+
+        ensureBar();
+
+        /* Wait before showing — avoids flash on fast pages */
+        showTimer = setTimeout(function () {
+
+            barEl.classList.add('is-active');
+            barEl.classList.remove('is-complete', 'is-done');
+
+            visibleAt = Date.now();
+
+        }, SHOW_DELAY_MS);
+    }
+
+    function finishProgress() {
+
+        /* If the bar was never shown, just bail — page loaded fast */
+        if (!barEl || !barEl.classList.contains('is-active')) {
+            if (showTimer) {
+                clearTimeout(showTimer);
+                showTimer = null;
+            }
+            isNavigating = false;
+            return;
+        }
+
+        var visibleFor = Date.now() - visibleAt;
+
+        var finish = function () {
+
+            barEl.classList.remove('is-active');
+            barEl.classList.add('is-complete');
+
+            /* One frame so the width transition kicks in */
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+
+                    barEl.classList.add('is-done');
+
+                    /* Reset for next navigation */
+                    setTimeout(function () {
+                        barEl.classList.remove('is-complete', 'is-done');
+                        barInner.style.width = '0';
+                        isNavigating = false;
+                    }, 400);
+                });
+            });
+        };
+
+        if (visibleFor < MIN_VISIBLE_MS) {
+            /* Keep it on screen at least MIN_VISIBLE_MS so it
+               doesn't just flicker */
+            setTimeout(finish, MIN_VISIBLE_MS - visibleFor);
+        } else {
+            finish();
+        }
+    }
+
+    function isInternalNavigation(anchor) {
+
+        if (!anchor || !anchor.href) return false;
+
+        /* Skip external links */
+        if (anchor.origin !== window.location.origin) return false;
+
+        /* Skip hash-only links */
+        if (anchor.pathname === window.location.pathname &&
+            anchor.search === window.location.search &&
+            anchor.hash) {
+            return false;
+        }
+
+        /* Skip target=_blank */
+        if (anchor.target === '_blank') return false;
+
+        /* Skip downloads */
+        if (anchor.hasAttribute('download')) return false;
+
+        /* Skip if it's within the same page and same url */
+        if (anchor.href === window.location.href) return false;
+
+        /* Skip anything with data-no-progress opt-out */
+        if (anchor.hasAttribute('data-no-progress')) return false;
+
+        return true;
+    }
+
+    /* ---------- Wire up ---------- */
+
+    function init() {
+
+        document.addEventListener('click', function (e) {
+
+            /* Ignore modified clicks (new tab, etc.) */
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            if (e.button !== 0) return;
+
+            var anchor = e.target.closest('a');
+            if (!anchor) return;
+
+            if (!isInternalNavigation(anchor)) return;
+
+            startProgress();
+        });
+
+        /* Browser back/forward */
+        window.addEventListener('popstate', function () {
+            startProgress();
+        });
+
+        /* Page finished loading — kill the bar */
+        window.addEventListener('pageshow', function () {
+            finishProgress();
+        });
+
+        window.addEventListener('load', function () {
+            finishProgress();
+        });
+
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
 })();

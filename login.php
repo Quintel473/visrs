@@ -139,7 +139,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     Email,
                     Password,
                     Role,
-                    ProfileImage
+                    ProfileImage,
+                    TwoFactorEnabled
                 FROM users
                 WHERE Email = ?
                 LIMIT 1
@@ -169,6 +170,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                  */
 
                 rate_limit_clear($pdo, $email);
+
+
+                /*
+                 * Two-Factor Authentication check.
+                 *
+                 * If the user has 2FA enabled, do NOT complete
+                 * the login here. Instead, stash the pending
+                 * user ID in the session and send them to the
+                 * verify step. The session is only promoted to
+                 * a full login after the second factor passes.
+                 */
+
+                if ((int) $user["TwoFactorEnabled"] === 1) {
+
+                    /*
+                     * Fresh session for the pending state —
+                     * prevents a stale/pre-existing session
+                     * from interfering.
+                     */
+
+                    session_regenerate_id(true);
+
+                    $_SESSION["2fa_pending_user"]   = (int) $user["UserID"];
+                    $_SESSION["2fa_pending_remember"] = !empty($_POST["RememberMe"]);
+
+                    header("Location: /visrs/2fa/verify.php");
+                    exit;
+                }
 
 
                 /*

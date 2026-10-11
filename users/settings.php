@@ -32,7 +32,9 @@ $userStmt = $pdo->prepare("
         Email,
         Role,
         ProfileImage,
-        CreatedAt
+        CreatedAt,
+        TwoFactorEnabled,
+        TwoFactorConfirmedAt
     FROM users
     WHERE UserID = ?
     LIMIT 1
@@ -45,6 +47,8 @@ $user = $userStmt->fetch();
 if (!$user) {
     redirect("/visrs/logout.php");
 }
+
+$is2FAEnabled = (int) ($user["TwoFactorEnabled"] ?? 0) === 1;
 
 
 /*
@@ -939,6 +943,35 @@ require_once "../includes/head.php";
         text-align: right;
     }
 
+    /* ---------- Two-Factor Status Badge ---------- */
+
+    .twofa-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        padding: 6px 12px;
+
+        border-radius: 999px;
+
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+
+        line-height: 1;
+    }
+
+    .twofa-badge-enabled {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .twofa-badge-disabled {
+        background: #f3f4f6;
+        color: #64748b;
+    }
+
     /* ---------- Dark Mode ---------- */
 
     [data-theme="dark"] .settings-card {
@@ -997,6 +1030,16 @@ require_once "../includes/head.php";
         background: #7f1d1d;
         border-color: #991b1b;
         color: #fecaca;
+    }
+
+    [data-theme="dark"] .twofa-badge-enabled {
+        background: #064e3b;
+        color: #6ee7b7;
+    }
+
+    [data-theme="dark"] .twofa-badge-disabled {
+        background: #334155;
+        color: #cbd5e1;
     }
 
     @media (max-width: 600px) {
@@ -1398,6 +1441,88 @@ require_once "../includes/head.php";
                             </div>
 
                         </form>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =============================================
+                     TWO-FACTOR AUTHENTICATION
+                     ============================================= -->
+
+                <div class="settings-card">
+
+                    <div class="settings-card-header">
+
+                        <h2>Two-Factor Authentication</h2>
+
+                        <p>
+                            Add an extra layer of security to your account.
+                        </p>
+
+                    </div>
+
+                    <div class="settings-card-body">
+
+                        <div
+                            style="
+                                display:flex;
+                                align-items:center;
+                                gap:12px;
+                                margin-bottom:16px;
+                                flex-wrap:wrap;
+                            "
+                        >
+
+                            <?php if ($is2FAEnabled): ?>
+
+                                <span class="twofa-badge twofa-badge-enabled">
+                                    ✓ Enabled
+                                </span>
+
+                            <?php else: ?>
+
+                                <span class="twofa-badge twofa-badge-disabled">
+                                    Disabled
+                                </span>
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <p
+                            style="
+                                margin:0 0 18px 0;
+                                color:#64748b;
+                                font-size:14px;
+                                line-height:1.6;
+                            "
+                        >
+                            <?php if ($is2FAEnabled): ?>
+
+                                Two-factor authentication is active
+                                on your account. You will be asked
+                                for a 6-digit code from your
+                                authenticator app each time you
+                                sign in.
+
+                            <?php else: ?>
+
+                                When enabled, you'll need both your
+                                password and a 6-digit code from an
+                                authenticator app (Google Authenticator,
+                                Authy, 1Password, etc.) to sign in.
+
+                            <?php endif; ?>
+                        </p>
+
+                        <a
+                            href="/visrs/2fa/setup.php"
+                            class="button<?= $is2FAEnabled ? " button-secondary" : "" ?>"
+                        >
+                            <?= $is2FAEnabled ? "Manage 2FA" : "Enable Two-Factor Authentication" ?>
+                        </a>
 
                     </div>
 

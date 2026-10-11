@@ -8,6 +8,7 @@
  *   - global stylesheet link
  *   - print stylesheet for PDF export
  *   - favicon pack
+ *   - service worker registration (offline fallback)
  *   - Chart.js (only when $loadCharts is true)
  *
  * Set BEFORE including this file:
@@ -91,5 +92,25 @@ $basePath  = $basePath  ?? "";
         ></script>
 
     <?php endif; ?>
+
+    <!--
+        Service Worker registration.
+        Enables offline fallback via /visrs/sw.js.
+        Placed here so every page gets it automatically
+        (head.php is included everywhere).
+    -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/visrs/sw.js', {
+                    scope: '/visrs/'
+                }).then(function (reg) {
+                    console.log('VISRS Service Worker registered. Scope:', reg.scope);
+                }).catch(function (err) {
+                    console.warn('VISRS Service Worker failed:', err);
+                });
+            });
+        }
+    </script>
 
 </head>

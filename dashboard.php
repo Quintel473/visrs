@@ -645,7 +645,7 @@ require_once "includes/head.php";
                         Distribution of all registered vehicles by their current status.
                     </p>
 
-                    <div class="chart-canvas-wrapper">
+                    <div class="chart-canvas-wrapper is-loading">
 
                         <canvas id="vehicleStatusChart"></canvas>
 
@@ -666,7 +666,7 @@ require_once "includes/head.php";
                         Number of recorded accidents per month over the last 6 months.
                     </p>
 
-                    <div class="chart-canvas-wrapper">
+                    <div class="chart-canvas-wrapper is-loading">
 
                         <canvas id="accidentsChart"></canvas>
 
@@ -726,6 +726,9 @@ require_once "includes/head.php";
         var ctx = document.getElementById('vehicleStatusChart');
         if (!ctx) return;
 
+        var wrapper = ctx.parentNode;
+        wrapper.classList.add('is-loading');
+
         var colors = getThemeColors();
 
         if (vehicleStatusChart) {
@@ -761,6 +764,12 @@ require_once "includes/head.php";
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 600,
+                    onComplete: function () {
+                        wrapper.classList.remove('is-loading');
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -792,6 +801,9 @@ require_once "includes/head.php";
         var ctx = document.getElementById('accidentsChart');
         if (!ctx) return;
 
+        var wrapper = ctx.parentNode;
+        wrapper.classList.add('is-loading');
+
         var colors = getThemeColors();
 
         if (accidentsChart) {
@@ -813,6 +825,12 @@ require_once "includes/head.php";
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 600,
+                    onComplete: function () {
+                        wrapper.classList.remove('is-loading');
+                    }
+                },
                 plugins: {
                     legend: {
                         display: false

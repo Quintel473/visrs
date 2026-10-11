@@ -22,6 +22,17 @@ $error = $_GET["error"] ?? "";
 
 
 /*
+ * Filter state (2FA status).
+ */
+
+$filter = $_GET["filter"] ?? "";
+
+if (!in_array($filter, ["2fa_on", "2fa_off", "2fa_warn"], true)) {
+    $filter = "";
+}
+
+
+/*
 |--------------------------------------------------------------------------
 | Pagination Setup
 |--------------------------------------------------------------------------
@@ -29,7 +40,35 @@ $error = $_GET["error"] ?? "";
 
 $perPage = 25;
 
-$countStmt = $pdo->query("SELECT COUNT(*) FROM users");
+$whereSql = "";
+
+if ($filter === "2fa_on") {
+
+    $whereSql = "WHERE TwoFactorEnabled = 1";
+
+} elseif ($filter === "2fa_off") {
+
+    $whereSql = "WHERE TwoFactorEnabled = 0";
+
+} elseif ($filter === "2fa_warn") {
+
+    $whereSql = "
+        WHERE TwoFactorEnabled = 1
+          AND (
+              SELECT COUNT(*)
+              FROM recovery_codes rc
+              WHERE rc.UserID = users.UserID
+                AND rc.UsedAt IS NULL
+          ) <= 2
+    ";
+}
+
+$countStmt = $pdo->query("
+    SELECT COUNT(*)
+    FROM users
+    {$whereSql}
+");
+
 $totalUsers = (int) $countStmt->fetchColumn();
 
 $pagination = paginationMeta($totalUsers, $perPage);
@@ -37,6 +76,10 @@ $pagination = paginationMeta($totalUsers, $perPage);
 
 /*
  * Retrieve users for current page.
+ *
+ * Includes TwoFactorEnabled and a subquery counting
+ * unused recovery codes so we can flag accounts that
+ * are running low.
  */
 
 $stmt = $pdo->prepare("
@@ -46,8 +89,16 @@ $stmt = $pdo->prepare("
         LastName,
         Email,
         Role,
-        CreatedAt
+        CreatedAt,
+        TwoFactorEnabled,
+        (
+            SELECT COUNT(*)
+            FROM recovery_codes rc
+            WHERE rc.UserID = users.UserID
+              AND rc.UsedAt IS NULL
+        ) AS UnusedRecoveryCodes
     FROM users
+    {$whereSql}
     ORDER BY CreatedAt DESC
     LIMIT ? OFFSET ?
 ");
@@ -143,6 +194,106 @@ require_once "../includes/head.php";
 
         color:#92400e;
 
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2FA Status Badges
+    |--------------------------------------------------------------------------
+    */
+
+    .twofa-status {
+
+        display:inline-flex;
+        align-items:center;
+        gap:5px;
+
+        padding:5px 10px;
+
+        border-radius:999px;
+
+        font-size:11px;
+        font-weight:700;
+        letter-spacing:0.3px;
+        text-transform:uppercase;
+
+        line-height:1;
+
+        white-space:nowrap;
+
+    }
+
+    .twofa-status-on {
+        background:#dcfce7;
+        color:#166534;
+    }
+
+    .twofa-status-off {
+        background:#f3f4f6;
+        color:#64748b;
+    }
+
+    .twofa-status-warn {
+        background:#fef3c7;
+        color:#92400e;
+    }
+
+
+    /* Dark mode */
+
+    [data-theme="dark"] .twofa-status-on {
+        background:#064e3b;
+        color:#6ee7b7;
+    }
+
+    [data-theme="dark"] .twofa-status-off {
+        background:#334155;
+        color:#cbd5e1;
+    }
+
+    [data-theme="dark"] .twofa-status-warn {
+        background:#78350f;
+        color:#fcd34d;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filter Dropdown
+    |--------------------------------------------------------------------------
+    */
+
+    .users-filter-select {
+
+        padding:10px 12px;
+
+        border:1px solid #d1d5db;
+        border-radius:8px;
+
+        font-size:14px;
+        font-family:inherit;
+
+        background:#ffffff;
+        color:#111827;
+
+        cursor:pointer;
+
+        min-width:200px;
+
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .users-filter-select:focus {
+        outline:none;
+        border-color:#2563eb;
+        box-shadow:0 0 0 3px rgba(37,99,235,0.10);
+    }
+
+    [data-theme="dark"] .users-filter-select {
+        background:#0f172a;
+        border-color:#334155;
+        color:#e2e8f0;
     }
 
 </style>
@@ -473,27 +624,100 @@ require_once "../includes/head.php";
                             color:#6b7280;
                             margin:6px 0 0 0;
                         ">
+
                             <?= $pagination["totalRows"] ?> user(s) registered
+
+                            <?php if ($filter === "2fa_on"): ?>
+                                &nbsp;·&nbsp; <strong>2FA enabled</strong>
+                            <?php elseif ($filter === "2fa_off"): ?>
+                                &nbsp;·&nbsp; <strong>2FA disabled</strong>
+                            <?php elseif ($filter === "2fa_warn"): ?>
+                                &nbsp;·&nbsp; <strong>low recovery codes</strong>
+                            <?php endif; ?>
+
                         </p>
 
                     </div>
 
 
-                    <!-- SEARCH -->
-
-                    <input
-                        type="text"
-                        data-table-search="usersTable"
-                        placeholder="Search users..."
+                    <div
                         style="
-                            width:260px;
-                            max-width:100%;
-                            padding:10px 12px;
-                            border:1px solid #d1d5db;
-                            border-radius:8px;
-                            font-size:14px;
+                            display:flex;
+                            gap:10px;
+                            align-items:center;
+                            flex-wrap:wrap;
                         "
                     >
+
+                        <!-- 2FA FILTER -->
+
+                        <form
+                            method="GET"
+                            action=""
+                            style="margin:0;"
+                        >
+
+                            <?php if ($success !== ""): ?>
+                                <input
+                                    type="hidden"
+                                    name="success"
+                                    value="<?= htmlspecialchars($success) ?>"
+                                >
+                            <?php endif; ?>
+
+                            <?php if ($error !== ""): ?>
+                                <input
+                                    type="hidden"
+                                    name="error"
+                                    value="<?= htmlspecialchars($error) ?>"
+                                >
+                            <?php endif; ?>
+
+                            <select
+                                name="filter"
+                                class="users-filter-select"
+                                onchange="this.form.submit();"
+                                aria-label="Filter by 2FA status"
+                            >
+
+                                <option value="" <?= $filter === "" ? "selected" : "" ?>>
+                                    All users
+                                </option>
+
+                                <option value="2fa_on" <?= $filter === "2fa_on" ? "selected" : "" ?>>
+                                    2FA enabled
+                                </option>
+
+                                <option value="2fa_off" <?= $filter === "2fa_off" ? "selected" : "" ?>>
+                                    2FA disabled
+                                </option>
+
+                                <option value="2fa_warn" <?= $filter === "2fa_warn" ? "selected" : "" ?>>
+                                    2FA low / no recovery codes
+                                </option>
+
+                            </select>
+
+                        </form>
+
+
+                        <!-- SEARCH -->
+
+                        <input
+                            type="text"
+                            data-table-search="usersTable"
+                            placeholder="Search users..."
+                            style="
+                                width:260px;
+                                max-width:100%;
+                                padding:10px 12px;
+                                border:1px solid #d1d5db;
+                                border-radius:8px;
+                                font-size:14px;
+                            "
+                        >
+
+                    </div>
 
                 </div>
 
@@ -517,8 +741,12 @@ require_once "../includes/head.php";
                         </strong>
 
                         <p style="margin:8px 0 0 0;">
-                            There are currently no registered users
-                            in the system.
+                            <?php if ($filter !== ""): ?>
+                                No users match the current filter.
+                            <?php else: ?>
+                                There are currently no registered users
+                                in the system.
+                            <?php endif; ?>
                         </p>
 
                     </div>
@@ -641,6 +869,15 @@ require_once "../includes/head.php";
                                             padding:14px;
                                             border-bottom:1px solid #e5e7eb;
                                         ">
+                                            2FA
+                                        </th>
+
+
+                                        <th style="
+                                            text-align:left;
+                                            padding:14px;
+                                            border-bottom:1px solid #e5e7eb;
+                                        ">
                                             Created
                                         </th>
 
@@ -701,6 +938,42 @@ require_once "../includes/head.php";
 
                                         $isSelf =
                                             $listedUserID === $currentUserID;
+
+
+                                        /*
+                                         * Determine 2FA badge.
+                                         */
+
+                                        $twoFAEnabled =
+                                            (int) ($user["TwoFactorEnabled"] ?? 0) === 1;
+
+                                        $unusedCodes =
+                                            (int) ($user["UnusedRecoveryCodes"] ?? 0);
+
+                                        if (!$twoFAEnabled) {
+
+                                            $twoFAClass = "twofa-status twofa-status-off";
+                                            $twoFALabel = "Off";
+                                            $twoFATitle = "Two-factor authentication is not enabled.";
+
+                                        } elseif ($unusedCodes === 0) {
+
+                                            $twoFAClass = "twofa-status twofa-status-warn";
+                                            $twoFALabel = "⚠️ On";
+                                            $twoFATitle = "2FA is enabled but this user has no unused recovery codes.";
+
+                                        } elseif ($unusedCodes <= 2) {
+
+                                            $twoFAClass = "twofa-status twofa-status-warn";
+                                            $twoFALabel = "⚠️ " . $unusedCodes;
+                                            $twoFATitle = "2FA is enabled. Only {$unusedCodes} recovery code(s) remaining.";
+
+                                        } else {
+
+                                            $twoFAClass = "twofa-status twofa-status-on";
+                                            $twoFALabel = "On";
+                                            $twoFATitle = "2FA is enabled with {$unusedCodes} recovery codes remaining.";
+                                        }
 
                                         ?>
 
@@ -819,6 +1092,23 @@ require_once "../includes/head.php";
                                             </td>
 
 
+                                            <!-- 2FA -->
+
+                                            <td style="
+                                                padding:14px;
+                                                border-bottom:1px solid #f1f5f9;
+                                            ">
+
+                                                <span
+                                                    class="<?= htmlspecialchars($twoFAClass) ?>"
+                                                    title="<?= htmlspecialchars($twoFATitle) ?>"
+                                                >
+                                                    <?= htmlspecialchars($twoFALabel) ?>
+                                                </span>
+
+                                            </td>
+
+
                                             <!-- CREATED -->
 
                                             <td style="
@@ -909,7 +1199,23 @@ require_once "../includes/head.php";
 
                     </form>
 
-                    <?php renderPagination($pagination); ?>
+                    <?php
+
+                    /*
+                     * Append the current filter to pagination URLs
+                     * so the filter sticks when changing pages.
+                     *
+                     * Requires renderPagination() in functions.php
+                     * to respect an "extraQuery" key on $pagination.
+                     */
+
+                    $pagination["extraQuery"] = $filter !== ""
+                        ? "&filter=" . urlencode($filter)
+                        : "";
+
+                    renderPagination($pagination);
+
+                    ?>
 
                 <?php endif; ?>
 
