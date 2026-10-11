@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 10, 2026 at 03:38 PM
+-- Generation Time: Oct 11, 2026 at 03:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -124,7 +124,26 @@ INSERT INTO `audit_logs` (`LogID`, `UserID`, `Action`, `TableAffected`, `RecordI
 (84, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-09 18:18:52'),
 (85, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-09 18:19:52'),
 (86, NULL, 'Requested password reset', 'users', 1, '::1', '2026-10-09 20:38:39'),
-(87, NULL, 'Reset password via email link', 'users', 1, '::1', '2026-10-09 20:40:02');
+(87, NULL, 'Reset password via email link', 'users', 1, '::1', '2026-10-09 20:40:02'),
+(88, 1, 'Updated vehicle', 'vehicles', 5, '::1', '2026-10-10 23:56:10'),
+(89, 1, 'Updated vehicle', 'vehicles', 4, '::1', '2026-10-10 23:56:43'),
+(90, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-10 23:58:28'),
+(91, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-10 23:59:01'),
+(92, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-10 23:59:41'),
+(93, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-10 23:59:45'),
+(94, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-11 00:00:41'),
+(95, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:13:22'),
+(96, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:13:28'),
+(97, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:13:31'),
+(98, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:13:51'),
+(99, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:14:06'),
+(100, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:15:56'),
+(101, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:16:09'),
+(102, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:16:38'),
+(103, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:20:26'),
+(104, 1, 'Enabled two-factor authentication', 'users', 1, '::1', '2026-10-11 01:12:12'),
+(105, 1, 'Regenerated 2FA recovery codes', 'users', 1, '::1', '2026-10-11 01:22:38'),
+(106, 1, 'Disabled two-factor authentication', 'users', 1, '::1', '2026-10-11 01:23:37');
 
 -- --------------------------------------------------------
 
@@ -256,6 +275,20 @@ INSERT INTO `password_resets` (`ResetID`, `UserID`, `TokenHash`, `ExpiresAt`, `U
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `recovery_codes`
+--
+
+CREATE TABLE `recovery_codes` (
+  `CodeID` int(10) UNSIGNED NOT NULL,
+  `UserID` int(10) UNSIGNED NOT NULL,
+  `CodeHash` char(64) NOT NULL,
+  `UsedAt` datetime DEFAULT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `remember_tokens`
 --
 
@@ -266,6 +299,14 @@ CREATE TABLE `remember_tokens` (
   `ExpiresAt` datetime NOT NULL,
   `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `remember_tokens`
+--
+
+INSERT INTO `remember_tokens` (`TokenID`, `UserID`, `TokenHash`, `ExpiresAt`, `CreatedAt`) VALUES
+(5, 1, '34e7864197da1886e06309270df2a68ff07817cc97b3cad40a8863f53acce365', '2026-11-10 01:33:49', '2026-10-10 19:33:49'),
+(8, 1, 'd5b214afe9a23afb035f6f86de12499f1214dcf4759dc7a2b1b7c69433395e6a', '2026-11-10 01:53:19', '2026-10-10 19:53:19');
 
 -- --------------------------------------------------------
 
@@ -281,18 +322,21 @@ CREATE TABLE `users` (
   `ProfileImage` varchar(255) DEFAULT NULL,
   `Password` varchar(255) NOT NULL,
   `Role` enum('Admin','Police','Seller','User') NOT NULL DEFAULT 'User',
-  `CreatedAt` timestamp NOT NULL DEFAULT current_timestamp()
+  `CreatedAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `TwoFactorSecret` varchar(64) DEFAULT NULL,
+  `TwoFactorEnabled` tinyint(1) NOT NULL DEFAULT 0,
+  `TwoFactorConfirmedAt` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`UserID`, `FirstName`, `LastName`, `Email`, `ProfileImage`, `Password`, `Role`, `CreatedAt`) VALUES
-(1, 'System', 'Administrator', 'admin@visrs.local', 'users/uploads/avatars/avatar_1_3c754ad53eb46bb711c8c3ce499586bd.jpg', '$2y$10$Imtpoor58ONPuyhVuupt5.BwPeXwSitfhzqU26S.mxvr.q5gJkwcS', 'Admin', '2026-09-13 18:40:07'),
-(2, 'Police', 'Officer', 'police@visrs.local', NULL, '$2y$10$PXbiSCo8AINeXkdmlJGVZOaN/c0GhMnBZFlTWUrooI1U0vdlyhbvq', 'Police', '2026-09-13 18:49:06'),
-(3, 'Vehicle', 'Seller', 'seller@visrs.local', NULL, '$2y$10$FiccudFMePKxu0Zl4fDbcuDb76h0OW3sCuz2pGEHRBWwUC2kMRgrm', 'Seller', '2026-09-13 18:49:06'),
-(5, 'Michael', 'Brown', 'michael.brown@example.com', NULL, '$2y$10$FOyZgcOrSI5qZCEWUuHoBuDBCFh9mnhTjeGkoZDX9ek2fac7Dg4mS', 'User', '2026-09-15 00:37:34');
+INSERT INTO `users` (`UserID`, `FirstName`, `LastName`, `Email`, `ProfileImage`, `Password`, `Role`, `CreatedAt`, `TwoFactorSecret`, `TwoFactorEnabled`, `TwoFactorConfirmedAt`) VALUES
+(1, 'System', 'Administrator', 'admin@visrs.local', 'users/uploads/avatars/avatar_1_e20e45f564441790469c7f67b0f3c9f8.jpg', '$2y$10$Imtpoor58ONPuyhVuupt5.BwPeXwSitfhzqU26S.mxvr.q5gJkwcS', 'Admin', '2026-09-13 18:40:07', NULL, 0, NULL),
+(2, 'Police', 'Officer', 'police@visrs.local', NULL, '$2y$10$PXbiSCo8AINeXkdmlJGVZOaN/c0GhMnBZFlTWUrooI1U0vdlyhbvq', 'Police', '2026-09-13 18:49:06', NULL, 0, NULL),
+(3, 'Vehicle', 'Seller', 'seller@visrs.local', NULL, '$2y$10$FiccudFMePKxu0Zl4fDbcuDb76h0OW3sCuz2pGEHRBWwUC2kMRgrm', 'Seller', '2026-09-13 18:49:06', NULL, 0, NULL),
+(5, 'Michael', 'Brown', 'michael.brown@example.com', NULL, '$2y$10$FOyZgcOrSI5qZCEWUuHoBuDBCFh9mnhTjeGkoZDX9ek2fac7Dg4mS', 'User', '2026-09-15 00:37:34', NULL, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -327,8 +371,8 @@ CREATE TABLE `vehicles` (
 --
 
 INSERT INTO `vehicles` (`VehicleID`, `PlateNumber`, `VIN`, `OwnerID`, `SellerID`, `Make`, `Model`, `VehicleYear`, `Mileage`, `LastServiceDate`, `OilChangeIntervalKm`, `LastOilChangeDate`, `LastOilChangeMileage`, `Color`, `VehicleType`, `EngineNumber`, `RegistrationDate`, `Status`, `CreatedAt`) VALUES
-(4, '7XYZ890', '4T1B11HK5LU123456', 5, NULL, 'Toyota', 'Camry', '2022', NULL, NULL, NULL, NULL, NULL, 'White', 'Car', 'ENG2021TOY45821', '2023-10-14', 'Active', '2026-09-14 14:54:48'),
-(5, 'P8492', '1NXBU4EE2HZ12749', 4, 3, 'Toyota', 'Corolla', '2026', 24679, '2025-06-27', 5000, '2026-06-08', 15500, 'Midnight Black Metallic', 'Car', 'M20A-FKS-094832', '2026-02-18', 'Active', '2026-09-15 16:10:35'),
+(4, '7XYZ890', '4T1B11HK5LU123456', 5, NULL, 'Toyota', 'Camry', '2022', NULL, NULL, NULL, NULL, NULL, 'White', 'Car', 'ENG2021TOY45821', '2023-10-14', 'Inactive', '2026-09-14 14:54:48'),
+(5, 'P8492', '1NXBU4EE2HZ12749', 4, 3, 'Toyota', 'Corolla', '2026', 24679, '2025-06-27', 5000, '2026-06-08', 15500, 'Midnight Black Metallic', 'Car', 'M20A-FKS-094832', '2026-02-18', 'Sold', '2026-09-15 16:10:35'),
 (6, 'GND-4827', '1HGCM82633A004352', 5, 3, 'Mitsubishi', 'Outlander', '2021', 25000, '2025-02-08', 7000, '2026-09-08', 20000, 'Silver', 'SUV', '2ZRFE123456', '2021-03-15', 'Active', '2026-09-15 22:25:13');
 
 -- --------------------------------------------------------
@@ -511,6 +555,14 @@ ALTER TABLE `password_resets`
   ADD KEY `idx_expires` (`ExpiresAt`);
 
 --
+-- Indexes for table `recovery_codes`
+--
+ALTER TABLE `recovery_codes`
+  ADD PRIMARY KEY (`CodeID`),
+  ADD KEY `idx_user` (`UserID`),
+  ADD KEY `idx_user_unused` (`UserID`,`UsedAt`);
+
+--
 -- Indexes for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
@@ -600,7 +652,7 @@ ALTER TABLE `accidents`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
 -- AUTO_INCREMENT for table `insurance`
@@ -639,10 +691,16 @@ ALTER TABLE `password_resets`
   MODIFY `ResetID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `recovery_codes`
+--
+ALTER TABLE `recovery_codes`
+  MODIFY `CodeID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `TokenID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `TokenID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `users`
