@@ -12,12 +12,85 @@ $pageSubtitle = "Manage and review vehicle accident records.";
 
 
 /*
+ * Filter state.
+ */
+
+$filterFrom         = trim($_GET["from"]         ?? "");
+$filterTo           = trim($_GET["to"]           ?? "");
+$filterDamage       = trim($_GET["damage"]       ?? "");
+$filterVehicle      = trim($_GET["vehicle"]      ?? "");
+
+$validDamageLevels = ["Minor", "Moderate", "Major", "Severe"];
+
+if (!in_array($filterDamage, $validDamageLevels, true)) {
+    $filterDamage = "";
+}
+
+/* Basic date sanity check */
+if ($filterFrom !== "" && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterFrom)) {
+    $filterFrom = "";
+}
+
+if ($filterTo !== "" && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterTo)) {
+    $filterTo = "";
+}
+
+
+/*
+ * Build WHERE clause.
+ */
+
+$whereParts  = [];
+$whereParams = [];
+
+if ($filterFrom !== "") {
+    $whereParts[]  = "a.AccidentDate >= ?";
+    $whereParams[] = $filterFrom;
+}
+
+if ($filterTo !== "") {
+    $whereParts[]  = "a.AccidentDate <= ?";
+    $whereParams[] = $filterTo;
+}
+
+if ($filterDamage !== "") {
+    $whereParts[]  = "a.DamageLevel = ?";
+    $whereParams[] = $filterDamage;
+}
+
+if ($filterVehicle !== "") {
+    $whereParts[]  = "(
+        v.PlateNumber LIKE ?
+        OR v.Make LIKE ?
+        OR v.Model LIKE ?
+        OR CONCAT(v.Make, ' ', v.Model) LIKE ?
+    )";
+    $vehicleLike   = "%" . $filterVehicle . "%";
+    $whereParams[] = $vehicleLike;
+    $whereParams[] = $vehicleLike;
+    $whereParams[] = $vehicleLike;
+    $whereParams[] = $vehicleLike;
+}
+
+$whereSql = $whereParts
+    ? "WHERE " . implode(" AND ", $whereParts)
+    : "";
+
+
+/*
  * Pagination setup.
  */
 
 $perPage = 25;
 
-$countStmt = $pdo->query("SELECT COUNT(*) FROM accidents");
+$countStmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM accidents a
+    INNER JOIN vehicles v ON a.VehicleID = v.VehicleID
+    {$whereSql}
+");
+
+$countStmt->execute($whereParams);
 $totalAccidents = (int) $countStmt->fetchColumn();
 
 $pagination = paginationMeta($totalAccidents, $perPage);
@@ -48,6 +121,8 @@ $stmt = $pdo->prepare("
     INNER JOIN vehicles v
         ON a.VehicleID = v.VehicleID
 
+    {$whereSql}
+
     ORDER BY
         a.AccidentDate DESC,
         a.AccidentID DESC
@@ -55,8 +130,14 @@ $stmt = $pdo->prepare("
     LIMIT ? OFFSET ?
 ");
 
-$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
-$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+$paramIndex = 1;
+
+foreach ($whereParams as $p) {
+    $stmt->bindValue($paramIndex++, $p);
+}
+
+$stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
 $stmt->execute();
 
 $accidents = $stmt->fetchAll();
@@ -71,6 +152,15 @@ $canManage =
     );
 
 
+/* Any filters active? Used to show a "Clear filters" link. */
+
+$hasFilters =
+    $filterFrom    !== "" ||
+    $filterTo      !== "" ||
+    $filterDamage  !== "" ||
+    $filterVehicle !== "";
+
+
 /*
  * Bulk Action Flash Message
  */
@@ -80,12 +170,160 @@ unset($_SESSION["bulk_message"]);
 
 
 /*
+ * Query string to preserve filters across pagination.
+ */
+
+$filterQuery =
+    ($filterFrom    !== "" ? "&from="    . urlencode($filterFrom)    : "") .
+    ($filterTo      !== "" ? "&to="      . urlencode($filterTo)      : "") .
+    ($filterDamage  !== "" ? "&damage="  . urlencode($filterDamage)  : "") .
+    ($filterVehicle !== "" ? "&vehicle=" . urlencode($filterVehicle) : "");
+
+
+/*
+ * Same string, but starting with "?" for use in href attributes
+ * on the export buttons.
+ */
+
+$exportQuery = $filterQuery !== ""
+    ? "?" . ltrim($filterQuery, "&")
+    : "";
+
+
+/*
  * Global <head>
  */
 
 require_once "../includes/head.php";
 
 ?>
+
+<style>
+
+    .filter-bar {
+        display: grid;
+        grid-template-columns: 1.1fr 1.1fr 1fr 1.4fr auto;
+        gap: 12px;
+        align-items: end;
+
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .filter-field label {
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .filter-field input,
+    .filter-field select {
+        width: 100%;
+        padding: 9px 11px;
+        font-size: 13px;
+        background: #ffffff;
+        color: #111827;
+        border: 1px solid #d1d5db;
+        border-radius: 7px;
+        font-family: inherit;
+    }
+
+    .filter-field input:focus,
+    .filter-field select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .filter-actions .button {
+        padding: 9px 14px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .filter-summary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .filter-summary a {
+        color: #2563eb;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .filter-summary a:hover {
+        text-decoration: underline;
+    }
+
+    /* Dark mode */
+
+    [data-theme="dark"] .filter-bar {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .filter-field label {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .filter-field input,
+    [data-theme="dark"] .filter-field select {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .filter-summary {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .filter-summary a {
+        color: #60a5fa;
+    }
+
+    @media (max-width: 900px) {
+
+        .filter-bar {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .filter-actions {
+            grid-column: 1 / -1;
+        }
+
+    }
+
+    @media (max-width: 600px) {
+
+        .filter-bar {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+</style>
 
 <body>
 
@@ -164,6 +402,7 @@ require_once "../includes/head.php";
                         align-items:center;
                         margin-bottom:20px;
                         gap:20px;
+                        flex-wrap:wrap;
                     "
                 >
 
@@ -181,18 +420,170 @@ require_once "../includes/head.php";
                     </div>
 
 
-                    <?php if ($canManage): ?>
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                        "
+                    >
+
+                        <!-- EXPORT CSV -->
 
                         <a
-                            href="add.php"
-                            class="button"
+                            href="export_csv.php<?= htmlspecialchars($exportQuery) ?>"
+                            class="button button-secondary"
+                            title="Download the current list as a CSV file"
                         >
-                            + Add Accident
+                            📄 Export CSV
                         </a>
 
-                    <?php endif; ?>
+
+                        <!-- EXPORT PDF -->
+
+                        <a
+                            href="export_pdf.php<?= htmlspecialchars($exportQuery) ?>"
+                            target="_blank"
+                            class="button button-secondary"
+                            title="Open a printable view of the current list"
+                        >
+                            🖨 Export PDF
+                        </a>
+
+
+                        <?php if ($canManage): ?>
+
+                            <a
+                                href="add.php"
+                                class="button"
+                            >
+                                + Add Accident
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
 
                 </div>
+
+
+                <!-- FILTER BAR -->
+
+                <form
+                    method="GET"
+                    action=""
+                    class="filter-bar"
+                >
+
+                    <div class="filter-field">
+
+                        <label for="from">From Date</label>
+
+                        <input
+                            type="date"
+                            id="from"
+                            name="from"
+                            value="<?= htmlspecialchars($filterFrom) ?>"
+                        >
+
+                    </div>
+
+
+                    <div class="filter-field">
+
+                        <label for="to">To Date</label>
+
+                        <input
+                            type="date"
+                            id="to"
+                            name="to"
+                            value="<?= htmlspecialchars($filterTo) ?>"
+                        >
+
+                    </div>
+
+
+                    <div class="filter-field">
+
+                        <label for="damage">Damage Level</label>
+
+                        <select id="damage" name="damage">
+
+                            <option value="">All levels</option>
+
+                            <?php foreach ($validDamageLevels as $level): ?>
+
+                                <option
+                                    value="<?= htmlspecialchars($level) ?>"
+                                    <?= $filterDamage === $level ? "selected" : "" ?>
+                                >
+                                    <?= htmlspecialchars($level) ?>
+                                </option>
+
+                            <?php endforeach; ?>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="filter-field">
+
+                        <label for="vehicle">Vehicle (plate, make, or model)</label>
+
+                        <input
+                            type="text"
+                            id="vehicle"
+                            name="vehicle"
+                            placeholder="e.g. ABC-123, Toyota, Corolla"
+                            value="<?= htmlspecialchars($filterVehicle) ?>"
+                            maxlength="100"
+                        >
+
+                    </div>
+
+
+                    <div class="filter-actions">
+
+                        <button
+                            type="submit"
+                            class="button"
+                        >
+                            Apply
+                        </button>
+
+                        <?php if ($hasFilters): ?>
+
+                            <a
+                                href="index.php"
+                                class="button button-secondary"
+                            >
+                                Clear
+                            </a>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </form>
+
+
+                <?php if ($hasFilters): ?>
+
+                    <div class="filter-summary">
+
+                        <span>
+
+                            <?= $pagination["totalRows"] ?>
+                            result(s) match your filters.
+
+                        </span>
+
+                        <a href="index.php">Reset all filters</a>
+
+                    </div>
+
+                <?php endif; ?>
 
 
                 <?php if (empty($accidents)): ?>
@@ -207,15 +598,38 @@ require_once "../includes/head.php";
                     >
 
                         <h3>
-                            No Accident Records
+                            <?= $hasFilters ? "No Matching Accidents" : "No Accident Records" ?>
                         </h3>
 
                         <p>
-                            There are currently no accident
-                            records in the system.
+
+                            <?php if ($hasFilters): ?>
+
+                                No accidents match the current
+                                filter criteria. Try adjusting
+                                or clearing the filters.
+
+                            <?php else: ?>
+
+                                There are currently no accident
+                                records in the system.
+
+                            <?php endif; ?>
+
                         </p>
 
-                        <?php if ($canManage): ?>
+
+                        <?php if ($hasFilters): ?>
+
+                            <a
+                                href="index.php"
+                                class="button"
+                                style="margin-top:10px;"
+                            >
+                                Clear Filters
+                            </a>
+
+                        <?php elseif ($canManage): ?>
 
                             <a
                                 href="add.php"
@@ -533,7 +947,7 @@ require_once "../includes/head.php";
 
                                                     <a
                                                         href="edit.php?id=<?= (int) $accident["AccidentID"] ?>"
-                                                        class="button button-secondary"
+                                                        class="button"
                                                     >
                                                         Edit
                                                     </a>
@@ -565,7 +979,17 @@ require_once "../includes/head.php";
 
                     </form>
 
-                    <?php renderPagination($pagination); ?>
+                    <?php
+
+                    /*
+                     * Preserve filters across pagination links.
+                     */
+
+                    $pagination["extraQuery"] = $filterQuery;
+
+                    renderPagination($pagination);
+
+                    ?>
 
 
                 <?php endif; ?>

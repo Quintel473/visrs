@@ -77,6 +77,46 @@ while ($row = $statusStmt->fetch()) {
 
 /*
 |--------------------------------------------------------------------------
+| Chart Data — Vehicles by Make
+|--------------------------------------------------------------------------
+|
+| Top 6 makes by count, with everything else grouped as "Other".
+*/
+
+$makeStmt = $pdo->query("
+    SELECT
+        Make,
+        COUNT(*) AS Count
+    FROM vehicles
+    WHERE Make IS NOT NULL
+      AND Make <> ''
+    GROUP BY Make
+    ORDER BY Count DESC, Make ASC
+");
+
+$makeRows = $makeStmt->fetchAll();
+
+$vehicleMakeData = [];
+
+$topN = 6;
+$otherCount = 0;
+
+foreach ($makeRows as $i => $row) {
+
+    if ($i < $topN) {
+        $vehicleMakeData[$row["Make"]] = (int) $row["Count"];
+    } else {
+        $otherCount += (int) $row["Count"];
+    }
+}
+
+if ($otherCount > 0) {
+    $vehicleMakeData["Other"] = $otherCount;
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Chart Data — Accidents Over Time (last 6 months)
 |--------------------------------------------------------------------------
 */
@@ -106,6 +146,35 @@ for ($i = 5; $i >= 0; $i--) {
 
     $accidentMonthLabels[] = date("M Y", strtotime($monthKey . "-01"));
     $accidentMonthCounts[] = $accidentMonthsRaw[$monthKey] ?? 0;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Chart Data — Accidents by Damage Level
+|--------------------------------------------------------------------------
+*/
+
+$damageStmt = $pdo->query("
+    SELECT
+        DamageLevel,
+        COUNT(*) AS Count
+    FROM accidents
+    GROUP BY DamageLevel
+");
+
+$damageData = [
+    "Minor"    => 0,
+    "Moderate" => 0,
+    "Major"    => 0,
+    "Severe"   => 0,
+];
+
+while ($row = $damageStmt->fetch()) {
+
+    if (isset($damageData[$row["DamageLevel"]])) {
+        $damageData[$row["DamageLevel"]] = (int) $row["Count"];
+    }
 }
 
 
@@ -654,6 +723,27 @@ require_once "includes/head.php";
                 </div>
 
 
+                <!-- VEHICLES BY MAKE -->
+
+                <div class="chart-card">
+
+                    <h2>
+                        Vehicles by Make
+                    </h2>
+
+                    <p>
+                        Distribution of registered vehicles by manufacturer.
+                    </p>
+
+                    <div class="chart-canvas-wrapper is-loading">
+
+                        <canvas id="vehicleMakeChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
                 <!-- ACCIDENTS OVER TIME -->
 
                 <div class="chart-card">
@@ -669,6 +759,27 @@ require_once "includes/head.php";
                     <div class="chart-canvas-wrapper is-loading">
 
                         <canvas id="accidentsChart"></canvas>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACCIDENTS BY DAMAGE LEVEL -->
+
+                <div class="chart-card">
+
+                    <h2>
+                        Accidents by Damage Level
+                    </h2>
+
+                    <p>
+                        Severity distribution across all recorded accidents.
+                    </p>
+
+                    <div class="chart-canvas-wrapper is-loading">
+
+                        <canvas id="accidentDamageChart"></canvas>
 
                     </div>
 
@@ -699,8 +810,10 @@ require_once "includes/head.php";
 
     /* Data from PHP */
     var vehicleStatusData = <?= json_encode($vehicleStatusData) ?>;
+    var vehicleMakeData   = <?= json_encode($vehicleMakeData) ?>;
     var accidentLabels    = <?= json_encode($accidentMonthLabels) ?>;
     var accidentCounts    = <?= json_encode($accidentMonthCounts) ?>;
+    var accidentDamageData = <?= json_encode($damageData) ?>;
 
 
     /* Color palette that adapts to the current theme */
@@ -718,7 +831,9 @@ require_once "includes/head.php";
 
 
     var vehicleStatusChart = null;
+    var vehicleMakeChart = null;
     var accidentsChart = null;
+    var accidentDamageChart = null;
 
 
     function buildVehicleStatusChart() {
@@ -779,6 +894,95 @@ require_once "includes/head.php";
                             font: {
                                 family: 'Arial, Helvetica, sans-serif',
                                 size: 13
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.label + ': ' + context.parsed;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+
+    function buildVehicleMakeChart() {
+
+        var ctx = document.getElementById('vehicleMakeChart');
+        if (!ctx) return;
+
+        var wrapper = ctx.parentNode;
+        wrapper.classList.add('is-loading');
+
+        var colors = getThemeColors();
+
+        var labels = Object.keys(vehicleMakeData);
+        var values = Object.values(vehicleMakeData);
+
+        /* No data — show a friendly placeholder */
+        if (labels.length === 0) {
+
+            wrapper.innerHTML =
+                '<div style="' +
+                'display:flex;align-items:center;justify-content:center;' +
+                'height:100%;color:' + colors.textMuted + ';' +
+                'font-size:13px;text-align:center;padding:20px;' +
+                '">No vehicle data to display.</div>';
+
+            wrapper.classList.remove('is-loading');
+            return;
+        }
+
+        if (vehicleMakeChart) {
+            vehicleMakeChart.destroy();
+        }
+
+        /* Palette tuned for up to 7 slices (6 makes + Other) */
+        var palette = [
+            '#2563eb',
+            '#16a34a',
+            '#f59e0b',
+            '#dc2626',
+            '#8b5cf6',
+            '#0891b2',
+            '#94a3b8'
+        ];
+
+        vehicleMakeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: palette.slice(0, labels.length),
+                    borderColor: colors.border,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 600,
+                    onComplete: function () {
+                        wrapper.classList.remove('is-loading');
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: colors.text,
+                            padding: 12,
+                            boxWidth: 12,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif',
+                                size: 12
                             }
                         }
                     },
@@ -874,9 +1078,99 @@ require_once "includes/head.php";
     }
 
 
+    function buildAccidentDamageChart() {
+
+        var ctx = document.getElementById('accidentDamageChart');
+        if (!ctx) return;
+
+        var wrapper = ctx.parentNode;
+        wrapper.classList.add('is-loading');
+
+        var colors = getThemeColors();
+
+        if (accidentDamageChart) {
+            accidentDamageChart.destroy();
+        }
+
+        accidentDamageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Minor', 'Moderate', 'Major', 'Severe'],
+                datasets: [{
+                    label: 'Accidents',
+                    data: [
+                        accidentDamageData.Minor,
+                        accidentDamageData.Moderate,
+                        accidentDamageData.Major,
+                        accidentDamageData.Severe
+                    ],
+                    backgroundColor: [
+                        '#16a34a',   /* Minor    - green  */
+                        '#f59e0b',   /* Moderate - amber  */
+                        '#ea580c',   /* Major    - orange */
+                        '#dc2626'    /* Severe   - red    */
+                    ],
+                    borderRadius: 6,
+                    maxBarThickness: 56
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 600,
+                    onComplete: function () {
+                        wrapper.classList.remove('is-loading');
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.parsed.y + ' accident(s)';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: colors.textMuted,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif'
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: colors.textMuted,
+                            precision: 0,
+                            font: {
+                                family: 'Arial, Helvetica, sans-serif'
+                            }
+                        },
+                        grid: {
+                            color: colors.grid
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
     function buildCharts() {
         buildVehicleStatusChart();
+        buildVehicleMakeChart();
         buildAccidentsChart();
+        buildAccidentDamageChart();
     }
 
 

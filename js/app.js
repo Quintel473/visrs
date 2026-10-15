@@ -58,17 +58,39 @@ document.addEventListener("DOMContentLoaded", function () {
     |--------------------------------------------------------------------------
     | FORM SUBMISSION PROTECTION
     |--------------------------------------------------------------------------
+    |
+    | Disables submit buttons to prevent double-submits, but
+    | SKIPS the button that actually triggered the submit.
+    |
+    | Disabling the triggering button causes the browser to
+    | drop its name/value pair from the submitted form data.
+    | This is why a button with name="action" value="X" would
+    | silently lose its value if it was disabled before the
+    | form finalized.
     */
 
     document.querySelectorAll("form").forEach(function (form) {
 
-        form.addEventListener("submit", function () {
+        form.addEventListener("submit", function (event) {
+
+            /*
+             * Identify the button that triggered the submit.
+             * We must NOT disable this one.
+             */
+            var clickedButton = event.submitter || null;
 
             const submitButtons = form.querySelectorAll(
                 'button[type="submit"], input[type="submit"]'
             );
 
             submitButtons.forEach(function (button) {
+
+                /*
+                 * Skip the submitter — its value must survive.
+                 */
+                if (clickedButton && button === clickedButton) {
+                    return;
+                }
 
                 button.disabled = true;
 

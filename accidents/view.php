@@ -138,6 +138,30 @@ if (!$accident) {
 
 
 /*
+ * Load accident photos.
+ */
+
+$photoStmt = $pdo->prepare("
+    SELECT
+        p.PhotoID,
+        p.OriginalName,
+        p.StoredName,
+        p.MimeType,
+        p.FileSize,
+        p.CreatedAt,
+        u.FirstName,
+        u.LastName
+    FROM accident_photos p
+    LEFT JOIN users u ON p.UploadedBy = u.UserID
+    WHERE p.AccidentID = ?
+    ORDER BY p.CreatedAt DESC
+");
+
+$photoStmt->execute([$accidentID]);
+$accidentPhotos = $photoStmt->fetchAll();
+
+
+/*
  * Format the accident date.
  */
 
@@ -309,6 +333,109 @@ require_once "../includes/head.php";
 
     .delete-button:hover {
         background: #7f1d1d;
+    }
+
+
+    /* ---------- Photo gallery ---------- */
+
+    .photo-upload-form {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .photo-upload-form label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .photo-upload-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .photo-upload-row input[type="file"] {
+        flex: 1;
+        min-width: 220px;
+        padding: 10px;
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 7px;
+    }
+
+    .photo-upload-hint {
+        margin: 8px 0 0 0;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+    }
+
+    .photo-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .photo-thumb {
+        display: block;
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        background: #f3f4f6;
+    }
+
+    .photo-meta {
+        padding: 10px 12px;
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .photo-name {
+        margin-bottom: 4px;
+        color: #111827;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .photo-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .photo-actions .button {
+        flex: 1;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .photo-empty {
+        padding: 36px 20px;
+        background: #f8fafc;
+        border: 1px dashed #d1d5db;
+        border-radius: 10px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .photo-empty-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
     }
 
     @media (max-width: 700px) {
@@ -554,6 +681,244 @@ require_once "../includes/head.php";
                         </p>
 
                     </div>
+
+                </div>
+
+
+                <!-- PHOTOS -->
+
+                <div class="detail-section">
+
+                    <h3>
+                        Photos (<?= count($accidentPhotos) ?>)
+                    </h3>
+
+
+                    <!-- Photo action flash messages -->
+
+                    <?php if (!empty($_SESSION["photo_success"])): ?>
+
+                        <div
+                            style="
+                                background:#dcfce7;
+                                color:#166534;
+                                padding:12px 14px;
+                                border-radius:8px;
+                                margin-bottom:16px;
+                                font-weight:600;
+                            "
+                        >
+                            <?= htmlspecialchars($_SESSION["photo_success"]) ?>
+                        </div>
+
+                        <?php unset($_SESSION["photo_success"]); ?>
+
+                    <?php endif; ?>
+
+
+                    <?php if (!empty($_SESSION["photo_error"])): ?>
+
+                        <div
+                            style="
+                                background:#fee2e2;
+                                color:#991b1b;
+                                padding:12px 14px;
+                                border-radius:8px;
+                                margin-bottom:16px;
+                                font-weight:600;
+                            "
+                        >
+                            <?= htmlspecialchars($_SESSION["photo_error"]) ?>
+                        </div>
+
+                        <?php unset($_SESSION["photo_error"]); ?>
+
+                    <?php endif; ?>
+
+
+                    <!-- Upload form (Admin / Police only) -->
+
+                    <?php if ($canManageAccidents): ?>
+
+                        <form
+                            method="POST"
+                            action="photos_upload.php"
+                            enctype="multipart/form-data"
+                            class="photo-upload-form"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="<?= htmlspecialchars(generateCSRFToken()) ?>"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="accident_id"
+                                value="<?= (int) $accident["AccidentID"] ?>"
+                            >
+
+                            <label for="photo">
+                                Upload a Photo
+                            </label>
+
+                            <div class="photo-upload-row">
+
+                                <input
+                                    type="file"
+                                    id="photo"
+                                    name="photo"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    required
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="button"
+                                >
+                                    Upload
+                                </button>
+
+                            </div>
+
+                            <p class="photo-upload-hint">
+                                JPG, PNG, or WebP. Maximum 10 MB per photo.
+                            </p>
+
+                        </form>
+
+                    <?php endif; ?>
+
+
+                    <!-- Photo grid -->
+
+                    <?php if (empty($accidentPhotos)): ?>
+
+                        <div class="photo-empty">
+
+                            <div class="photo-empty-icon">
+                                📷
+                            </div>
+
+                            <strong style="display:block; margin-bottom:4px;">
+                                No photos uploaded yet
+                            </strong>
+
+                            <p style="margin:0; font-size:13px;">
+                                Photos of the accident scene or vehicle
+                                damage can be attached above.
+                            </p>
+
+                        </div>
+
+                    <?php else: ?>
+
+                        <div class="photo-grid">
+
+                            <?php foreach ($accidentPhotos as $photo): ?>
+
+                                <div class="photo-card">
+
+                                    <a
+                                        href="photos_download.php?id=<?= (int) $photo["PhotoID"] ?>&inline=1"
+                                        target="_blank"
+                                    >
+
+                                        <img
+                                            src="photos_download.php?id=<?= (int) $photo["PhotoID"] ?>&inline=1"
+                                            alt="<?= htmlspecialchars($photo["OriginalName"]) ?>"
+                                            loading="lazy"
+                                            class="photo-thumb"
+                                        >
+
+                                    </a>
+
+
+                                    <div class="photo-meta">
+
+                                        <div
+                                            class="photo-name"
+                                            title="<?= htmlspecialchars($photo["OriginalName"]) ?>"
+                                        >
+                                            <?= htmlspecialchars($photo["OriginalName"]) ?>
+                                        </div>
+
+                                        <div>
+                                            <?= number_format($photo["FileSize"] / 1024, 1) ?> KB
+                                        </div>
+
+                                        <?php if (!empty($photo["FirstName"])): ?>
+
+                                            <div>
+                                                by
+                                                <?= htmlspecialchars(
+                                                    $photo["FirstName"]
+                                                    . " "
+                                                    . $photo["LastName"]
+                                                ) ?>
+                                            </div>
+
+                                        <?php endif; ?>
+
+
+                                        <div class="photo-actions">
+
+                                            <a
+                                                href="photos_download.php?id=<?= (int) $photo["PhotoID"] ?>"
+                                                class="button button-secondary"
+                                            >
+                                                Download
+                                            </a>
+
+
+                                            <?php if ($canManageAccidents): ?>
+
+                                                <form
+                                                    method="POST"
+                                                    action="photos_delete.php"
+                                                    style="display:inline-flex; flex:1;"
+                                                    onsubmit="return confirm('Delete this photo? This cannot be undone.');"
+                                                >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="csrf_token"
+                                                        value="<?= htmlspecialchars(generateCSRFToken()) ?>"
+                                                    >
+
+                                                    <input
+                                                        type="hidden"
+                                                        name="photo_id"
+                                                        value="<?= (int) $photo["PhotoID"] ?>"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="button"
+                                                        style="
+                                                            width:100%;
+                                                            background:#991b1b;
+                                                        "
+                                                    >
+                                                        Delete
+                                                    </button>
+
+                                                </form>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    <?php endif; ?>
 
                 </div>
 

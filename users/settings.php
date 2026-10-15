@@ -73,7 +73,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     requireValidCSRF();
 
-    $action = $_POST["action"] ?? "";
+
+    /*
+     * The avatar form has a hidden "default_action" field plus a
+     * submit button named "action". The button's value wins when
+     * present, otherwise the hidden default is used.
+     */
+
+    $action = $_POST["action"] ?? $_POST["default_action"] ?? "";
 
 
     /*
@@ -1193,7 +1200,7 @@ require_once "../includes/head.php";
 
                                     <input
                                         type="hidden"
-                                        name="action"
+                                        name="default_action"
                                         value="upload_avatar"
                                     >
 
@@ -1224,6 +1231,7 @@ require_once "../includes/head.php";
                                                 name="action"
                                                 value="remove_avatar"
                                                 class="button button-secondary"
+                                                formnovalidate
                                                 onclick="return confirm('Remove your profile picture?');"
                                             >
                                                 Remove Photo
