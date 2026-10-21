@@ -7,7 +7,7 @@
  *   - anti-FOUC theme loader (runs before CSS paints)
  *   - global stylesheet link
  *   - print stylesheet for PDF export
- *   - favicon pack
+ *   - dynamic favicon
  *   - service worker registration (offline fallback)
  *   - Chart.js (only when $loadCharts is true)
  *
@@ -54,16 +54,16 @@ $basePath  = $basePath  ?? "";
     <title><?= htmlspecialchars($pageTitle) ?></title>
 
     <!--
-        Favicon pack.
-        Absolute paths so every page (root or subfolder)
-        resolves them identically.
+        Favicon — Dynamic SVG "V"
+        Generates a dark rounded square with a white "V"
+        entirely via code. No image files required.
     -->
-    <link rel="icon" type="image/svg+xml" href="/visrs/images/favicon.svg">
-    <link rel="icon" type="image/x-icon" href="/visrs/images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="96x96" href="/visrs/images/favicon-96x96.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/visrs/images/apple-touch-icon.png">
-    <link rel="manifest" href="/visrs/images/site.webmanifest">
-    <meta name="theme-color" content="#1e3a8a">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23111827'/><text x='50' y='52' font-family='Arial,sans-serif' font-size='65' font-weight='bold' fill='%23ffffff' text-anchor='middle' dominant-baseline='middle'>V</text></svg>">
+    
+    <!--
+        Updated theme-color to match the new dark favicon background.
+    -->
+    <meta name="theme-color" content="#111827">
 
     <link
         rel="stylesheet"
