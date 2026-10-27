@@ -313,7 +313,7 @@ require_once "includes/head.php";
 
             <div class="login-hero-top">
 
-                <span class="login-hero-badge">ADMIN</span>
+                <span class="login-hero-badge">USER</span>
 
             </div>
 
