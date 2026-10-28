@@ -346,7 +346,7 @@ require_once "includes/head.php";
                         Total Vehicles
                     </div>
 
-                    <div class="stat-number">
+                    <div class="stat-number" data-target="<?= (int) $totalVehicles ?>">
 
                         <?= htmlspecialchars(
                             $totalVehicles
@@ -368,7 +368,7 @@ require_once "includes/head.php";
                         Total Owners
                     </div>
 
-                    <div class="stat-number">
+                    <div class="stat-number" data-target="<?= (int) $totalOwners ?>">
 
                         <?= htmlspecialchars(
                             $totalOwners
@@ -390,7 +390,7 @@ require_once "includes/head.php";
                         Accident Records
                     </div>
 
-                    <div class="stat-number">
+                    <div class="stat-number" data-target="<?= (int) $totalAccidents ?>">
 
                         <?= htmlspecialchars(
                             $totalAccidents
@@ -412,7 +412,7 @@ require_once "includes/head.php";
                         Insurance Records
                     </div>
 
-                    <div class="stat-number">
+                    <div class="stat-number" data-target="<?= (int) $totalInsurance ?>">
 
                         <?= htmlspecialchars(
                             $totalInsurance

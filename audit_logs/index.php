@@ -399,244 +399,75 @@ require_once "../includes/head.php";
                 </form>
 
 
-                <!-- TABLE -->
+                <!-- TIMELINE -->
 
                 <?php if (count($logs) > 0): ?>
 
-                    <div
-                        style="
-                            overflow-x:auto;
-                        "
-                    >
-
-                        <table
-                            class="data-table"
-                            style="
-                                width:100%;
-                            "
-                        >
-
-                            <thead>
-
-                                <tr>
-
-                                    <th>
-                                        ID
-                                    </th>
-
-                                    <th>
-                                        User
-                                    </th>
-
-                                    <th>
-                                        Action
-                                    </th>
-
-                                    <th>
-                                        Table
-                                    </th>
-
-                                    <th>
-                                        Record ID
-                                    </th>
-
-                                    <th>
-                                        IP Address
-                                    </th>
-
-                                    <th>
-                                        Date & Time
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-
-                            <tbody>
-
-                                <?php foreach ($logs as $log): ?>
-
-                                    <tr>
-
-
-                                        <!-- LOG ID -->
-
-                                        <td>
-
-                                            <strong>
-                                                #<?= (int) $log["LogID"] ?>
-                                            </strong>
-
-                                        </td>
-
-
-                                        <!-- USER -->
-
-                                        <td>
-
-                                            <?php if ($log["FirstName"] !== null): ?>
-
-                                                <strong>
-                                                    <?= htmlspecialchars(
-                                                        $log["FirstName"] .
-                                                        " " .
-                                                        $log["LastName"]
-                                                    ) ?>
-                                                </strong>
-
-                                                <br>
-
-                                                <small
-                                                    style="
-                                                        color:#6b7280;
-                                                    "
-                                                >
-                                                    <?= htmlspecialchars(
-                                                        $log["Role"] ?? ""
-                                                    ) ?>
-                                                </small>
-
-                                            <?php else: ?>
-
-                                                <span
-                                                    style="
-                                                        color:#6b7280;
-                                                    "
-                                                >
-                                                    Unknown User
-                                                </span>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
-                                        <!-- ACTION -->
-
-                                        <td>
-
-                                            <?= htmlspecialchars(
-                                                $log["Action"]
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- TABLE -->
-
-                                        <td>
-
-                                            <?php if (!empty($log["TableAffected"])): ?>
-
-                                                <span
-                                                    style="
-                                                        display:inline-block;
-                                                        padding:5px 9px;
-                                                        border-radius:6px;
-                                                        background:#f3f4f6;
-                                                        color:#374151;
-                                                        font-size:13px;
-                                                        font-weight:600;
-                                                    "
-                                                >
-                                                    <?= htmlspecialchars(
-                                                        $log["TableAffected"]
-                                                    ) ?>
-                                                </span>
-
-                                            <?php else: ?>
-
-                                                <span
-                                                    style="
-                                                        color:#9ca3af;
-                                                    "
-                                                >
-                                                    —
-                                                </span>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
-                                        <!-- RECORD ID -->
-
-                                        <td>
-
-                                            <?php if ($log["RecordID"] !== null): ?>
-
-                                                <?= (int) $log["RecordID"] ?>
-
-                                            <?php else: ?>
-
-                                                <span
-                                                    style="
-                                                        color:#9ca3af;
-                                                    "
-                                                >
-                                                    —
-
-                                                </span>
-
-                                            <?php endif; ?>
-
-                                        </td>
-
-
-                                        <!-- IP ADDRESS -->
-
-                                        <td>
-
-                                            <?= htmlspecialchars(
-                                                $log["IPAddress"] ?? "—"
-                                            ) ?>
-
-                                        </td>
-
-
-                                        <!-- DATE -->
-
-                                        <td>
-
-                                            <strong>
-                                                <?= htmlspecialchars(
-                                                    date(
-                                                        "M d, Y",
-                                                        strtotime(
-                                                            $log["CreatedAt"]
-                                                        )
-                                                    )
-                                                ) ?>
-                                            </strong>
-
+                    <div class="audit-timeline">
+
+                        <?php foreach ($logs as $log): 
+                            
+                            /* Determine color based on action */
+                            $actionText = strtolower($log["Action"]);
+                            $dotClass = "action-update"; // Default (Amber)
+                            
+                            if (strpos($actionText, 'create') !== false || strpos($actionText, 'add') !== false || strpos($actionText, 'insert') !== false) {
+                                $dotClass = "action-create"; // Green
+                            } elseif (strpos($actionText, 'delete') !== false || strpos($actionText, 'remove') !== false) {
+                                $dotClass = "action-delete"; // Red
+                            } elseif (strpos($actionText, 'login') !== false || strpos($actionText, 'auth') !== false) {
+                                $dotClass = "action-login"; // Blue
+                            }
+
+                            /* Format user name */
+                            $userName = $log["FirstName"] 
+                                ? htmlspecialchars($log["FirstName"] . " " . $log["LastName"]) 
+                                : "Unknown User";
+                                
+                            $userRole = $log["Role"] ? htmlspecialchars($log["Role"]) : "System";
+                            
+                            /* Format Time */
+                            $logTime = date("M d, Y • h:i A", strtotime($log["CreatedAt"]));
+                        ?>
+
+                            <div class="audit-item">
+                                
+                                <!-- Colored dot -->
+                                <div class="audit-dot <?= $dotClass ?>"></div>
+                                
+                                <!-- Content card -->
+                                <div class="audit-content">
+                                    
+                                    <div class="audit-header">
+                                        <h3 class="audit-title">
+                                            <?= htmlspecialchars($log["Action"]) ?>
+                                        </h3>
+                                        <span class="audit-time">
+                                            <?= $logTime ?>
+                                        </span>
+                                    </div>
+
+                                    <p class="audit-details">
+                                        <strong><?= $userName ?></strong> 
+                                        (<?= $userRole ?>) performed this action.
+                                        <?php if (!empty($log["TableAffected"])): ?>
                                             <br>
+                                            Affected Table: <strong><?= htmlspecialchars($log["TableAffected"]) ?></strong>
+                                            <?php if ($log["RecordID"] !== null): ?>
+                                                (Record #<?= (int) $log["RecordID"] ?>)
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </p>
 
-                                            <small
-                                                style="
-                                                    color:#6b7280;
-                                                "
-                                            >
-                                                <?= htmlspecialchars(
-                                                    date(
-                                                        "h:i A",
-                                                        strtotime(
-                                                            $log["CreatedAt"]
-                                                        )
-                                                    )
-                                                ) ?>
-                                            </small>
+                                    <div class="audit-meta">
+                                        <span>ID: <strong>#<?= (int) $log["LogID"] ?></strong></span>
+                                        <span>IP: <strong><?= htmlspecialchars($log["IPAddress"] ?? "—") ?></strong></span>
+                                    </div>
 
-                                        </td>
+                                </div>
+                            </div>
 
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            </tbody>
-
-                        </table>
+                        <?php endforeach; ?>
 
                     </div>
 
@@ -709,8 +540,6 @@ require_once "../includes/head.php";
 </div>
 
 
-<!-- FIX: removed the duplicate </body></html> that appeared after
-     this include. footer.php already closes those tags. -->
 <?php
 
 include __DIR__ . "/../includes/footer.php";

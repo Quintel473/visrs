@@ -168,6 +168,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 unset($_SESSION["2fa_pending_user"]);
 
+
+                /*
+                 * NEW: Save the user's first name to a cookie 
+                 * so the login page can greet them on their next visit.
+                 */
+
+                setcookie("last_logged_in_user", $user["FirstName"], time() + (86400 * 30), "/");
+
+
                 /*
                  * Remember-me: if the user checked the box on the
                  * password step, issue the persistent token now

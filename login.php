@@ -244,6 +244,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
                 /*
+                 * NEW: Save the user's first name to a cookie 
+                 * so the login page can greet them on their next visit.
+                 */
+
+                setcookie("last_logged_in_user", $user["FirstName"], time() + (86400 * 30), "/");
+
+
+                /*
                  * Redirect to dashboard.
                  */
 
@@ -313,7 +321,16 @@ require_once "includes/head.php";
 
             <div class="login-hero-top">
 
-                <span class="login-hero-badge">USER</span>
+                <!-- NEW: Dynamic Greeting Badge -->
+                <span class="login-hero-badge">
+                    <?php 
+                    if (isset($_COOKIE["last_logged_in_user"])) {
+                        echo "Welcome back, " . htmlspecialchars($_COOKIE["last_logged_in_user"]);
+                    } else {
+                        echo "USER LOGIN";
+                    }
+                    ?>
+                </span>
 
             </div>
 

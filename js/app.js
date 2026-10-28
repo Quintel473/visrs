@@ -1303,3 +1303,145 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 })();
+
+/* =========================================================
+   VISRS Animated Number Counters
+   ========================================================= */
+(function () {
+    'use strict';
+
+    function initCounters() {
+        document.querySelectorAll('.stat-number[data-target]').forEach(function (el) {
+            var target = parseInt(el.getAttribute('data-target'), 10);
+            if (isNaN(target)) return;
+
+            var duration = 1000; // 1 second
+            var start = null;
+
+            function animateNumber(timestamp) {
+                if (!start) start = timestamp;
+                var progress = timestamp - start;
+                var current = Math.min(progress / duration, 1);
+                
+                /* Ease out quad */
+                var ease = 1 - Math.pow(1 - current, 3);
+                var value = Math.floor(ease * target);
+
+                el.textContent = value.toLocaleString();
+
+                if (current < 1) {
+                    window.requestAnimationFrame(animateNumber);
+                } else {
+                    el.textContent = target.toLocaleString();
+                }
+            }
+
+            window.requestAnimationFrame(animateNumber);
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCounters);
+    } else {
+        initCounters();
+    }
+})();
+
+
+/* =========================================================
+   VISRS Photo Lightbox
+   ========================================================= */
+(function () {
+    'use strict';
+
+    function initLightbox() {
+        var triggers = document.querySelectorAll('.photo-lightbox-trigger');
+        var lightbox = document.getElementById('photo-lightbox');
+        
+        if (!triggers.length || !lightbox) return;
+
+        var imgEl = document.getElementById('lightbox-img');
+        var captionEl = document.getElementById('lightbox-caption');
+        var btnClose = lightbox.querySelector('.lightbox-close');
+        var btnPrev = lightbox.querySelector('.lightbox-prev');
+        var btnNext = lightbox.querySelector('.lightbox-next');
+
+        var currentIndex = 0;
+        var images = [];
+
+        // Build array of images from triggers
+        triggers.forEach(function (trigger, index) {
+            images.push({
+                src: trigger.getAttribute('data-full-src'),
+                caption: trigger.getAttribute('data-caption')
+            });
+
+            trigger.addEventListener('click', function (e) {
+                e.preventDefault();
+                openLightbox(index);
+            });
+        });
+
+        if (images.length <= 1) {
+            lightbox.classList.add('single-photo');
+        }
+
+        function openLightbox(index) {
+            currentIndex = index;
+            updateLightbox();
+            lightbox.classList.add('active');
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            lightbox.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        function updateLightbox() {
+            var image = images[currentIndex];
+            imgEl.src = image.src;
+            captionEl.textContent = image.caption;
+        }
+
+        function showNext() {
+            currentIndex = (currentIndex + 1) % images.length;
+            updateLightbox();
+        }
+
+        function showPrev() {
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            updateLightbox();
+        }
+
+        // Event Listeners
+        btnClose.addEventListener('click', closeLightbox);
+        btnNext.addEventListener('click', showNext);
+        btnPrev.addEventListener('click', showPrev);
+
+        // Click outside image to close
+        lightbox.addEventListener('click', function (e) {
+            if (e.target === lightbox || e.target.classList.contains('lightbox-content')) {
+                closeLightbox();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function (e) {
+            if (!lightbox.classList.contains('active')) return;
+            
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowRight') showNext();
+            if (e.key === 'ArrowLeft') showPrev();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLightbox);
+    } else {
+        initLightbox();
+    }
+
+})();
