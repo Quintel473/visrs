@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 11, 2026 at 03:52 AM
+-- Generation Time: Oct 28, 2026 at 03:29 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -37,6 +37,30 @@ CREATE TABLE `accidents` (
   `ReportNumber` varchar(100) DEFAULT NULL,
   `CreatedAt` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `accidents`
+--
+
+INSERT INTO `accidents` (`AccidentID`, `VehicleID`, `AccidentDate`, `Location`, `Description`, `DamageLevel`, `ReportNumber`, `CreatedAt`) VALUES
+(2, 6, '2026-09-16', 'Grand Anse, St. George', 'Vehicle 1 was traveling northbound at approximately 25 mph through an intersection on a green light when Vehicle 2, traveling southbound, attempted a sudden left turn without yielding the right-of-way. Despite Vehicle 1 immediately applying the brakes, a broadside collision occurred, causing severe front-end damage to Vehicle 1 and extensive passenger-side damage to Vehicle 2. The impact deployed airbags in both vehicles, requiring both to be towed from the scene, while the driver of Vehicle 1 was transported to the hospital for evaluation of leg pain.', 'Moderate', '1102356', '2026-10-12 20:26:43');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `accident_photos`
+--
+
+CREATE TABLE `accident_photos` (
+  `PhotoID` int(10) UNSIGNED NOT NULL,
+  `AccidentID` int(10) UNSIGNED NOT NULL,
+  `UploadedBy` int(10) UNSIGNED NOT NULL,
+  `OriginalName` varchar(255) NOT NULL,
+  `StoredName` varchar(255) NOT NULL,
+  `MimeType` varchar(100) NOT NULL,
+  `FileSize` int(10) UNSIGNED NOT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -143,7 +167,28 @@ INSERT INTO `audit_logs` (`LogID`, `UserID`, `Action`, `TableAffected`, `RecordI
 (103, 1, 'Updated own profile information', 'users', 1, '::1', '2026-10-11 00:20:26'),
 (104, 1, 'Enabled two-factor authentication', 'users', 1, '::1', '2026-10-11 01:12:12'),
 (105, 1, 'Regenerated 2FA recovery codes', 'users', 1, '::1', '2026-10-11 01:22:38'),
-(106, 1, 'Disabled two-factor authentication', 'users', 1, '::1', '2026-10-11 01:23:37');
+(106, 1, 'Disabled two-factor authentication', 'users', 1, '::1', '2026-10-11 01:23:37'),
+(107, 1, 'Updated vehicle', 'vehicles', 4, '::1', '2026-10-11 17:50:04'),
+(108, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-12 19:58:50'),
+(109, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-12 19:59:35'),
+(110, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-12 19:59:39'),
+(111, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-12 19:59:44'),
+(112, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-12 19:59:48'),
+(113, 1, 'Added accident record for vehicle GND-4827', 'accidents', 2, '::1', '2026-10-12 20:26:43'),
+(114, 1, 'Added current ownership record for vehicle GND-4827', 'ownership_history', 10, '::1', '2026-10-12 20:29:16'),
+(115, 1, 'Updated accident record #2 for vehicle GND-4827', 'accidents', 2, '::1', '2026-10-12 20:31:49'),
+(116, 1, 'Exported accident records to PDF (1 rows)', 'accidents', 0, '::1', '2026-10-12 20:42:01'),
+(117, 1, 'Exported accident records to CSV (1 rows)', 'accidents', 0, '::1', '2026-10-12 20:42:55'),
+(118, 1, 'Exported accident records to CSV (1 rows)', 'accidents', 0, '::1', '2026-10-12 20:43:01'),
+(119, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-15 01:00:55'),
+(120, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-15 01:00:58'),
+(121, 1, 'Enabled two-factor authentication', 'users', 1, '::1', '2026-10-18 02:06:08'),
+(122, 1, 'Updated profile picture', 'users', 1, '::1', '2026-10-18 02:43:59'),
+(123, 1, 'Removed profile picture', 'users', 1, '::1', '2026-10-18 03:06:26'),
+(124, 1, 'Disabled two-factor authentication', 'users', 1, '::1', '2026-10-21 15:53:39'),
+(125, 1, 'Exported accident records to PDF (1 rows)', 'accidents', 0, '::1', '2026-10-21 15:55:06'),
+(126, 1, 'Exported accident records to PDF (1 rows)', 'accidents', 0, '::1', '2026-10-21 15:55:20'),
+(127, 1, 'Exported accident records to PDF (1 rows)', 'accidents', 0, '::1', '2026-10-21 15:55:31');
 
 -- --------------------------------------------------------
 
@@ -247,7 +292,8 @@ CREATE TABLE `ownership_history` (
 
 INSERT INTO `ownership_history` (`OwnershipID`, `VehicleID`, `OwnerID`, `StartDate`, `EndDate`, `TransferReason`, `CreatedAt`) VALUES
 (8, 4, 4, '2023-10-14', '2025-10-14', 'Sale of vehicle', '2026-09-14 14:55:36'),
-(9, 4, 5, '2025-10-21', NULL, 'Bought', '2026-09-14 15:05:14');
+(9, 4, 5, '2025-10-21', NULL, 'Bought', '2026-09-14 15:05:14'),
+(10, 6, 4, '2026-09-05', NULL, 'Bought', '2026-10-12 20:29:16');
 
 -- --------------------------------------------------------
 
@@ -306,7 +352,8 @@ CREATE TABLE `remember_tokens` (
 
 INSERT INTO `remember_tokens` (`TokenID`, `UserID`, `TokenHash`, `ExpiresAt`, `CreatedAt`) VALUES
 (5, 1, '34e7864197da1886e06309270df2a68ff07817cc97b3cad40a8863f53acce365', '2026-11-10 01:33:49', '2026-10-10 19:33:49'),
-(8, 1, 'd5b214afe9a23afb035f6f86de12499f1214dcf4759dc7a2b1b7c69433395e6a', '2026-11-10 01:53:19', '2026-10-10 19:53:19');
+(8, 1, 'd5b214afe9a23afb035f6f86de12499f1214dcf4759dc7a2b1b7c69433395e6a', '2026-11-10 01:53:19', '2026-10-10 19:53:19'),
+(35, 1, '4e7cca29a677924257ee8dc0547070db08924d795f382d5a2ab847f811425c01', '2026-11-27 02:49:17', '2026-10-27 21:49:17');
 
 -- --------------------------------------------------------
 
@@ -333,7 +380,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`UserID`, `FirstName`, `LastName`, `Email`, `ProfileImage`, `Password`, `Role`, `CreatedAt`, `TwoFactorSecret`, `TwoFactorEnabled`, `TwoFactorConfirmedAt`) VALUES
-(1, 'System', 'Administrator', 'admin@visrs.local', 'users/uploads/avatars/avatar_1_e20e45f564441790469c7f67b0f3c9f8.jpg', '$2y$10$Imtpoor58ONPuyhVuupt5.BwPeXwSitfhzqU26S.mxvr.q5gJkwcS', 'Admin', '2026-09-13 18:40:07', NULL, 0, NULL),
+(1, 'System', 'Administrator', 'admin@visrs.local', NULL, '$2y$10$Imtpoor58ONPuyhVuupt5.BwPeXwSitfhzqU26S.mxvr.q5gJkwcS', 'Admin', '2026-09-13 18:40:07', NULL, 0, NULL),
 (2, 'Police', 'Officer', 'police@visrs.local', NULL, '$2y$10$PXbiSCo8AINeXkdmlJGVZOaN/c0GhMnBZFlTWUrooI1U0vdlyhbvq', 'Police', '2026-09-13 18:49:06', NULL, 0, NULL),
 (3, 'Vehicle', 'Seller', 'seller@visrs.local', NULL, '$2y$10$FiccudFMePKxu0Zl4fDbcuDb76h0OW3sCuz2pGEHRBWwUC2kMRgrm', 'Seller', '2026-09-13 18:49:06', NULL, 0, NULL),
 (5, 'Michael', 'Brown', 'michael.brown@example.com', NULL, '$2y$10$FOyZgcOrSI5qZCEWUuHoBuDBCFh9mnhTjeGkoZDX9ek2fac7Dg4mS', 'User', '2026-09-15 00:37:34', NULL, 0, NULL);
@@ -371,9 +418,9 @@ CREATE TABLE `vehicles` (
 --
 
 INSERT INTO `vehicles` (`VehicleID`, `PlateNumber`, `VIN`, `OwnerID`, `SellerID`, `Make`, `Model`, `VehicleYear`, `Mileage`, `LastServiceDate`, `OilChangeIntervalKm`, `LastOilChangeDate`, `LastOilChangeMileage`, `Color`, `VehicleType`, `EngineNumber`, `RegistrationDate`, `Status`, `CreatedAt`) VALUES
-(4, '7XYZ890', '4T1B11HK5LU123456', 5, NULL, 'Toyota', 'Camry', '2022', NULL, NULL, NULL, NULL, NULL, 'White', 'Car', 'ENG2021TOY45821', '2023-10-14', 'Inactive', '2026-09-14 14:54:48'),
+(4, '7XYZ890', '4T1B11HK5LU123456', 5, NULL, 'Toyota', 'Camry', '2022', NULL, NULL, NULL, NULL, NULL, 'White', 'Car', 'ENG2021TOY45821', '2023-10-14', 'Stolen', '2026-09-14 14:54:48'),
 (5, 'P8492', '1NXBU4EE2HZ12749', 4, 3, 'Toyota', 'Corolla', '2026', 24679, '2025-06-27', 5000, '2026-06-08', 15500, 'Midnight Black Metallic', 'Car', 'M20A-FKS-094832', '2026-02-18', 'Sold', '2026-09-15 16:10:35'),
-(6, 'GND-4827', '1HGCM82633A004352', 5, 3, 'Mitsubishi', 'Outlander', '2021', 25000, '2025-02-08', 7000, '2026-09-08', 20000, 'Silver', 'SUV', '2ZRFE123456', '2021-03-15', 'Active', '2026-09-15 22:25:13');
+(6, 'GND-4827', '1HGCM82633A004352', 4, 3, 'Mitsubishi', 'Outlander', '2021', 25000, '2025-02-08', 7000, '2026-09-08', 20000, 'Silver', 'SUV', '2ZRFE123456', '2021-03-15', 'Active', '2026-09-15 22:25:13');
 
 -- --------------------------------------------------------
 
@@ -499,6 +546,14 @@ CREATE TABLE `vehicle_messages` (
 ALTER TABLE `accidents`
   ADD PRIMARY KEY (`AccidentID`),
   ADD KEY `VehicleID` (`VehicleID`);
+
+--
+-- Indexes for table `accident_photos`
+--
+ALTER TABLE `accident_photos`
+  ADD PRIMARY KEY (`PhotoID`),
+  ADD KEY `idx_accident` (`AccidentID`),
+  ADD KEY `idx_uploader` (`UploadedBy`);
 
 --
 -- Indexes for table `audit_logs`
@@ -646,19 +701,25 @@ ALTER TABLE `vehicle_messages`
 -- AUTO_INCREMENT for table `accidents`
 --
 ALTER TABLE `accidents`
-  MODIFY `AccidentID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `AccidentID` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `accident_photos`
+--
+ALTER TABLE `accident_photos`
+  MODIFY `PhotoID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `insurance`
 --
 ALTER TABLE `insurance`
-  MODIFY `InsuranceID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `InsuranceID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `login_attempts`
@@ -676,43 +737,43 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `owners`
 --
 ALTER TABLE `owners`
-  MODIFY `OwnerID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `OwnerID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `ownership_history`
 --
 ALTER TABLE `ownership_history`
-  MODIFY `OwnershipID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `OwnershipID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `password_resets`
 --
 ALTER TABLE `password_resets`
-  MODIFY `ResetID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `ResetID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `recovery_codes`
 --
 ALTER TABLE `recovery_codes`
-  MODIFY `CodeID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `CodeID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `remember_tokens`
 --
 ALTER TABLE `remember_tokens`
-  MODIFY `TokenID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `TokenID` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicles`
 --
 ALTER TABLE `vehicles`
-  MODIFY `VehicleID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `VehicleID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicle_documents`
@@ -724,19 +785,19 @@ ALTER TABLE `vehicle_documents`
 -- AUTO_INCREMENT for table `vehicle_images`
 --
 ALTER TABLE `vehicle_images`
-  MODIFY `ImageID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `ImageID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicle_interests`
 --
 ALTER TABLE `vehicle_interests`
-  MODIFY `InterestID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `InterestID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicle_listings`
 --
 ALTER TABLE `vehicle_listings`
-  MODIFY `ListingID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `ListingID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehicle_messages`
