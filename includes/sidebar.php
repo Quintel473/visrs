@@ -2,11 +2,15 @@
 $activePage = $activePage ?? "";
 ?>
 
-<aside class="sidebar">
+<aside class="sidebar" id="mobile-sidebar">
+
+    <!-- MOBILE CLOSE BUTTON -->
+    <button type="button" class="mobile-close-btn" id="mobile-close-btn" aria-label="Close menu">
+        ✕
+    </button>
 
     <!-- =====================================================
          VISRS LOGO (clickable — links to Dashboard)
-         Shows full branding when expanded, single letter when collapsed
          ===================================================== -->
     <a href="/visrs/dashboard.php" class="sidebar-logo">
 
@@ -118,3 +122,6 @@ $activePage = $activePage ?? "";
     </nav>
 
 </aside>
+
+<!-- MOBILE OVERLAY BACKDROP -->
+<div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>

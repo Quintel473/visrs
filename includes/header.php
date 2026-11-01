@@ -21,11 +21,17 @@ if (isset($pdo) && isset($_SESSION["UserID"])) {
 
 <header class="topbar">
 
+    <!-- MOBILE HAMBURGER MENU -->
+    <button type="button" class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+        ☰
+    </button>
+
     <div class="topbar-title">
         <?= htmlspecialchars($pageTitle ?? "VISRS") ?>
     </div>
 
-    <div class="user-info">
+    <!-- Added class "topbar-actions" for mobile wrapping -->
+    <div class="user-info topbar-actions">
 
         <!-- ========================= -->
         <!-- LANGUAGE SWITCHER -->

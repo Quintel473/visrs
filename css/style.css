@@ -5293,3 +5293,187 @@ body.legal-body::after {
         font-size: 24px;
     }
 }
+
+/* =========================================================
+   MOBILE TABLE CARD VIEW
+   ========================================================= */
+@media (max-width: 768px) {
+    
+    /* Force the table to act like a block, not a table */
+    .mobile-stack-table, 
+    .mobile-stack-table thead, 
+    .mobile-stack-table tbody, 
+    .mobile-stack-table th, 
+    .mobile-stack-table td, 
+    .mobile-stack-table tr { 
+        display: block; 
+    }
+
+    /* Hide the table header on mobile */
+    .mobile-stack-table thead tr { 
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    /* Style the rows to look like mini-cards */
+    .mobile-stack-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 10px;
+    }
+
+    [data-theme="dark"] .mobile-stack-table tr {
+        border-color: #334155 !important;
+        background: #1e293b;
+    }
+
+    /* Style the cells inside the cards */
+    .mobile-stack-table td { 
+        border: none !important;
+        border-bottom: 1px solid #f3f4f6 !important; 
+        position: relative;
+        padding: 12px 12px 12px 40% !important; 
+        text-align: right;
+        white-space: normal !important;
+    }
+
+    [data-theme="dark"] .mobile-stack-table td {
+        border-bottom-color: #334155 !important;
+    }
+
+    .mobile-stack-table td:last-child {
+        border-bottom: none !important;
+    }
+
+    /* Create the labels on the left side of the cell */
+    .mobile-stack-table td::before { 
+        content: attr(data-label); 
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        width: 35%; 
+        white-space: nowrap;
+        text-align: left;
+        font-weight: 700;
+        color: #6b7280;
+        font-size: 13px;
+    }
+}
+
+/* =========================================================
+   MOBILE OFF-CANVAS SIDEBAR
+   ========================================================= */
+
+/* Hide mobile-only buttons on desktop */
+.mobile-menu-btn,
+.mobile-close-btn,
+.mobile-menu-overlay {
+    display: none;
+}
+
+@media (max-width: 768px) {
+
+    /* 1. Show the Hamburger button */
+    .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: #374151;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 5px;
+        margin-right: 10px;
+    }
+
+    [data-theme="dark"] .mobile-menu-btn {
+        color: #e2e8f0;
+    }
+
+    /* 2. Hide the sidebar off-screen to the left */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        max-width: 80vw;
+        z-index: 10000;
+        transform: translateX(-100%); /* Push it off screen */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow-y: auto;
+        margin-left: 0; /* Override the old desktop margin */
+    }
+
+    /* 3. When the 'active' class is added via JS, slide it in */
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    /* 4. Style the close button inside the sidebar */
+    .mobile-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border: none;
+        border-radius: 50%;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    /* 5. The dark backdrop overlay */
+    .mobile-menu-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(2px);
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .mobile-menu-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* 6. Fix the Main Content width so it fills the screen */
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding-left: 0 !important;
+    }
+
+    /* 7. Make the topbar look cleaner on mobile */
+    .topbar {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    
+    .topbar-title {
+        font-size: 16px;
+        flex: 1; /* Pushes the action icons to the right */
+    }
+
+    /* Optional: Hide the user name text on mobile to save space */
+    .profile-name {
+        display: none;
+    }
+}

@@ -80,11 +80,6 @@ $bulkMessage = $_SESSION["bulk_message"] ?? null;
 unset($_SESSION["bulk_message"]);
 
 
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
-
 require_once "../includes/head.php";
 
 ?>
@@ -323,6 +318,7 @@ require_once "../includes/head.php";
 
                             <table
                                 id="vehiclesTable"
+                                class="mobile-stack-table"
                                 style="
                                     width:100%;
                                     border-collapse:collapse;
@@ -409,7 +405,7 @@ require_once "../includes/head.php";
 
                                             <?php if (canManageVehicles()): ?>
 
-                                                <td style="padding:12px;">
+                                                <td style="padding:12px;" data-label="Select">
 
                                                     <input
                                                         type="checkbox"
@@ -426,7 +422,7 @@ require_once "../includes/head.php";
 
                                             <!-- PLATE -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="Plate Number">
 
                                                 <strong>
                                                     <?= htmlspecialchars(
@@ -439,7 +435,7 @@ require_once "../includes/head.php";
 
                                             <!-- VIN -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="VIN">
 
                                                 <?= htmlspecialchars(
                                                     $vehicle["VIN"]
@@ -450,7 +446,7 @@ require_once "../includes/head.php";
 
                                             <!-- VEHICLE -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="Vehicle">
 
                                                 <?= htmlspecialchars(
                                                     $vehicle["Make"]
@@ -487,7 +483,7 @@ require_once "../includes/head.php";
 
                                             <!-- YEAR -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="Year">
 
                                                 <?= htmlspecialchars(
                                                     $vehicle["VehicleYear"]
@@ -498,7 +494,7 @@ require_once "../includes/head.php";
 
                                             <!-- OWNER -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="Owner">
 
                                                 <?= htmlspecialchars(
                                                     $vehicle["FirstName"]
@@ -513,7 +509,7 @@ require_once "../includes/head.php";
 
                                             <!-- STATUS -->
 
-                                            <td style="padding:12px;">
+                                            <td style="padding:12px;" data-label="Status">
 
                                                 <?php
 
@@ -570,6 +566,7 @@ require_once "../includes/head.php";
                                                     padding:12px;
                                                     white-space:nowrap;
                                                 "
+                                                data-label="Actions"
                                             >
 
 

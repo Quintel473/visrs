@@ -1445,3 +1445,41 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 })();
+
+/* =========================================================
+   VISRS Mobile Sidebar Drawer
+   ========================================================= */
+(function () {
+    'use strict';
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var menuBtn = document.getElementById("mobile-menu-btn");
+        var closeBtn = document.getElementById("mobile-close-btn");
+        var sidebar = document.getElementById("mobile-sidebar");
+        var overlay = document.getElementById("mobile-menu-overlay");
+
+        // If elements don't exist on the page, stop.
+        if (!menuBtn || !sidebar || !overlay) return;
+
+        function openMenu() {
+            sidebar.classList.add("mobile-open");
+            overlay.classList.add("active");
+            document.body.style.overflow = "hidden"; // Prevent background scrolling
+        }
+
+        function closeMenu() {
+            sidebar.classList.remove("mobile-open");
+            overlay.classList.remove("active");
+            document.body.style.overflow = ""; // Restore scrolling
+        }
+
+        menuBtn.addEventListener("click", openMenu);
+        
+        if (closeBtn) {
+            closeBtn.addEventListener("click", closeMenu);
+        }
+        
+        // Close menu if user clicks the dark background
+        overlay.addEventListener("click", closeMenu);
+    });
+})();
