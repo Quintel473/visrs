@@ -308,7 +308,7 @@ require_once "../includes/head.php";
         font-weight: 600;
     }
 
-        .description-box {
+    .description-box {
         padding: 24px;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
@@ -318,17 +318,18 @@ require_once "../includes/head.php";
         line-height: 1.7;
         white-space: pre-wrap;
         
-        /* Force the text to the top-left */
+        /* Force layout to top-left */
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
         justify-content: flex-start;
+        align-items: flex-start;
     }
     
+    /* Use !important to override any global paragraph styles */
     .description-box p {
-        margin: 0;
-        padding: 0;
-        text-align: left;
+        margin: 0 !important;
+        padding: 0 !important;
+        text-align: left !important;
         width: 100%;
     }
 
@@ -340,25 +341,10 @@ require_once "../includes/head.php";
         font-weight: 600;
     }
 
-    .damage-minor {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .damage-moderate {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .damage-major {
-        background: #ffedd5;
-        color: #9a3412;
-    }
-
-    .damage-severe {
-        background: #fee2e2;
-        color: #991b1b;
-    }
+    .damage-minor { background: #dcfce7; color: #166534; }
+    .damage-moderate { background: #fef3c7; color: #92400e; }
+    .damage-major { background: #ffedd5; color: #9a3412; }
+    .damage-severe { background: #fee2e2; color: #991b1b; }
 
     .vehicle-summary {
         padding: 18px;
@@ -367,14 +353,8 @@ require_once "../includes/head.php";
         background: #f8fafc;
     }
 
-    .vehicle-summary h3 {
-        margin-top: 0;
-        margin-bottom: 12px;
-    }
-
-    .vehicle-summary p {
-        margin: 7px 0;
-    }
+    .vehicle-summary h3 { margin-top: 0; margin-bottom: 12px; }
+    .vehicle-summary p { margin: 7px 0; }
 
     .page-actions {
         display: flex;
@@ -383,13 +363,8 @@ require_once "../includes/head.php";
         flex-wrap: wrap;
     }
 
-    .delete-button {
-        background: #991b1b;
-    }
-
-    .delete-button:hover {
-        background: #7f1d1d;
-    }
+    .delete-button { background: #991b1b; }
+    .delete-button:hover { background: #7f1d1d; }
 
 
     /* ---------- Photo gallery ---------- */
@@ -424,6 +399,17 @@ require_once "../includes/head.php";
         background: #ffffff;
         border: 1px solid #d1d5db;
         border-radius: 7px;
+    }
+
+    /* NEW: Preview Image CSS */
+    .upload-preview {
+        display: none;
+        margin-top: 15px;
+        max-width: 200px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        object-fit: cover;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
     .photo-upload-hint {
@@ -480,11 +466,15 @@ require_once "../includes/head.php";
         font-size: 12px;
     }
 
-    .photo-empty {
+        .photo-empty {
         padding: 36px 20px;
         background: #f8fafc;
         border: 1px dashed #d1d5db;
         border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         text-align: center;
         color: #64748b;
     }
@@ -838,6 +828,9 @@ require_once "../includes/head.php";
 
                             </div>
 
+                            <!-- NEW: Preview Image Element -->
+                            <img id="upload-preview" class="upload-preview" alt="Selected Photo Preview">
+
                             <p class="photo-upload-hint">
                                 JPG, PNG, or WebP. Maximum 10 MB per photo.
                             </p>
@@ -1091,5 +1084,33 @@ require_once "../includes/head.php";
     </main>
 
 </div>
+
+<!-- NEW: JavaScript to handle instant image preview -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const photoInput = document.getElementById("photo");
+    const previewImg = document.getElementById("upload-preview");
+
+    if (photoInput && previewImg) {
+        photoInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = "block";
+                };
+                
+                reader.readAsDataURL(file);
+            } else {
+                previewImg.src = "";
+                previewImg.style.display = "none";
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once "../includes/footer.php"; ?>

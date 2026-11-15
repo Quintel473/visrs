@@ -207,11 +207,36 @@ require_once "../includes/head.php";
     .vehicle-detail-card { background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06); overflow:hidden; }
     .vehicle-detail-card-content { padding:22px; }
     .vehicle-gallery { background:#f1f5f9; }
+    
     .vehicle-primary-image { position:relative; width:100%; height:430px; background:#e2e8f0; }
     .vehicle-primary-image img { display:block; width:100%; height:100%; object-fit:cover; }
+    
+    /* NEW: Arrow Navigation */
+    .gallery-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(17,24,39,0.6);
+        color: white;
+        border: none;
+        font-size: 24px;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+    }
+    .gallery-nav:hover { background: rgba(17,24,39,0.9); }
+    .gallery-prev { left: 16px; }
+    .gallery-next { right: 16px; }
+
     .vehicle-no-image { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; gap:10px; }
     .vehicle-no-image-icon { font-size:64px; }
-    .vehicle-image-count { position:absolute; bottom:12px; right:12px; padding:7px 11px; border-radius:20px; background:rgba(17,24,39,0.80); color:#ffffff; font-size:12px; font-weight:600; }
+    .vehicle-image-count { position:absolute; bottom:12px; right:12px; padding:7px 11px; border-radius:20px; background:rgba(17,24,39,0.80); color:#ffffff; font-size:12px; font-weight:600; z-index: 5; }
     .vehicle-thumbnails { display:flex; gap:10px; padding:14px; overflow-x:auto; background:#ffffff; }
     .vehicle-thumbnail { flex:0 0 82px; width:82px; height:62px; padding:0; border:2px solid transparent; border-radius:7px; overflow:hidden; background:#f1f5f9; cursor:pointer; }
     .vehicle-thumbnail.active { border-color:#111827; }
@@ -287,7 +312,6 @@ require_once "../includes/head.php";
                     ← Back to Marketplace
                 </a>
 
-                <!-- FIXED: Added button to go to Official Vehicle Record -->
                 <a href="/visrs/vehicles/view.php?id=<?= (int) $listing["VehicleID"] ?>" class="button button-secondary" style="padding:8px 12px; font-size:13px;">
                     View Official Registry Record →
                 </a>
@@ -309,6 +333,7 @@ require_once "../includes/head.php";
                 <!-- LEFT - IMAGE GALLERY -->
                 <div class="vehicle-detail-card vehicle-gallery">
                     <div class="vehicle-primary-image" id="vehiclePrimaryImage">
+                        
                         <?php if ($primaryImage): ?>
                             <img src="/visrs/<?= e($primaryImage["ImagePath"]) ?>" alt="<?= e($listing["Make"] . " " . $listing["Model"]) ?>" id="primaryVehicleImage">
                         <?php else: ?>
@@ -316,6 +341,12 @@ require_once "../includes/head.php";
                                 <div class="vehicle-no-image-icon">🚗</div>
                                 <div>No photo available</div>
                             </div>
+                        <?php endif; ?>
+
+                        <!-- NEW: Arrow Navigation -->
+                        <?php if (count($images) > 1): ?>
+                            <button type="button" class="gallery-nav gallery-prev" id="galleryPrev" aria-label="Previous photo">‹</button>
+                            <button type="button" class="gallery-nav gallery-next" id="galleryNext" aria-label="Next photo">›</button>
                         <?php endif; ?>
 
                         <?php if (count($images) > 0): ?>
@@ -327,9 +358,9 @@ require_once "../includes/head.php";
 
                     <!-- THUMBNAILS -->
                     <?php if (count($images) > 1): ?>
-                        <div class="vehicle-thumbnails">
+                        <div class="vehicle-thumbnails" id="galleryThumbnails">
                             <?php foreach ($images as $index => $image): ?>
-                                <button type="button" class="vehicle-thumbnail <?= ($primaryImage && $image["ImageID"] === $primaryImage["ImageID"]) ? "active" : "" ?>" data-image="/visrs/<?= e($image["ImagePath"]) ?>" aria-label="View vehicle photo <?= $index + 1 ?>">
+                                <button type="button" class="vehicle-thumbnail <?= ($primaryImage && $image["ImageID"] === $primaryImage["ImageID"]) ? "active" : "" ?>" data-image="/visrs/<?= e($image["ImagePath"]) ?>" data-index="<?= $index ?>" aria-label="View vehicle photo <?= $index + 1 ?>">
                                     <img src="/visrs/<?= e($image["ImagePath"]) ?>" alt="Vehicle photo <?= $index + 1 ?>">
                                 </button>
                             <?php endforeach; ?>
@@ -688,23 +719,56 @@ require_once "../includes/head.php";
 document.addEventListener("DOMContentLoaded", function () {
     const primaryImage = document.getElementById("primaryVehicleImage");
     const thumbnails = document.querySelectorAll(".vehicle-thumbnail");
+    const btnPrev = document.getElementById("galleryPrev");
+    const btnNext = document.getElementById("galleryNext");
 
     if (!primaryImage || thumbnails.length === 0) return;
 
-    thumbnails.forEach(function (thumbnail) {
-        thumbnail.addEventListener("click", function () {
-            const imagePath = thumbnail.getAttribute("data-image");
-            if (!imagePath) return;
+    let currentIndex = 0;
+    
+    // Find the starting index based on which thumbnail is active
+    thumbnails.forEach((thumb, index) => {
+        if (thumb.classList.contains("active")) {
+            currentIndex = index;
+        }
+    });
 
+    function updateGallery(index) {
+        // Loop around if going out of bounds
+        if (index < 0) index = thumbnails.length - 1;
+        if (index >= thumbnails.length) index = 0;
+
+        currentIndex = index;
+        const imagePath = thumbnails[index].getAttribute("data-image");
+
+        if (imagePath) {
             primaryImage.src = imagePath;
+        }
 
-            thumbnails.forEach(function (item) {
-                item.classList.remove("active");
-            });
+        thumbnails.forEach(function (item) {
+            item.classList.remove("active");
+        });
 
-            thumbnail.classList.add("active");
+        thumbnails[index].classList.add("active");
+    }
+
+    // Thumbnail click
+    thumbnails.forEach(function (thumbnail, index) {
+        thumbnail.addEventListener("click", function () {
+            updateGallery(index);
         });
     });
+
+    // Arrow click
+    if (btnPrev && btnNext) {
+        btnPrev.addEventListener("click", function () {
+            updateGallery(currentIndex - 1);
+        });
+
+        btnNext.addEventListener("click", function () {
+            updateGallery(currentIndex + 1);
+        });
+    }
 });
 </script>
 

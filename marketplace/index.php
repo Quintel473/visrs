@@ -99,8 +99,7 @@ if ($search !== "") {
         )
     ";
 
-    $searchValue =
-        "%" . $search . "%";
+    $searchValue = "%" . $search . "%";
 
     $params[] = $searchValue;
     $params[] = $searchValue;
@@ -116,17 +115,9 @@ if ($search !== "") {
 |--------------------------------------------------------------------------
 */
 
-if (
-    $minPrice !== "" &&
-    is_numeric($minPrice)
-) {
-
-    $sql .= "
-        AND vl.Price >= ?
-    ";
-
-    $params[] =
-        (float) $minPrice;
+if ($minPrice !== "" && is_numeric($minPrice)) {
+    $sql .= " AND vl.Price >= ? ";
+    $params[] = (float) $minPrice;
 }
 
 
@@ -136,17 +127,9 @@ if (
 |--------------------------------------------------------------------------
 */
 
-if (
-    $maxPrice !== "" &&
-    is_numeric($maxPrice)
-) {
-
-    $sql .= "
-        AND vl.Price <= ?
-    ";
-
-    $params[] =
-        (float) $maxPrice;
+if ($maxPrice !== "" && is_numeric($maxPrice)) {
+    $sql .= " AND vl.Price <= ? ";
+    $params[] = (float) $maxPrice;
 }
 
 
@@ -156,29 +139,11 @@ if (
 |--------------------------------------------------------------------------
 */
 
-$allowedStatuses = [
-    "Available",
-    "Reserved",
-    "Sold",
-    "Inactive"
-];
+$allowedStatuses = ["Available", "Reserved", "Sold", "Inactive"];
 
-
-if (
-    $status !== "" &&
-    in_array(
-        $status,
-        $allowedStatuses,
-        true
-    )
-) {
-
-    $sql .= "
-        AND vl.Status = ?
-    ";
-
+if ($status !== "" && in_array($status, $allowedStatuses, true)) {
+    $sql .= " AND vl.Status = ? ";
     $params[] = $status;
-
 }
 
 
@@ -188,10 +153,7 @@ if (
 |--------------------------------------------------------------------------
 */
 
-$sql .= "
-    ORDER BY
-        vl.CreatedAt DESC
-";
+$sql .= " ORDER BY vl.CreatedAt DESC";
 
 
 /*
@@ -200,30 +162,12 @@ $sql .= "
 |--------------------------------------------------------------------------
 */
 
-$stmt =
-    $pdo->prepare($sql);
-
-$stmt->execute(
-    $params
-);
-
-$listings =
-    $stmt->fetchAll();
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$listings = $stmt->fetchAll();
 
 
-/*
-|--------------------------------------------------------------------------
-| Total Listings
-|--------------------------------------------------------------------------
-*/
-
-$totalListings =
-    count($listings);
-
-
-/*
- * Global <head>
- */
+$totalListings = count($listings);
 
 require_once "../includes/head.php";
 
@@ -240,8 +184,11 @@ require_once "../includes/head.php";
     .filter-group input, .filter-group select { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; background:#ffffff; font-size:14px; }
     .filter-buttons { display:flex; gap:8px; }
     .marketplace-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap:22px; }
-    .vehicle-listing-card { overflow:hidden; border:1px solid #e5e7eb; border-radius:12px; background:#ffffff; box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
-    .vehicle-listing-card:hover { transform:translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10); }
+    
+    /* Make the card position relative so the absolute link stays inside */
+    .vehicle-listing-card { position: relative; overflow:hidden; border:1px solid #e5e7eb; border-radius:12px; background:#ffffff; box-shadow: 0 2px 7px rgba(0, 0, 0, 0.06); transition: transform 0.2s ease, box-shadow 0.2s ease; display:flex; flex-direction:column; }
+    .vehicle-listing-card:hover { transform:translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10); border-color: #2563eb; }
+    
     .listing-image-container { position:relative; width:100%; height:210px; background:#f1f5f9; }
     .listing-image { display:block; width:100%; height:100%; object-fit:cover; }
     .listing-no-image { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#94a3b8; font-size:14px; gap:8px; }
@@ -259,8 +206,12 @@ require_once "../includes/head.php";
     .listing-description { min-height:42px; margin-bottom:15px; color:#64748b; font-size:13px; line-height:1.5; flex:1; }
     .listing-seller { padding-top:12px; margin-bottom:15px; border-top:1px solid #f1f5f9; color:#64748b; font-size:12px; }
     .listing-seller strong { color:#374151; }
-    .listing-button { display:block; width:100%; box-sizing:border-box; padding:10px 14px; border-radius:6px; background:#111827; color:#ffffff; text-align:center; text-decoration:none; font-size:13px; font-weight:600; }
+    .listing-button { display:block; width:100%; box-sizing:border-box; padding:10px 14px; border-radius:6px; background:#111827; color:#ffffff; text-align:center; text-decoration:none; font-size:13px; font-weight:600; position: relative; z-index: 2; }
     .listing-button:hover { opacity:0.9; }
+    
+    /* THE CLICKABLE CARD TRICK */
+    .card-link-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; }
+    
     .marketplace-empty { padding:60px 25px; text-align:center; border:1px solid #e5e7eb; border-radius:12px; background:#ffffff; }
     .marketplace-empty-icon { margin-bottom:12px; font-size:48px; }
     .marketplace-empty h2 { margin:0 0 8px; }
@@ -350,6 +301,9 @@ require_once "../includes/head.php";
 
                         <article class="vehicle-listing-card">
 
+                            <!-- CLICKABLE CARD OVERLAY -->
+                            <a href="/visrs/marketplace/view.php?vehicle_id=<?= (int) $listing["VehicleID"] ?>" class="card-link-overlay" title="View Vehicle"></a>
+
                             <!-- IMAGE -->
                             <div class="listing-image-container">
                                 <?php if (!empty($listing["ImagePath"])): ?>
@@ -414,8 +368,10 @@ require_once "../includes/head.php";
 
                                 <!-- BUTTONS -->
                                 <div style="display:flex; gap:8px; margin-top: auto;">
+                                    
+                                    <!-- FIXED: This button now points to the official registry, but you can click the card to go to the marketplace view -->
                                     <a href="/visrs/marketplace/view.php?vehicle_id=<?= (int) $listing["VehicleID"] ?>" class="listing-button" style="flex:1;">
-                                        View Vehicle
+                                        View Listing
                                     </a>
 
                                     <?php 
