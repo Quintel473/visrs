@@ -34,7 +34,74 @@ $status = trim($_GET["status"] ?? "Available");
 
 /*
 |--------------------------------------------------------------------------
-| Build Query
+| Build Query for COUNT (Pagination)
+|--------------------------------------------------------------------------
+*/
+
+$countSql = "
+    SELECT COUNT(*) 
+    FROM vehicle_listings vl
+    INNER JOIN vehicles v ON vl.VehicleID = v.VehicleID
+    INNER JOIN users u ON vl.SellerID = u.UserID
+    WHERE 1 = 1
+";
+
+$countParams = [];
+
+
+/*
+|--------------------------------------------------------------------------
+| Apply Filters to COUNT
+|--------------------------------------------------------------------------
+*/
+
+if ($search !== "") {
+    $countSql .= " AND (
+        v.PlateNumber LIKE ? OR v.VIN LIKE ? OR v.Make LIKE ? OR v.Model LIKE ? OR v.VehicleYear LIKE ?
+    )";
+    $searchValue = "%" . $search . "%";
+    $countParams[] = $searchValue;
+    $countParams[] = $searchValue;
+    $countParams[] = $searchValue;
+    $countParams[] = $searchValue;
+    $countParams[] = $searchValue;
+}
+
+if ($minPrice !== "" && is_numeric($minPrice)) {
+    $countSql .= " AND vl.Price >= ? ";
+    $countParams[] = (float) $minPrice;
+}
+
+if ($maxPrice !== "" && is_numeric($maxPrice)) {
+    $countSql .= " AND vl.Price <= ? ";
+    $countParams[] = (float) $maxPrice;
+}
+
+$allowedStatuses = ["Available", "Reserved", "Sold", "Inactive"];
+
+if ($status !== "" && in_array($status, $allowedStatuses, true)) {
+    $countSql .= " AND vl.Status = ? ";
+    $countParams[] = $status;
+}
+
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($countParams);
+$totalListings = (int) $countStmt->fetchColumn();
+
+
+/*
+|--------------------------------------------------------------------------
+| Pagination Setup
+|--------------------------------------------------------------------------
+*/
+
+$perPage = 9; // Number of cars per page
+$pagination = paginationMeta($totalListings, $perPage);
+
+
+/*
+|--------------------------------------------------------------------------
+| Build Query for LISTINGS (Fetch current page)
 |--------------------------------------------------------------------------
 */
 
@@ -77,97 +144,70 @@ $sql = "
     WHERE 1 = 1
 ";
 
-
 $params = [];
 
-
-/*
-|--------------------------------------------------------------------------
-| Search
-|--------------------------------------------------------------------------
-*/
-
+/* Apply the exact same filters to the main query */
 if ($search !== "") {
-
-    $sql .= "
-        AND (
-            v.PlateNumber LIKE ?
-            OR v.VIN LIKE ?
-            OR v.Make LIKE ?
-            OR v.Model LIKE ?
-            OR v.VehicleYear LIKE ?
-        )
-    ";
-
-    $searchValue = "%" . $search . "%";
-
+    $sql .= " AND (
+        v.PlateNumber LIKE ? OR v.VIN LIKE ? OR v.Make LIKE ? OR v.Model LIKE ? OR v.VehicleYear LIKE ?
+    )";
     $params[] = $searchValue;
     $params[] = $searchValue;
     $params[] = $searchValue;
     $params[] = $searchValue;
     $params[] = $searchValue;
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| Minimum Price
-|--------------------------------------------------------------------------
-*/
 
 if ($minPrice !== "" && is_numeric($minPrice)) {
     $sql .= " AND vl.Price >= ? ";
     $params[] = (float) $minPrice;
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Maximum Price
-|--------------------------------------------------------------------------
-*/
-
 if ($maxPrice !== "" && is_numeric($maxPrice)) {
     $sql .= " AND vl.Price <= ? ";
     $params[] = (float) $maxPrice;
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| Listing Status
-|--------------------------------------------------------------------------
-*/
-
-$allowedStatuses = ["Available", "Reserved", "Sold", "Inactive"];
 
 if ($status !== "" && in_array($status, $allowedStatuses, true)) {
     $sql .= " AND vl.Status = ? ";
     $params[] = $status;
 }
 
+/* Add Order and Limit */
+$sql .= " ORDER BY vl.CreatedAt DESC LIMIT ? OFFSET ?";
 
-/*
-|--------------------------------------------------------------------------
-| Ordering
-|--------------------------------------------------------------------------
-*/
-
-$sql .= " ORDER BY vl.CreatedAt DESC";
-
-
-/*
-|--------------------------------------------------------------------------
-| Execute Query
-|--------------------------------------------------------------------------
-*/
+/* Bind pagination limits */
+$paramIndex = 1;
+foreach ($params as $param) {
+    $countStmt->bindValue($paramIndex++, $param); // Just to increment, we bind on $stmt below
+}
 
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+$paramIndex = 1;
+foreach ($params as $param) {
+    $stmt->bindValue($paramIndex++, $param);
+}
+$stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
+
+$stmt->execute();
 $listings = $stmt->fetchAll();
 
 
-$totalListings = count($listings);
+/*
+|--------------------------------------------------------------------------
+| Build Query String to preserve filters across pagination
+|--------------------------------------------------------------------------
+*/
+
+$filterQuery = 
+    ($search !== "" ? "&search=" . urlencode($search) : "") .
+    ($minPrice !== "" ? "&min_price=" . urlencode($minPrice) : "") .
+    ($maxPrice !== "" ? "&max_price=" . urlencode($maxPrice) : "") .
+    ($status !== "" ? "&status=" . urlencode($status) : "");
+
+$pagination["extraQuery"] = $filterQuery;
+
 
 require_once "../includes/head.php";
 
@@ -183,6 +223,7 @@ require_once "../includes/head.php";
     .filter-group label { display:block; margin-bottom:6px; font-size:13px; font-weight:600; color:#374151; }
     .filter-group input, .filter-group select { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #d1d5db; border-radius:6px; background:#ffffff; font-size:14px; }
     .filter-buttons { display:flex; gap:8px; }
+    
     .marketplace-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap:22px; }
     
     /* Make the card position relative so the absolute link stays inside */
@@ -287,7 +328,7 @@ require_once "../includes/head.php";
             <!-- RESULTS SUMMARY -->
 
             <div style="margin-bottom:15px; color:#64748b; font-size:14px;">
-                <?= $totalListings ?> <?= $totalListings === 1 ? "vehicle" : "vehicles" ?> found
+                <?= $pagination["totalRows"] ?> <?= $pagination["totalRows"] === 1 ? "vehicle" : "vehicles" ?> found
             </div>
 
 
@@ -369,7 +410,6 @@ require_once "../includes/head.php";
                                 <!-- BUTTONS -->
                                 <div style="display:flex; gap:8px; margin-top: auto;">
                                     
-                                    <!-- FIXED: This button now points to the official registry, but you can click the card to go to the marketplace view -->
                                     <a href="/visrs/marketplace/view.php?vehicle_id=<?= (int) $listing["VehicleID"] ?>" class="listing-button" style="flex:1;">
                                         View Listing
                                     </a>
@@ -391,6 +431,9 @@ require_once "../includes/head.php";
                     <?php endforeach; ?>
 
                 </div>
+
+                <!-- PAGINATION CONTROLS -->
+                <?php renderPagination($pagination); ?>
 
             <?php else: ?>
 
