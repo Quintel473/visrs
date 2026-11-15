@@ -46,8 +46,11 @@ if (isset($pdo) && isset($_SESSION["UserID"])) {
                 title="Change language"
                 aria-haspopup="true"
                 aria-expanded="false"
+                style="display: flex; align-items: center; gap: 6px;"
             >
-                <span class="language-icon" aria-hidden="true">🌐</span>
+                <span class="language-icon" aria-hidden="true" style="display: flex; align-items: center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                </span>
                 <span class="language-current" id="language-current">EN</span>
             </button>
 
@@ -80,8 +83,11 @@ if (isset($pdo) && isset($_SESSION["UserID"])) {
             id="notifications-button"
             aria-label="Notifications"
             title="Notifications"
+            style="display: flex; align-items: center;"
         >
-            <span class="notifications-icon" aria-hidden="true">🔔</span>
+            <span class="notifications-icon" aria-hidden="true" style="display: flex; align-items: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            </span>
 
             <span
                 class="notifications-badge"
@@ -103,8 +109,11 @@ if (isset($pdo) && isset($_SESSION["UserID"])) {
             aria-label="Switch to dark mode"
             aria-pressed="false"
             title="Toggle dark mode"
+            style="display: flex; align-items: center; justify-content: center;"
         >
-            <span class="theme-icon" aria-hidden="true">🌙</span>
+            <span class="theme-icon" aria-hidden="true" style="display: flex; align-items: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </span>
         </button>
 
 

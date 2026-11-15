@@ -250,6 +250,7 @@ require_once "includes/head.php";
         display: flex; 
         align-items: center; 
         justify-content: center; 
+        gap: 8px; /* Added gap for the SVG icon */
         padding: 14px 20px;
         min-height: 52px; 
         box-sizing: border-box; 
@@ -262,6 +263,14 @@ require_once "includes/head.php";
         color: #374151;
         transition: all 0.2s ease;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Ensure the SVG icons scale nicely inside the buttons */
+    .dashboard-action-button svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        flex-shrink: 0;
     }
 
     .dashboard-action-button:hover {
@@ -543,14 +552,16 @@ require_once "includes/head.php";
                 <div class="dashboard-actions">
 
                     <a href="search.php" class="dashboard-action-button">
-                        🔍 Search Vehicles
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        Search Vehicles
                     </a>
 
 
                     <!-- Add Vehicle (Staff only) -->
                     <?php if ($isAdminOrPolice || $isSeller): ?>
                         <a href="vehicles/add.php" class="dashboard-action-button primary-action">
-                            ➕ Add Vehicle
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Add Vehicle
                         </a>
                     <?php endif; ?>
 
@@ -558,7 +569,8 @@ require_once "includes/head.php";
                     <!-- Add Owner (Admin/Police only) -->
                     <?php if ($canManageOwners): ?>
                         <a href="owners/add.php" class="dashboard-action-button">
-                            👤 Add Owner
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Add Owner
                         </a>
                     <?php endif; ?>
 
@@ -566,35 +578,40 @@ require_once "includes/head.php";
                     <!-- Add Ownership Record (Admin/Police only) -->
                     <?php if ($canManageOwners): ?>
                         <a href="ownership_history/add.php" class="dashboard-action-button">
-                            📋 Add Ownership
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Add Ownership
                         </a>
                     <?php endif; ?>
 
 
                     <!-- View Vehicles (Everyone) -->
                     <a href="vehicles/" class="dashboard-action-button">
-                        🚗 View Vehicles
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>
+                        View Vehicles
                     </a>
 
 
                     <!-- View Owners (Admin/Police only) -->
                     <?php if ($canManageOwners): ?>
                         <a href="owners/" class="dashboard-action-button">
-                            👥 View Owners
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            View Owners
                         </a>
                     <?php endif; ?>
 
 
                     <!-- View Ownership History (Everyone) -->
                     <a href="ownership_history/" class="dashboard-action-button">
-                        📜 View History
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        View History
                     </a>
 
 
                     <!-- Manage Users (Admin only) -->
                     <?php if ($currentRole === "Admin"): ?>
                         <a href="users/" class="dashboard-action-button">
-                            ⚙️ Manage Users
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            Manage Users
                         </a>
                     <?php endif; ?>
 
