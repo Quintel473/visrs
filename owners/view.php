@@ -8,7 +8,45 @@ $basePath = "../";
 $activePage = "owners";
 
 $pageTitle = "Owner Details";
-$pageSubtitle = "Owner profile and associated vehicle information.";
+$pageSubtitle = "Owner profile and associated vehicle information";
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$canManageOwners = in_array($currentRole, ['Admin', 'Police'], true);
+
+// If they aren't Admin or Police, they cannot view individual Owner profiles.
+if (!$canManageOwners) {
+    http_response_code(403);
+    $pageTitle = "Access Denied";
+    require_once "../includes/head.php";
+    ?>
+    <body>
+    <div class="layout">
+        <main class="main-content" style="margin-left:0; width:100%;">
+            <div class="content" style="max-width:700px; margin:80px auto;">
+                <div class="card">
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Access Denied</strong>
+                    </div>
+                    <h2>You do not have permission to view this owner.</h2>
+                    <p>Owner profiles are restricted to Administrators and Police Officers.</p>
+                    <a href="../dashboard.php" class="button">Return to Dashboard</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 
 $ownerID = $_GET["id"] ?? "";
 
@@ -61,11 +99,6 @@ $owner = $stmt->fetch();
 if (!$owner) {
 
     http_response_code(404);
-
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
 
     $pageTitle = "Owner Not Found";
 
@@ -162,28 +195,6 @@ $stmt->execute([$ownerID]);
 
 $vehicles = $stmt->fetchAll();
 
-
-/*
-|--------------------------------------------------------------------------
-| Permission
-|--------------------------------------------------------------------------
-|
-| All authenticated users can view owner information.
-| Only Admin and Police can edit owners.
-|
-*/
-
-$canManageOwners = in_array(
-    $_SESSION["Role"] ?? "",
-    ["Admin", "Police"],
-    true
-);
-
-
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
 
 $pageTitle = "Owner Details";
 
@@ -613,8 +624,4 @@ require_once "../includes/head.php";
 
 </div>
 
-
-<!-- FIX: moved footer.php OUT of .main-content and removed the
-     duplicate </body></html> that followed. footer.php closes
-     those tags. -->
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

@@ -12,7 +12,6 @@ $pageSubtitle = "View complete information about this accident record.";
 $accidentID = (int) ($_GET["id"] ?? 0);
 
 if ($accidentID <= 0) {
-
     header("Location: index.php");
     exit;
 }
@@ -42,12 +41,17 @@ $stmt = $pdo->prepare("
         v.VehicleType,
         v.EngineNumber,
         v.RegistrationDate,
-        v.Status AS VehicleStatus
+        v.Status AS VehicleStatus,
+        
+        o.UserID AS OwnerUserID
 
     FROM accidents a
 
     INNER JOIN vehicles v
         ON a.VehicleID = v.VehicleID
+        
+    INNER JOIN owners o
+        ON v.OwnerID = o.OwnerID
 
     WHERE a.AccidentID = ?
 ");
@@ -133,6 +137,44 @@ if (!$accident) {
 
     <?php
 
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+$isStaff = in_array($currentRole, ['Admin', 'Police', 'Seller']);
+
+// If they are a basic User, they can ONLY view accidents for vehicles they own
+if (!$isStaff && (int)$accident["OwnerUserID"] !== $currentUserId) {
+    http_response_code(403);
+    $pageTitle = "Access Denied";
+    require_once "../includes/head.php";
+    ?>
+    <body>
+    <div class="layout">
+        <main class="main-content" style="margin-left:0; width:100%;">
+            <div class="content" style="max-width:700px; margin:80px auto;">
+                <div class="card">
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Access Denied</strong>
+                    </div>
+                    <h2>You do not have permission to view this accident record.</h2>
+                    <p>You can only view accident records for vehicles that are linked to your account.</p>
+                    <a href="index.php" class="button">Return to Accident Records</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    </body>
+    </html>
+    <?php
     exit;
 }
 
@@ -266,14 +308,28 @@ require_once "../includes/head.php";
         font-weight: 600;
     }
 
-    .description-box {
-        padding: 18px;
+        .description-box {
+        padding: 24px;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
         background: #f8fafc;
         color: #374151;
-        line-height: 1.6;
+        font-size: 14px;
+        line-height: 1.7;
         white-space: pre-wrap;
+        
+        /* Force the text to the top-left */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+    
+    .description-box p {
+        margin: 0;
+        padding: 0;
+        text-align: left;
+        width: 100%;
     }
 
     .damage-badge {
@@ -570,14 +626,14 @@ require_once "../includes/head.php";
                     </h3>
 
                     <div class="description-box">
-
-                        <?= $accident["Description"]
-                            ? htmlspecialchars(
-                                $accident["Description"]
-                            )
-                            : "No description was provided for this accident."
-                        ?>
-
+                        <p>
+                            <?= $accident["Description"]
+                                ? htmlspecialchars(
+                                    $accident["Description"]
+                                )
+                                : "No description was provided for this accident."
+                            ?>
+                        </p>
                     </div>
 
                 </div>

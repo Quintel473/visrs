@@ -42,6 +42,7 @@ $stmt = $pdo->prepare("
         v.PlateNumber,
         v.VIN,
         v.OwnerID,
+        v.SellerID,
         v.Make,
         v.Model,
         v.VehicleYear,
@@ -59,7 +60,8 @@ $stmt = $pdo->prepare("
         o.LastName AS OwnerLastName,
         o.Address AS OwnerAddress,
         o.Phone AS OwnerPhone,
-        o.Email AS OwnerEmail
+        o.Email AS OwnerEmail,
+        o.UserID AS OwnerUserID
     FROM vehicles v
     INNER JOIN owners o
         ON v.OwnerID = o.OwnerID
@@ -160,6 +162,77 @@ if (!$vehicle) {
 
     exit;
 
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+
+$isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
+
+// Check permissions based on role
+if (!$isAdminOrPolice) {
+    
+    // Sellers can only view vehicles they are selling
+    if ($currentRole === 'Seller') {
+        if ((int)$vehicle["SellerID"] !== $currentUserId) {
+            http_response_code(403);
+            $pageTitle = "Access Denied";
+            require_once "../includes/head.php";
+            ?>
+            <body>
+            <div class="layout">
+                <main class="main-content" style="margin-left:0; width:100%;">
+                    <div class="content" style="max-width:700px; margin:80px auto;">
+                        <div class="card">
+                            <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                                <strong>Access Denied</strong>
+                            </div>
+                            <h2>You do not have permission to view this vehicle.</h2>
+                            <p>You can only view vehicles that are assigned to your Seller account.</p>
+                            <a href="index.php" class="button">Return to My Vehicles</a>
+                        </div>
+                    </div>
+                </main>
+            </div>
+            </body>
+            </html>
+            <?php
+            exit;
+        }
+    } 
+    // Basic Users can only view vehicles they own
+    elseif ((int)$vehicle["OwnerUserID"] !== $currentUserId) {
+        http_response_code(403);
+        $pageTitle = "Access Denied";
+        require_once "../includes/head.php";
+        ?>
+        <body>
+        <div class="layout">
+            <main class="main-content" style="margin-left:0; width:100%;">
+                <div class="content" style="max-width:700px; margin:80px auto;">
+                    <div class="card">
+                        <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                            <strong>Access Denied</strong>
+                        </div>
+                        <h2>You do not have permission to view this vehicle.</h2>
+                        <p>You can only view vehicles that are linked to your account.</p>
+                        <a href="index.php" class="button">Return to My Vehicles</a>
+                    </div>
+                </div>
+            </main>
+        </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
 }
 
 
@@ -420,30 +493,23 @@ require_once "../includes/head.php";
                 <?php 
                 /* ========================================================
                    🚗 VEHICLE IMAGE SETUP 🚗
-                   ========================================================
-                   The system automatically looks for an image named 
-                   after the Make and Model.
-                   
-                   Example: Make = "Honda", Model = "Civic"
-                   It will look for: "honda-civic.jpg"
                    ======================================================== */
                 
                 // 1. Get the Make and Model
                 $carName = $vehicle["Make"] . " " . $vehicle["Model"];
                 
-                // 2. Clean it up: lowercase, replace spaces with hyphens, remove weird characters
+                // 2. Clean it up
                 $cleanName = strtolower($carName);
                 $cleanName = preg_replace('/[^a-z0-9]+/', '-', $cleanName); 
                 $cleanName = trim($cleanName, '-');
 
-                // 3. Build the final path (Change .jpg to .png if you use PNGs)
+                // 3. Build the final path
                 $imagePath = "../images/vehicles/" . $cleanName . ".jpg";
                 ?>
 
                 <div class="profile-avatar-large">
                     <?php if (file_exists(__DIR__ . "/" . $imagePath)): ?>
                         
-                        <!-- Image found, load it and make it clickable for the Lightbox -->
                         <img 
                             src="<?= $imagePath ?>" 
                             alt="<?= htmlspecialchars($vehicle["Make"] . ' ' . $vehicle["Model"]) ?>" 
@@ -455,7 +521,6 @@ require_once "../includes/head.php";
                         
                     <?php else: ?>
                         
-                        <!-- No image found, show the emoji -->
                         🚗
                         
                     <?php endif; ?>

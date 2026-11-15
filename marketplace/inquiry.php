@@ -26,11 +26,6 @@ if (!$interestID || $interestID <= 0) {
 
     http_response_code(400);
 
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
-
     $pageTitle = "Invalid Inquiry";
 
     require_once "../includes/head.php";
@@ -111,13 +106,6 @@ $statusError = "";
 |--------------------------------------------------------------------------
 | Load Inquiry
 |--------------------------------------------------------------------------
-|
-| Admin:
-|   Can view any inquiry.
-|
-| Seller:
-|   Can only view inquiries belonging to their account.
-|
 */
 
 if (isAdmin()) {
@@ -253,11 +241,6 @@ if (!$inquiry) {
 
     http_response_code(404);
 
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
-
     $pageTitle = "Inquiry Not Found";
 
     require_once "../includes/head.php";
@@ -321,13 +304,6 @@ if (!$inquiry) {
 |--------------------------------------------------------------------------
 | Update Inquiry Status
 |--------------------------------------------------------------------------
-|
-| Admin:
-|   Can update any inquiry.
-|
-| Seller:
-|   Can only update their own inquiries.
-|
 */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -337,13 +313,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $newStatus = trim(
         $_POST["status"] ?? ""
     );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validate Submitted Status
-    |--------------------------------------------------------------------------
-    */
 
     if (!in_array(
         $newStatus,
@@ -355,12 +324,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "Please select a valid inquiry status.";
 
     } else {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Verify Permission
-        |--------------------------------------------------------------------------
-        */
 
         $hasPermission = false;
 
@@ -376,13 +339,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $hasPermission = true;
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Unauthorized Status Change
-        |--------------------------------------------------------------------------
-        */
-
         if (!$hasPermission) {
 
             http_response_code(403);
@@ -395,13 +351,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $oldStatus =
                 $inquiry["Status"];
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | No Change
-            |--------------------------------------------------------------------------
-            */
-
             if ($oldStatus === $newStatus) {
 
                 $statusSuccess =
@@ -411,16 +360,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             } else {
 
-                /*
-                |--------------------------------------------------------------------------
-                | Update Database
-                |--------------------------------------------------------------------------
-                */
-
                 try {
 
                     $pdo->beginTransaction();
-
 
                     $updateStmt = $pdo->prepare("
                         UPDATE vehicle_interests
@@ -436,18 +378,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         (int) $interestID
                     ]);
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Audit Log
-                    |--------------------------------------------------------------------------
-                    |
-                    | IMPORTANT:
-                    | logAudit() requires the PDO connection as its
-                    | first argument.
-                    |
-                    */
-
                     logAudit(
                         $pdo,
                         "Changed inquiry status from "
@@ -458,21 +388,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         (int) $interestID
                     );
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Commit Transaction
-                    |--------------------------------------------------------------------------
-                    */
-
                     $pdo->commit();
-
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Notify the buyer about the status change
-                    |--------------------------------------------------------------------------
-                    */
 
                     notifyUser(
                         $pdo,
@@ -490,19 +406,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             . (int) $interestID
                     );
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Update Current Page Data
-                    |--------------------------------------------------------------------------
-                    */
-
                     $inquiry["Status"] =
                         $newStatus;
 
                     $inquiry["UpdatedAt"] =
                         date("Y-m-d H:i:s");
-
 
                     $statusSuccess =
                         "Inquiry status updated to "
@@ -546,35 +454,24 @@ $statusClass = "status-pending";
 switch ($inquiry["Status"]) {
 
     case "Contacted":
-
         $statusClass = "status-contacted";
-
         break;
 
     case "Accepted":
-
         $statusClass = "status-accepted";
-
         break;
 
     case "Declined":
-
         $statusClass = "status-declined";
-
         break;
 
     case "Closed":
-
         $statusClass = "status-closed";
-
         break;
 
     case "Pending":
-
     default:
-
         $statusClass = "status-pending";
-
         break;
 }
 
@@ -591,588 +488,54 @@ $message =
     );
 
 
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
-
 $pageTitle = "Inquiry #" . (int) $inquiry["InterestID"] . " - VISRS";
 
 require_once "../includes/head.php";
 
 ?>
 
-<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
 <style>
-
-    /*
-    |--------------------------------------------------------------------------
-    | Page Header
-    |--------------------------------------------------------------------------
-    */
-
-    .inquiry-page-header {
-
-        display:flex;
-
-        justify-content:space-between;
-
-        align-items:flex-start;
-
-        gap:20px;
-
-        margin-bottom:25px;
-
-        flex-wrap:wrap;
-    }
-
-
-    .inquiry-page-header h1 {
-
-        margin:0 0 6px;
-    }
-
-
-    .inquiry-page-header p {
-
-        margin:0;
-
-        color:#64748b;
-    }
-
-
-    .inquiry-actions {
-
-        display:flex;
-
-        gap:10px;
-
-        flex-wrap:wrap;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Main Grid
-    |--------------------------------------------------------------------------
-    */
-
-    .inquiry-grid {
-
-        display:grid;
-
-        grid-template-columns:
-            minmax(0, 1.15fr)
-            minmax(300px, 0.85fr);
-
-        gap:20px;
-    }
-
-
-    .inquiry-section {
-
-        margin-bottom:20px;
-    }
-
-
-    .inquiry-section:last-child {
-
-        margin-bottom:0;
-    }
-
-
-    .inquiry-section h2 {
-
-        margin:0 0 16px;
-
-        font-size:18px;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Detail Grid
-    |--------------------------------------------------------------------------
-    */
-
-    .detail-grid {
-
-        display:grid;
-
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-
-        gap:14px;
-    }
-
-
-    .detail-item {
-
-        padding:13px 14px;
-
-        border:1px solid #e5e7eb;
-
-        border-radius:8px;
-
-        background:#f8fafc;
-    }
-
-
-    .detail-label {
-
-        display:block;
-
-        margin-bottom:5px;
-
-        color:#64748b;
-
-        font-size:12px;
-
-        font-weight:600;
-    }
-
-
-    .detail-value {
-
-        color:#111827;
-
-        font-size:14px;
-
-        font-weight:600;
-
-        word-break:break-word;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Message
-    |--------------------------------------------------------------------------
-    */
-
-    .inquiry-message {
-
-        padding:18px;
-
-        border:1px solid #e5e7eb;
-
-        border-radius:10px;
-
-        background:#f8fafc;
-
-        color:#374151;
-
-        line-height:1.7;
-
-        white-space:pre-wrap;
-
-        word-break:break-word;
-
-        min-height:60px;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Status Badges
-    |--------------------------------------------------------------------------
-    */
-
-    .status-badge {
-
-        display:inline-block;
-
-        padding:6px 11px;
-
-        border-radius:999px;
-
-        font-size:12px;
-
-        font-weight:700;
-
-        line-height:1;
-    }
-
-
-    .status-pending {
-
-        background:#fef3c7;
-
-        color:#92400e;
-    }
-
-
-    .status-contacted {
-
-        background:#dbeafe;
-
-        color:#1e40af;
-    }
-
-
-    .status-accepted {
-
-        background:#dcfce7;
-
-        color:#166534;
-    }
-
-
-    .status-declined {
-
-        background:#fee2e2;
-
-        color:#991b1b;
-    }
-
-
-    .status-closed {
-
-        background:#e5e7eb;
-
-        color:#374151;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Status Management
-    |--------------------------------------------------------------------------
-    */
-
-    .status-management {
-
-        padding:18px;
-
-        border:1px solid #e5e7eb;
-
-        border-radius:10px;
-
-        background:#f8fafc;
-    }
-
-
-    .current-status-row {
-
-        display:flex;
-
-        align-items:center;
-
-        justify-content:space-between;
-
-        gap:15px;
-
-        flex-wrap:wrap;
-
-        margin-bottom:18px;
-    }
-
-
-    .current-status-label {
-
-        display:block;
-
-        margin-bottom:7px;
-
-        color:#64748b;
-
-        font-size:13px;
-
-        font-weight:600;
-    }
-
-
-    .status-help-text {
-
-        margin:0 0 18px;
-
-        color:#64748b;
-
-        font-size:13px;
-
-        line-height:1.6;
-    }
-
-
-    .status-form {
-
-        display:flex;
-
-        align-items:flex-end;
-
-        gap:12px;
-
-        flex-wrap:wrap;
-    }
-
-
-    .status-form-group {
-
-        flex:1;
-
-        min-width:220px;
-    }
-
-
-    .status-form-group label {
-
-        display:block;
-
-        margin-bottom:7px;
-
-        color:#374151;
-
-        font-size:13px;
-
-        font-weight:600;
-    }
-
-
-    .status-form-group select {
-
-        width:100%;
-
-        box-sizing:border-box;
-
-        padding:11px 12px;
-
-        border:1px solid #d1d5db;
-
-        border-radius:7px;
-
-        background:#ffffff;
-
-        color:#111827;
-
-        font-size:14px;
-
-        cursor:pointer;
-    }
-
-
-    .status-form-group select:focus {
-
-        outline:none;
-
-        border-color:#2563eb;
-
-        box-shadow:
-            0 0 0 3px
-            rgba(37,99,235,0.10);
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Alerts
-    |--------------------------------------------------------------------------
-    */
-
-    .inquiry-alert {
-
-        padding:13px 15px;
-
-        border-radius:8px;
-
-        margin-bottom:20px;
-
-        font-size:14px;
-
-        font-weight:600;
-    }
-
-
-    .inquiry-alert-success {
-
-        background:#dcfce7;
-
-        border:1px solid #bbf7d0;
-
-        color:#166534;
-    }
-
-
-    .inquiry-alert-error {
-
-        background:#fee2e2;
-
-        border:1px solid #fecaca;
-
-        color:#991b1b;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vehicle Summary
-    |--------------------------------------------------------------------------
-    */
-
-    .vehicle-summary {
-
-        padding:18px;
-
-        border:1px solid #e5e7eb;
-
-        border-radius:10px;
-
-        background:#ffffff;
-    }
-
-
-    .vehicle-summary-title {
-
-        margin:0 0 5px;
-
-        font-size:20px;
-
-        font-weight:800;
-
-        color:#111827;
-    }
-
-
-    .vehicle-summary-subtitle {
-
-        margin:0 0 16px;
-
-        color:#64748b;
-
-        font-size:13px;
-    }
-
-
-    .price-display {
-
-        margin-bottom:18px;
-
-        font-size:25px;
-
-        font-weight:800;
-
-        color:#111827;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Timeline
-    |--------------------------------------------------------------------------
-    */
-
-    .timeline-item {
-
-        display:flex;
-
-        justify-content:space-between;
-
-        gap:20px;
-
-        padding:11px 0;
-
-        border-bottom:1px solid #f1f5f9;
-    }
-
-
-    .timeline-item:last-child {
-
-        border-bottom:0;
-    }
-
-
-    .timeline-label {
-
-        color:#64748b;
-
-        font-size:13px;
-    }
-
-
-    .timeline-value {
-
-        color:#374151;
-
-        font-size:13px;
-
-        font-weight:600;
-
-        text-align:right;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Responsive
-    |--------------------------------------------------------------------------
-    */
-
-    @media (max-width:900px) {
-
-        .inquiry-grid {
-
-            grid-template-columns:1fr;
-        }
-
-    }
-
-
-    @media (max-width:600px) {
-
-        .detail-grid {
-
-            grid-template-columns:1fr;
-        }
-
-
-        .inquiry-actions {
-
-            width:100%;
-        }
-
-
-        .inquiry-actions .button {
-
-            flex:1;
-
-            text-align:center;
-        }
-
-
-        .status-form {
-
-            display:block;
-        }
-
-
-        .status-form-group {
-
-            width:100%;
-
-            margin-bottom:12px;
-        }
-
-
-        .status-form .button {
-
-            width:100%;
-        }
-
-
-        .timeline-item {
-
-            display:block;
-        }
-
-
-        .timeline-value {
-
-            margin-top:4px;
-
-            text-align:left;
-        }
-
-    }
-
+    .inquiry-page-header { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:25px; flex-wrap:wrap; }
+    .inquiry-page-header h1 { margin:0 0 6px; }
+    .inquiry-page-header p { margin:0; color:#64748b; }
+    .inquiry-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .inquiry-grid { display:grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr); gap:20px; }
+    .inquiry-section { margin-bottom:20px; }
+    .inquiry-section:last-child { margin-bottom:0; }
+    .inquiry-section h2 { margin:0 0 16px; font-size:18px; }
+    .detail-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; }
+    .detail-item { padding:13px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc; }
+    .detail-label { display:block; margin-bottom:5px; color:#64748b; font-size:12px; font-weight:600; }
+    .detail-value { color:#111827; font-size:14px; font-weight:600; word-break:break-word; }
+    .inquiry-message { padding:18px; border:1px solid #e5e7eb; border-radius:10px; background:#f8fafc; color:#374151; line-height:1.7; white-space:pre-wrap; word-break:break-word; min-height:60px; }
+    .status-badge { display:inline-block; padding:6px 11px; border-radius:999px; font-size:12px; font-weight:700; line-height:1; }
+    .status-pending { background:#fef3c7; color:#92400e; }
+    .status-contacted { background:#dbeafe; color:#1e40af; }
+    .status-accepted { background:#dcfce7; color:#166534; }
+    .status-declined { background:#fee2e2; color:#991b1b; }
+    .status-closed { background:#e5e7eb; color:#374151; }
+    .status-management { padding:18px; border:1px solid #e5e7eb; border-radius:10px; background:#f8fafc; }
+    .current-status-row { display:flex; align-items:center; justify-content:space-between; gap:15px; flex-wrap:wrap; margin-bottom:18px; }
+    .current-status-label { display:block; margin-bottom:7px; color:#64748b; font-size:13px; font-weight:600; }
+    .status-help-text { margin:0 0 18px; color:#64748b; font-size:13px; line-height:1.6; }
+    .status-form { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+    .status-form-group { flex:1; min-width:220px; }
+    .status-form-group label { display:block; margin-bottom:7px; color:#374151; font-size:13px; font-weight:600; }
+    .status-form-group select { width:100%; box-sizing:border-box; padding:11px 12px; border:1px solid #d1d5db; border-radius:7px; background:#ffffff; color:#111827; font-size:14px; cursor:pointer; }
+    .status-form-group select:focus { outline:none; border-color:#2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
+    .inquiry-alert { padding:13px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; }
+    .inquiry-alert-success { background:#dcfce7; border:1px solid #bbf7d0; color:#166534; }
+    .inquiry-alert-error { background:#fee2e2; border:1px solid #fecaca; color:#991b1b; }
+    .vehicle-summary { padding:18px; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; }
+    .vehicle-summary-title { margin:0 0 5px; font-size:20px; font-weight:800; color:#111827; }
+    .vehicle-summary-subtitle { margin:0 0 16px; color:#64748b; font-size:13px; }
+    .price-display { margin-bottom:18px; font-size:25px; font-weight:800; color:#111827; }
+    .timeline-item { display:flex; justify-content:space-between; gap:20px; padding:11px 0; border-bottom:1px solid #f1f5f9; }
+    .timeline-item:last-child { border-bottom:0; }
+    .timeline-label { color:#64748b; font-size:13px; }
+    .timeline-value { color:#374151; font-size:13px; font-weight:600; text-align:right; }
+    @media (max-width:900px) { .inquiry-grid { grid-template-columns:1fr; } }
+    @media (max-width:600px) { .detail-grid { grid-template-columns:1fr; } .inquiry-actions { width:100%; } .inquiry-actions .button { flex:1; text-align:center; } .status-form { display:block; } .status-form-group { width:100%; margin-bottom:12px; } .status-form .button { width:100%; } .timeline-item { display:block; } .timeline-value { margin-top:4px; text-align:left; } }
 </style>
 
 
@@ -1180,56 +543,33 @@ require_once "../includes/head.php";
 
 <div class="layout">
 
-    <?php
-    require_once __DIR__ . "/../includes/sidebar.php";
-    ?>
-
+    <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
     <main class="main-content">
 
-        <?php
-        require_once __DIR__ . "/../includes/header.php";
-        ?>
-
+        <?php require_once __DIR__ . "/../includes/header.php"; ?>
 
         <main class="content">
 
-
-            <!-- =========================================================
-                 PAGE HEADER
-                 ========================================================= -->
+            <!-- PAGE HEADER -->
 
             <div class="inquiry-page-header">
 
                 <div>
-
-                    <h1>
-                        Inquiry #<?= (int) $inquiry["InterestID"] ?>
-                    </h1>
-
-                    <p>
-                        Review and manage the buyer's inquiry for this
-                        marketplace listing.
-                    </p>
-
+                    <h1>Inquiry #<?= (int) $inquiry["InterestID"] ?></h1>
+                    <p>Review and manage the buyer's inquiry for this marketplace listing.</p>
                 </div>
 
 
                 <div class="inquiry-actions">
 
-                    <a
-                        href="/visrs/marketplace/inquiries.php"
-                        class="button button-secondary"
-                    >
+                    <a href="/visrs/marketplace/inquiries.php" class="button button-secondary">
                         Back to Inquiries
                     </a>
 
-
-                    <a
-                        href="/visrs/marketplace/view.php?vehicle_id=<?= (int) $inquiry["VehicleID"] ?>"
-                        class="button"
-                    >
-                        View Vehicle
+                    <!-- FIXED: Points directly to the official vehicle record -->
+                    <a href="/visrs/vehicles/view.php?id=<?= (int) $inquiry["VehicleID"] ?>" class="button">
+                        View Official Vehicle Record
                     </a>
 
                 </div>
@@ -1237,252 +577,111 @@ require_once "../includes/head.php";
             </div>
 
 
-            <!-- =========================================================
-                 STATUS UPDATE FEEDBACK
-                 ========================================================= -->
+            <!-- STATUS UPDATE FEEDBACK -->
 
             <?php if ($statusSuccess !== ""): ?>
-
-                <div
-                    class="inquiry-alert inquiry-alert-success"
-                >
-
-                    <?= htmlspecialchars(
-                        $statusSuccess
-                    ) ?>
-
+                <div class="inquiry-alert inquiry-alert-success">
+                    <?= htmlspecialchars($statusSuccess) ?>
                 </div>
-
             <?php endif; ?>
 
 
             <?php if ($statusError !== ""): ?>
-
-                <div
-                    class="inquiry-alert inquiry-alert-error"
-                >
-
-                    <?= htmlspecialchars(
-                        $statusError
-                    ) ?>
-
+                <div class="inquiry-alert inquiry-alert-error">
+                    <?= htmlspecialchars($statusError) ?>
                 </div>
-
             <?php endif; ?>
 
 
             <div class="inquiry-grid">
 
-
-                <!-- =====================================================
-                     LEFT COLUMN
-                     ===================================================== -->
+                <!-- LEFT COLUMN -->
 
                 <div>
 
-
-                    <!-- =================================================
-                         BUYER INFORMATION
-                         ================================================= -->
+                    <!-- BUYER INFORMATION -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Buyer Information
-                        </h2>
-
+                        <h2>Buyer Information</h2>
 
                         <div class="detail-grid">
 
-
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Buyer Name
-                                </span>
-
+                                <span class="detail-label">Buyer Name</span>
                                 <span class="detail-value">
-
-                                    <?= htmlspecialchars(
-                                        $inquiry["BuyerFirstName"]
-                                        . " "
-                                        . $inquiry["BuyerLastName"]
-                                    ) ?>
-
+                                    <?= htmlspecialchars($inquiry["BuyerFirstName"] . " " . $inquiry["BuyerLastName"]) ?>
                                 </span>
-
                             </div>
 
-
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Email
-                                </span>
-
+                                <span class="detail-label">Email</span>
                                 <span class="detail-value">
-
-                                    <?= htmlspecialchars(
-                                        $inquiry["BuyerEmail"]
-                                    ) ?>
-
+                                    <?= htmlspecialchars($inquiry["BuyerEmail"]) ?>
                                 </span>
-
                             </div>
 
-
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Inquiry Status
-                                </span>
-
+                                <span class="detail-label">Inquiry Status</span>
                                 <span class="detail-value">
-
-                                    <span
-                                        class="status-badge <?= htmlspecialchars($statusClass) ?>"
-                                    >
-                                        <?= htmlspecialchars(
-                                            $inquiry["Status"]
-                                        ) ?>
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
+                                        <?= htmlspecialchars($inquiry["Status"]) ?>
                                     </span>
-
                                 </span>
-
                             </div>
-
 
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Submitted
-                                </span>
-
+                                <span class="detail-label">Submitted</span>
                                 <span class="detail-value">
-
-                                    <?= htmlspecialchars(
-                                        formatDateTime(
-                                            $inquiry["CreatedAt"]
-                                        )
-                                    ) ?>
-
+                                    <?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?>
                                 </span>
-
                             </div>
-
 
                         </div>
 
                     </section>
 
 
-                    <!-- =================================================
-                         STATUS MANAGEMENT
-                         ================================================= -->
+                    <!-- STATUS MANAGEMENT -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Manage Inquiry Status
-                        </h2>
-
+                        <h2>Manage Inquiry Status</h2>
 
                         <div class="status-management">
 
-
                             <div class="current-status-row">
-
                                 <div>
-
-                                    <span class="current-status-label">
-                                        Current Status
+                                    <span class="current-status-label">Current Status</span>
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
+                                        <?= htmlspecialchars($inquiry["Status"]) ?>
                                     </span>
-
-                                    <span
-                                        class="status-badge <?= htmlspecialchars($statusClass) ?>"
-                                    >
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["Status"]
-                                        ) ?>
-
-                                    </span>
-
                                 </div>
-
                             </div>
 
-
                             <p class="status-help-text">
-
                                 Update the inquiry as communication with
                                 the buyer progresses. Every status change
                                 is saved to the database and recorded in
                                 the VISRS audit log.
-
                             </p>
 
+                            <form method="POST" class="status-form">
 
-                            <form
-                                method="POST"
-                                class="status-form"
-                            >
-
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="<?= htmlspecialchars(
-                                        generateCSRFToken()
-                                    ) ?>"
-                                >
-
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
 
                                 <div class="status-form-group">
-
-                                    <label
-                                        for="inquiry-status"
-                                    >
-                                        Change Status
-                                    </label>
-
-
-                                    <select
-                                        id="inquiry-status"
-                                        name="status"
-                                        required
-                                    >
-
-                                        <?php foreach (
-                                            $allowedInquiryStatuses
-                                            as $statusOption
-                                        ): ?>
-
-                                            <option
-                                                value="<?= htmlspecialchars(
-                                                    $statusOption
-                                                ) ?>"
-                                                <?= $inquiry["Status"] === $statusOption
-                                                    ? "selected"
-                                                    : "" ?>
-                                            >
-                                                <?= htmlspecialchars(
-                                                    $statusOption
-                                                ) ?>
+                                    <label for="inquiry-status">Change Status</label>
+                                    <select id="inquiry-status" name="status" required>
+                                        <?php foreach ($allowedInquiryStatuses as $statusOption): ?>
+                                            <option value="<?= htmlspecialchars($statusOption) ?>" <?= $inquiry["Status"] === $statusOption ? "selected" : "" ?>>
+                                                <?= htmlspecialchars($statusOption) ?>
                                             </option>
-
                                         <?php endforeach; ?>
-
                                     </select>
-
                                 </div>
 
-
-                                <button
-                                    type="submit"
-                                    class="button"
-                                >
-                                    Update Status
-                                </button>
+                                <button type="submit" class="button">Update Status</button>
 
                             </form>
 
@@ -1491,235 +690,108 @@ require_once "../includes/head.php";
                     </section>
 
 
-                    <!-- =================================================
-                         BUYER MESSAGE
-                         ================================================= -->
+                    <!-- BUYER MESSAGE -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Buyer Message
-                        </h2>
-
+                        <h2>Buyer Message</h2>
 
                         <div class="inquiry-message">
-
                             <?php if ($message !== ""): ?>
-
-                                <?= htmlspecialchars(
-                                    $message
-                                ) ?>
-
+                                <?= htmlspecialchars($message) ?>
                             <?php else: ?>
-
                                 No message was provided with this inquiry.
-
                             <?php endif; ?>
-
                         </div>
 
                     </section>
 
 
-                    <!-- =================================================
-                         SELLER INFORMATION
-                         ================================================= -->
+                    <!-- SELLER INFORMATION -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Seller Information
-                        </h2>
-
+                        <h2>Seller Information</h2>
 
                         <div class="detail-grid">
 
-
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Seller Name
-                                </span>
-
+                                <span class="detail-label">Seller Name</span>
                                 <span class="detail-value">
-
-                                    <?= htmlspecialchars(
-                                        $inquiry["SellerFirstName"]
-                                        . " "
-                                        . $inquiry["SellerLastName"]
-                                    ) ?>
-
+                                    <?= htmlspecialchars($inquiry["SellerFirstName"] . " " . $inquiry["SellerLastName"]) ?>
                                 </span>
-
                             </div>
 
-
                             <div class="detail-item">
-
-                                <span class="detail-label">
-                                    Seller Email
-                                </span>
-
+                                <span class="detail-label">Seller Email</span>
                                 <span class="detail-value">
-
-                                    <?= htmlspecialchars(
-                                        $inquiry["SellerEmail"]
-                                    ) ?>
-
+                                    <?= htmlspecialchars($inquiry["SellerEmail"]) ?>
                                 </span>
-
                             </div>
-
 
                         </div>
 
                     </section>
 
-
                 </div>
 
 
-                <!-- =====================================================
-                     RIGHT COLUMN
-                     ===================================================== -->
+                <!-- RIGHT COLUMN -->
 
                 <div>
 
-
-                    <!-- =================================================
-                         VEHICLE LISTING
-                         ================================================= -->
+                    <!-- VEHICLE LISTING -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Vehicle Listing
-                        </h2>
-
+                        <h2>Vehicle Listing</h2>
 
                         <div class="vehicle-summary">
 
-
                             <h3 class="vehicle-summary-title">
-
-                                <?= htmlspecialchars(
-                                    $inquiry["VehicleYear"]
-                                    . " "
-                                    . $inquiry["Make"]
-                                    . " "
-                                    . $inquiry["Model"]
-                                ) ?>
-
+                                <?= htmlspecialchars($inquiry["VehicleYear"] . " " . $inquiry["Make"] . " " . $inquiry["Model"]) ?>
                             </h3>
 
-
                             <p class="vehicle-summary-subtitle">
-
-                                <?= htmlspecialchars(
-                                    $inquiry["Color"]
-                                    ?: "Color not specified"
-                                ) ?>
-
-
-                                <?php if (
-                                    !empty(
-                                        $inquiry["VehicleType"]
-                                    )
-                                ): ?>
-
-                                    ·
-
-                                    <?= htmlspecialchars(
-                                        $inquiry["VehicleType"]
-                                    ) ?>
-
+                                <?= htmlspecialchars($inquiry["Color"] ?: "Color not specified") ?>
+                                <?php if (!empty($inquiry["VehicleType"])): ?>
+                                    · <?= htmlspecialchars($inquiry["VehicleType"]) ?>
                                 <?php endif; ?>
-
                             </p>
 
-
                             <div class="price-display">
-
-                                $
-
-                                <?= number_format(
-                                    (float) $inquiry["Price"],
-                                    2
-                                ) ?>
-
+                                $ <?= number_format((float) $inquiry["Price"], 2) ?>
                             </div>
-
 
                             <div class="detail-grid">
 
-
                                 <div class="detail-item">
-
-                                    <span class="detail-label">
-                                        Plate Number
-                                    </span>
-
+                                    <span class="detail-label">Plate Number</span>
                                     <span class="detail-value">
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["PlateNumber"]
-                                        ) ?>
-
+                                        <?= htmlspecialchars($inquiry["PlateNumber"]) ?>
                                     </span>
-
                                 </div>
 
-
                                 <div class="detail-item">
-
-                                    <span class="detail-label">
-                                        VIN
-                                    </span>
-
+                                    <span class="detail-label">VIN</span>
                                     <span class="detail-value">
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["VIN"]
-                                        ) ?>
-
+                                        <?= htmlspecialchars($inquiry["VIN"]) ?>
                                     </span>
-
                                 </div>
 
-
                                 <div class="detail-item">
-
-                                    <span class="detail-label">
-                                        Vehicle Status
-                                    </span>
-
+                                    <span class="detail-label">Vehicle Status</span>
                                     <span class="detail-value">
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["VehicleStatus"]
-                                        ) ?>
-
+                                        <?= htmlspecialchars($inquiry["VehicleStatus"]) ?>
                                     </span>
-
                                 </div>
 
-
                                 <div class="detail-item">
-
-                                    <span class="detail-label">
-                                        Listing Status
-                                    </span>
-
+                                    <span class="detail-label">Listing Status</span>
                                     <span class="detail-value">
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["ListingStatus"]
-                                        ) ?>
-
+                                        <?= htmlspecialchars($inquiry["ListingStatus"]) ?>
                                     </span>
-
                                 </div>
-
 
                             </div>
 
@@ -1728,117 +800,56 @@ require_once "../includes/head.php";
                     </section>
 
 
-                    <!-- =================================================
-                         INQUIRY TIMELINE
-                         ================================================= -->
+                    <!-- INQUIRY TIMELINE -->
 
                     <section class="card inquiry-section">
 
-                        <h2>
-                            Inquiry Timeline
-                        </h2>
-
+                        <h2>Inquiry Timeline</h2>
 
                         <div>
 
-
                             <div class="timeline-item">
-
-                                <span class="timeline-label">
-                                    Inquiry Submitted
-                                </span>
-
+                                <span class="timeline-label">Inquiry Submitted</span>
                                 <span class="timeline-value">
-
-                                    <?= htmlspecialchars(
-                                        formatDateTime(
-                                            $inquiry["CreatedAt"]
-                                        )
-                                    ) ?>
-
+                                    <?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?>
                                 </span>
-
                             </div>
 
-
                             <div class="timeline-item">
-
-                                <span class="timeline-label">
-                                    Last Updated
-                                </span>
-
+                                <span class="timeline-label">Last Updated</span>
                                 <span class="timeline-value">
-
-                                    <?= htmlspecialchars(
-                                        formatDateTime(
-                                            $inquiry["UpdatedAt"]
-                                        )
-                                    ) ?>
-
+                                    <?= htmlspecialchars(formatDateTime($inquiry["UpdatedAt"])) ?>
                                 </span>
-
                             </div>
 
-
                             <div class="timeline-item">
-
-                                <span class="timeline-label">
-                                    Current Status
-                                </span>
-
+                                <span class="timeline-label">Current Status</span>
                                 <span class="timeline-value">
-
-                                    <span
-                                        class="status-badge <?= htmlspecialchars($statusClass) ?>"
-                                    >
-
-                                        <?= htmlspecialchars(
-                                            $inquiry["Status"]
-                                        ) ?>
-
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
+                                        <?= htmlspecialchars($inquiry["Status"]) ?>
                                     </span>
-
                                 </span>
-
                             </div>
-
 
                             <div class="timeline-item">
-
-                                <span class="timeline-label">
-                                    Inquiry ID
-                                </span>
-
+                                <span class="timeline-label">Inquiry ID</span>
                                 <span class="timeline-value">
-
                                     #<?= (int) $inquiry["InterestID"] ?>
-
                                 </span>
-
                             </div>
-
 
                         </div>
 
                     </section>
 
-
                 </div>
-
 
             </div>
 
-
         </main>
-
 
     </main>
 
 </div>
 
-
-<!-- FIX: removed the duplicate </body></html> that appeared after
-     footer.php. footer.php already closes those tags. -->
-<?php
-require_once __DIR__ . "/../includes/footer.php";
-?>
+<?php require_once __DIR__ . "/../includes/footer.php"; ?>

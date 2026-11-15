@@ -56,13 +56,15 @@ $sql = "
         v.VehicleYear,
         v.Color,
         v.VehicleType,
+        v.OwnerID AS CurrentOwnerID,
 
         o.OwnerID,
         o.FirstName,
         o.LastName,
         o.Address,
         o.Phone,
-        o.Email
+        o.Email,
+        o.UserID AS OwnerUserID
 
     FROM ownership_history oh
 
@@ -98,11 +100,6 @@ if (!$record) {
 
     $pageTitle = "Ownership Record Not Found";
     $pageSubtitle = "The requested ownership record could not be found.";
-
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
 
     require_once "../includes/head.php";
 
@@ -187,14 +184,56 @@ if (!$record) {
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+$isStaff = in_array($currentRole, ['Admin', 'Police', 'Seller']);
+
+// Verify they own the CURRENT vehicle record, not just the historical owner record
+// If they are basic user and don't own the vehicle, block them.
+if (!$isStaff && (int)$record["OwnerUserID"] !== $currentUserId) {
+    // If this is a historical record, the user viewing it might not be the current owner. 
+    // We check if the logged-in user is the CURRENT owner of the vehicle.
+    $checkOwnerStmt = $pdo->prepare("SELECT UserID FROM owners WHERE OwnerID = ?");
+    $checkOwnerStmt->execute([$record["CurrentOwnerID"]]);
+    $currentVehicleOwnerUserID = (int)$checkOwnerStmt->fetchColumn();
+
+    if ($currentVehicleOwnerUserID !== $currentUserId) {
+        http_response_code(403);
+        $pageTitle = "Access Denied";
+        require_once "../includes/head.php";
+        ?>
+        <body>
+        <div class="layout">
+            <main class="main-content" style="margin-left:0; width:100%;">
+                <div class="content" style="max-width:700px; margin:80px auto;">
+                    <div class="card">
+                        <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                            <strong>Access Denied</strong>
+                        </div>
+                        <h2>You do not have permission to view this ownership record.</h2>
+                        <p>You can only view history for vehicles that are currently linked to your account.</p>
+                        <a href="index.php" class="button">Return to Ownership History</a>
+                    </div>
+                </div>
+            </main>
+        </div>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
+}
+
+
 $isCurrentOwner =
     empty($record["EndDate"]);
 
-
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
 
 $pageTitle = "Ownership Record";
 
@@ -202,7 +241,6 @@ require_once "../includes/head.php";
 
 ?>
 
-<!-- FIX: Page-specific CSS moved here from <head> (head.php closes </head>) -->
 <style>
 
     .detail-grid {
@@ -726,7 +764,4 @@ require_once "../includes/head.php";
 
 </div>
 
-
-<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
-     </body></html> that followed. footer.php closes those tags. -->
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

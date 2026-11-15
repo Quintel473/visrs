@@ -20,6 +20,100 @@ $filterTo           = trim($_GET["to"]           ?? "");
 $filterDamage       = trim($_GET["damage"]       ?? "");
 $filterVehicle      = trim($_GET["vehicle"]      ?? "");
 
+/* ============================================================
+ * === VEHICLE SCOPING (from ?vehicle_id=...) ===
+ * ============================================================ */
+
+$filterVehicleId = isset($_GET["vehicle_id"])
+    ? (int) $_GET["vehicle_id"]
+    : 0;
+
+if ($filterVehicleId < 0) {
+    $filterVehicleId = 0;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control Setup
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+
+$isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
+$canManage = in_array($currentRole, ['Admin', 'Police'], true);
+
+/* Load the scoped vehicle's basic info for the page header. */
+
+$scopedVehicle = null;
+
+if ($filterVehicleId > 0) {
+    $svStmt = $pdo->prepare("
+        SELECT
+            v.VehicleID,
+            v.PlateNumber,
+            v.Make,
+            v.Model,
+            v.VehicleYear,
+            v.Status,
+            o.UserID AS OwnerUserID,
+            v.SellerID
+        FROM vehicles v
+        INNER JOIN owners o ON v.OwnerID = o.OwnerID
+        WHERE v.VehicleID = ?
+        LIMIT 1
+    ");
+    $svStmt->execute([$filterVehicleId]);
+    $scopedVehicle = $svStmt->fetch() ?: null;
+
+    /* If the ID doesn't exist, fall back to "all accidents" but
+     * remember the invalid state so we can show a warning. */
+    if (!$scopedVehicle) {
+        $filterVehicleId = 0;
+    } else {
+        // SECURITY CHECK: If they aren't Admin/Police, verify access based on role.
+        if (!$isAdminOrPolice) {
+            $hasAccess = false;
+            
+            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) {
+                $hasAccess = true;
+            } elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) {
+                $hasAccess = true;
+            }
+
+            if (!$hasAccess) {
+                http_response_code(403);
+                $pageTitle = "Access Denied";
+                require_once "../includes/head.php";
+                ?>
+                <body>
+                <div class="layout">
+                    <main class="main-content" style="margin-left:0; width:100%;">
+                        <div class="content" style="max-width:700px; margin:80px auto;">
+                            <div class="card">
+                                <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                                    <strong>Access Denied</strong>
+                                </div>
+                                <h2>You do not have permission to view this vehicle's accidents.</h2>
+                                <p>You can only view accident records for vehicles that are linked to your account.</p>
+                                <a href="index.php" class="button">Return to Accident Records</a>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+                </body>
+                </html>
+                <?php
+                exit;
+            }
+        }
+    }
+}
+/* === END NEW === */
+
+
 $validDamageLevels = ["Minor", "Moderate", "Major", "Severe"];
 
 if (!in_array($filterDamage, $validDamageLevels, true)) {
@@ -58,6 +152,12 @@ if ($filterDamage !== "") {
     $whereParams[] = $filterDamage;
 }
 
+/* === exact vehicle scope === */
+if ($filterVehicleId > 0) {
+    $whereParts[]  = "a.VehicleID = ?";
+    $whereParams[] = $filterVehicleId;
+}
+
 if ($filterVehicle !== "") {
     $whereParts[]  = "(
         v.PlateNumber LIKE ?
@@ -70,6 +170,16 @@ if ($filterVehicle !== "") {
     $whereParams[] = $vehicleLike;
     $whereParams[] = $vehicleLike;
     $whereParams[] = $vehicleLike;
+}
+
+/* === Role-Based Filter (If not Admin/Police and no specific vehicle is requested) === */
+if (!$isAdminOrPolice && $filterVehicleId === 0) {
+    if ($currentRole === 'Seller') {
+        $whereParts[] = "v.SellerID = ?";
+    } else {
+        $whereParts[] = "o.UserID = ?";
+    }
+    $whereParams[] = $currentUserId;
 }
 
 $whereSql = $whereParts
@@ -87,6 +197,7 @@ $countStmt = $pdo->prepare("
     SELECT COUNT(*)
     FROM accidents a
     INNER JOIN vehicles v ON a.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
     {$whereSql}
 ");
 
@@ -120,6 +231,9 @@ $stmt = $pdo->prepare("
 
     INNER JOIN vehicles v
         ON a.VehicleID = v.VehicleID
+        
+    INNER JOIN owners o
+        ON v.OwnerID = o.OwnerID
 
     {$whereSql}
 
@@ -141,15 +255,6 @@ $stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
 $stmt->execute();
 
 $accidents = $stmt->fetchAll();
-
-
-$canManage =
-    isset($_SESSION["Role"]) &&
-    in_array(
-        $_SESSION["Role"],
-        ["Admin", "Police"],
-        true
-    );
 
 
 /* Any filters active? Used to show a "Clear filters" link. */
@@ -174,10 +279,11 @@ unset($_SESSION["bulk_message"]);
  */
 
 $filterQuery =
-    ($filterFrom    !== "" ? "&from="    . urlencode($filterFrom)    : "") .
-    ($filterTo      !== "" ? "&to="      . urlencode($filterTo)      : "") .
-    ($filterDamage  !== "" ? "&damage="  . urlencode($filterDamage)  : "") .
-    ($filterVehicle !== "" ? "&vehicle=" . urlencode($filterVehicle) : "");
+    ($filterFrom      !== ""  ? "&from="       . urlencode($filterFrom)      : "") .
+    ($filterTo        !== ""  ? "&to="         . urlencode($filterTo)        : "") .
+    ($filterDamage    !== ""  ? "&damage="     . urlencode($filterDamage)    : "") .
+    ($filterVehicle   !== ""  ? "&vehicle="    . urlencode($filterVehicle)   : "") .
+    ($filterVehicleId >  0    ? "&vehicle_id=" . urlencode($filterVehicleId) : "");
 
 
 /*
@@ -275,6 +381,71 @@ require_once "../includes/head.php";
 
     .filter-summary a:hover {
         text-decoration: underline;
+    }
+
+    /* === vehicle scope banner === */
+
+    .vehicle-scope-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+
+        padding: 16px 20px;
+        margin-bottom: 20px;
+
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 10px;
+    }
+
+    .vehicle-scope-banner .scope-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .vehicle-scope-banner .scope-eyebrow {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #1d4ed8;
+    }
+
+    .vehicle-scope-banner .scope-vehicle {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .vehicle-scope-banner .scope-meta {
+        font-size: 13px;
+        color: #475569;
+    }
+
+    .vehicle-scope-banner .scope-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    [data-theme="dark"] .vehicle-scope-banner {
+        background: #172554;
+        border-color: #1e40af;
+    }
+
+    [data-theme="dark"] .vehicle-scope-banner .scope-vehicle {
+        color: #e2e8f0;
+    }
+
+    [data-theme="dark"] .vehicle-scope-banner .scope-meta {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .vehicle-scope-banner .scope-eyebrow {
+        color: #93c5fd;
     }
 
     /* Dark mode */
@@ -395,6 +566,64 @@ require_once "../includes/head.php";
                 <?php endif; ?>
 
 
+                <!-- VEHICLE SCOPE BANNER -->
+
+                <?php if ($scopedVehicle): ?>
+
+                    <div class="vehicle-scope-banner">
+
+                        <div class="scope-info">
+
+                            <span class="scope-eyebrow">
+                                Scoped to vehicle
+                            </span>
+
+                            <span class="scope-vehicle">
+
+                                <?= htmlspecialchars($scopedVehicle["PlateNumber"]) ?>
+
+                                —
+
+                                <?= htmlspecialchars(
+                                    $scopedVehicle["Make"] . " " . $scopedVehicle["Model"]
+                                ) ?>
+
+                                (<?= htmlspecialchars((string) $scopedVehicle["VehicleYear"]) ?>)
+
+                            </span>
+
+                            <span class="scope-meta">
+
+                                Showing only accident records
+                                for this vehicle.
+
+                            </span>
+
+                        </div>
+
+                        <div class="scope-actions">
+
+                            <a
+                                href="../vehicles/view.php?id=<?= (int) $scopedVehicle["VehicleID"] ?>"
+                                class="button button-secondary"
+                            >
+                                ← Back to Vehicle
+                            </a>
+
+                            <a
+                                href="index.php"
+                                class="button button-secondary"
+                            >
+                                Show All My Accidents
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                <?php endif; ?>
+
+
                 <div
                     style="
                         display:flex;
@@ -474,6 +703,18 @@ require_once "../includes/head.php";
                     action=""
                     class="filter-bar"
                 >
+
+                    <!-- preserve vehicle scope across filter form -->
+
+                    <?php if ($filterVehicleId > 0): ?>
+
+                        <input
+                            type="hidden"
+                            name="vehicle_id"
+                            value="<?= (int) $filterVehicleId ?>"
+                        >
+
+                    <?php endif; ?>
 
                     <div class="filter-field">
 
@@ -555,7 +796,7 @@ require_once "../includes/head.php";
                         <?php if ($hasFilters): ?>
 
                             <a
-                                href="index.php"
+                                href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . (int) $filterVehicleId : '' ?>"
                                 class="button button-secondary"
                             >
                                 Clear
@@ -579,7 +820,7 @@ require_once "../includes/head.php";
 
                         </span>
 
-                        <a href="index.php">Reset all filters</a>
+                        <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . (int) $filterVehicleId : '' ?>">Reset all filters</a>
 
                     </div>
 
@@ -598,12 +839,31 @@ require_once "../includes/head.php";
                     >
 
                         <h3>
-                            <?= $hasFilters ? "No Matching Accidents" : "No Accident Records" ?>
+
+                            <?php if ($scopedVehicle): ?>
+
+                                No Accidents Recorded for This Vehicle
+
+                            <?php elseif ($hasFilters): ?>
+
+                                No Matching Accidents
+
+                            <?php else: ?>
+
+                                No Accident Records
+
+                            <?php endif; ?>
+
                         </h3>
 
                         <p>
 
-                            <?php if ($hasFilters): ?>
+                            <?php if ($scopedVehicle): ?>
+
+                                This vehicle (<strong><?= htmlspecialchars($scopedVehicle["PlateNumber"]) ?></strong>)
+                                has no accident records in the system.
+
+                            <?php elseif ($hasFilters): ?>
 
                                 No accidents match the current
                                 filter criteria. Try adjusting
@@ -619,7 +879,17 @@ require_once "../includes/head.php";
                         </p>
 
 
-                        <?php if ($hasFilters): ?>
+                        <?php if ($scopedVehicle): ?>
+
+                            <a
+                                href="../vehicles/view.php?id=<?= (int) $scopedVehicle["VehicleID"] ?>"
+                                class="button"
+                                style="margin-top:10px;"
+                            >
+                                ← Back to Vehicle
+                            </a>
+
+                        <?php elseif ($hasFilters): ?>
 
                             <a
                                 href="index.php"
@@ -657,6 +927,18 @@ require_once "../includes/head.php";
                             name="csrf_token"
                             value="<?= htmlspecialchars(generateCSRFToken()) ?>"
                         >
+
+                        <!-- preserve vehicle scope through bulk form -->
+
+                        <?php if ($filterVehicleId > 0): ?>
+
+                            <input
+                                type="hidden"
+                                name="return_vehicle_id"
+                                value="<?= (int) $filterVehicleId ?>"
+                            >
+
+                        <?php endif; ?>
 
 
                         <!-- BULK ACTION BAR -->

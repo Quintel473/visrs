@@ -7,13 +7,104 @@ require_once __DIR__ . "/../includes/functions.php";
 $basePath = "../";
 $activePage = "ownership_history";
 
-$canManage =
-    isset($_SESSION["Role"]) &&
-    in_array(
-        $_SESSION["Role"],
-        ["Admin", "Police"],
-        true
-    );
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control Setup
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+
+$canManage = in_array($currentRole, ['Admin', 'Police'], true);
+$isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
+
+
+/*
+|--------------------------------------------------------------------------
+| Vehicle Scoping Logic
+|--------------------------------------------------------------------------
+*/
+
+$filterVehicleId = isset($_GET["vehicle_id"]) ? (int) $_GET["vehicle_id"] : 0;
+$scopedVehicle = null;
+
+if ($filterVehicleId > 0) {
+    $svStmt = $pdo->prepare("
+        SELECT v.VehicleID, v.PlateNumber, v.Make, v.Model, v.VehicleYear, o.UserID AS OwnerUserID, v.SellerID
+        FROM vehicles v
+        INNER JOIN owners o ON v.OwnerID = o.OwnerID
+        WHERE v.VehicleID = ?
+        LIMIT 1
+    ");
+    $svStmt->execute([$filterVehicleId]);
+    $scopedVehicle = $svStmt->fetch() ?: null;
+
+    if (!$scopedVehicle) {
+        $filterVehicleId = 0; // Invalid ID, fallback to all
+    } else {
+        // Security check
+        if (!$isAdminOrPolice) {
+            $hasAccess = false;
+            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) {
+                $hasAccess = true;
+            } elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) {
+                $hasAccess = true;
+            }
+
+            if (!$hasAccess) {
+                http_response_code(403);
+                $pageTitle = "Access Denied";
+                require_once "../includes/head.php";
+                ?>
+                <body>
+                <div class="layout">
+                    <main class="main-content" style="margin-left:0; width:100%;">
+                        <div class="content" style="max-width:700px; margin:80px auto;">
+                            <div class="card">
+                                <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                                    <strong>Access Denied</strong>
+                                </div>
+                                <h2>You do not have permission to view this vehicle's history.</h2>
+                                <p>You can only view ownership history for vehicles that are linked to your account.</p>
+                                <a href="index.php" class="button">Return to Ownership History</a>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+                </body>
+                </html>
+                <?php
+                exit;
+            }
+        }
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Base Query Constraints
+|--------------------------------------------------------------------------
+*/
+
+$whereClause = "";
+$queryParams = [];
+
+if ($currentRole === 'Seller') {
+    $whereClause = " WHERE v.SellerID = ?";
+    $queryParams[] = $currentUserId;
+} elseif (!$isAdminOrPolice) {
+    $whereClause = " WHERE o.UserID = ?";
+    $queryParams[] = $currentUserId;
+}
+
+// Apply the specific vehicle scope filter
+if ($filterVehicleId > 0) {
+    $whereClause .= ($whereClause === "" ? " WHERE " : " AND ") . "oh.VehicleID = ?";
+    $queryParams[] = $filterVehicleId;
+}
 
 
 /*
@@ -24,7 +115,14 @@ $canManage =
 
 $perPage = 25;
 
-$countStmt = $pdo->query("SELECT COUNT(*) FROM ownership_history");
+$countStmt = $pdo->prepare("
+    SELECT COUNT(*) 
+    FROM ownership_history oh
+    INNER JOIN vehicles v ON oh.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    {$whereClause}
+");
+$countStmt->execute($queryParams);
 $totalRecords = (int) $countStmt->fetchColumn();
 
 $pagination = paginationMeta($totalRecords, $perPage);
@@ -60,7 +158,9 @@ $stmt = $pdo->prepare("
         ON oh.VehicleID = v.VehicleID
 
     INNER JOIN owners o
-        ON oh.OwnerID = o.OwnerID
+        ON v.OwnerID = o.OwnerID
+
+    {$whereClause}
 
     ORDER BY
         oh.StartDate DESC,
@@ -69,8 +169,14 @@ $stmt = $pdo->prepare("
     LIMIT ? OFFSET ?
 ");
 
-$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
-$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+/* Bind the UserID (if restricted) + Pagination limits */
+$paramIndex = 1;
+foreach ($queryParams as $param) {
+    $stmt->bindValue($paramIndex++, $param, PDO::PARAM_INT);
+}
+$stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
+
 $stmt->execute();
 
 $history = $stmt->fetchAll();
@@ -86,11 +192,6 @@ $bulkMessage = $_SESSION["bulk_message"] ?? null;
 unset($_SESSION["bulk_message"]);
 
 
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
-
 $pageTitle = "Ownership History";
 
 require_once "../includes/head.php";
@@ -103,21 +204,37 @@ require_once "../includes/head.php";
 
     <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
 
-
     <main class="main-content">
 
         <?php
 
         $pageTitle = "Ownership History";
-        $pageSubtitle =
-            "View the ownership records associated with vehicles in VISRS.";
+        $pageSubtitle = "View the ownership records associated with vehicles in VISRS.";
 
         include __DIR__ . "/../includes/header.php";
 
         ?>
 
-
         <div class="content">
+
+            <!-- VEHICLE SCOPE BANNER -->
+
+            <?php if ($scopedVehicle): ?>
+
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                    <div>
+                        <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.06em;">Scoped to vehicle</span><br>
+                        <span style="font-size:18px; font-weight:700; color:#111827;"><?= htmlspecialchars($scopedVehicle["PlateNumber"]) ?> — <?= htmlspecialchars($scopedVehicle["Make"] . " " . $scopedVehicle["Model"]) ?> (<?= htmlspecialchars((string) $scopedVehicle["VehicleYear"]) ?>)</span><br>
+                        <span style="font-size:13px; color:#475569;">Showing only ownership history for this vehicle.</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <a href="../vehicles/view.php?id=<?= (int) $scopedVehicle["VehicleID"] ?>" class="button button-secondary">← Back to Vehicle</a>
+                        <a href="index.php" class="button button-secondary">Show All My History</a>
+                    </div>
+                </div>
+
+            <?php endif; ?>
+
 
             <div class="page-title">
 
@@ -138,10 +255,7 @@ require_once "../includes/head.php";
 
                     <div>
 
-                        <a
-                            href="add.php"
-                            class="button"
-                        >
+                        <a href="add.php" class="button">
                             Add Ownership Record
                         </a>
 
@@ -154,24 +268,10 @@ require_once "../includes/head.php";
 
             <!-- SUCCESS MESSAGE -->
 
-            <?php if (
-                isset($_GET["deleted"]) &&
-                $_GET["deleted"] === "1"
-            ): ?>
+            <?php if (isset($_GET["deleted"]) && $_GET["deleted"] === "1"): ?>
 
-                <div
-                    class="auto-dismiss"
-                    style="
-                        background:#dcfce7;
-                        color:#166534;
-                        padding:14px;
-                        border-radius:8px;
-                        margin-bottom:20px;
-                    "
-                >
-
+                <div class="auto-dismiss" style="background:#dcfce7; color:#166534; padding:14px; border-radius:8px; margin-bottom:20px;">
                     Ownership record deleted successfully.
-
                 </div>
 
             <?php endif; ?>
@@ -194,40 +294,16 @@ require_once "../includes/head.php";
                 }
                 ?>
 
-                <div
-                    class="auto-dismiss"
-                    style="
-                        background:<?= $bulkBg ?>;
-                        color:<?= $bulkColor ?>;
-                        padding:14px;
-                        border-radius:8px;
-                        margin-bottom:20px;
-                    "
-                >
-
+                <div class="auto-dismiss" style="background:<?= $bulkBg ?>; color:<?= $bulkColor ?>; padding:14px; border-radius:8px; margin-bottom:20px;">
                     <?= htmlspecialchars($bulkMessage["text"]) ?>
 
                     <?php if (!empty($bulkMessage["skipped"])): ?>
-
-                        <ul
-                            style="
-                                margin:8px 0 0 20px;
-                                padding:0;
-                            "
-                        >
-
+                        <ul style="margin:8px 0 0 20px; padding:0;">
                             <?php foreach ($bulkMessage["skipped"] as $item): ?>
-
-                                <li>
-                                    <?= htmlspecialchars($item) ?>
-                                </li>
-
+                                <li><?= htmlspecialchars($item) ?></li>
                             <?php endforeach; ?>
-
                         </ul>
-
                     <?php endif; ?>
-
                 </div>
 
             <?php endif; ?>
@@ -239,41 +315,18 @@ require_once "../includes/head.php";
 
                 <?php if (count($history) === 0): ?>
 
-                    <div
-                        style="
-                            padding:30px;
-                            text-align:center;
-                        "
-                    >
+                    <div style="padding:30px; text-align:center;">
 
-                        <h2>
-                            No Ownership History
-                        </h2>
+                        <h2>No Ownership History</h2>
 
-                        <p
-                            style="
-                                margin-top:10px;
-                                color:#6b7280;
-                            "
-                        >
-                            No ownership history records have been
-                            added to the system yet.
+                        <p style="margin-top:10px; color:#6b7280;">
+                            No ownership history records have been added to the system yet.
                         </p>
 
-
                         <?php if ($canManage): ?>
-
                             <div style="margin-top:20px;">
-
-                                <a
-                                    href="add.php"
-                                    class="button"
-                                >
-                                    Add First Record
-                                </a>
-
+                                <a href="add.php" class="button">Add First Record</a>
                             </div>
-
                         <?php endif; ?>
 
                     </div>
@@ -281,51 +334,27 @@ require_once "../includes/head.php";
                 <?php else: ?>
 
 
-                    <form
-                        method="POST"
-                        action="bulk_delete.php"
-                        id="bulkForm"
-                    >
+                    <form method="POST" action="bulk_delete.php" id="bulkForm">
 
-                        <input
-                            type="hidden"
-                            name="csrf_token"
-                            value="<?= htmlspecialchars(generateCSRFToken()) ?>"
-                        >
-
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
 
                         <!-- BULK ACTION BAR -->
 
                         <?php if ($canManage): ?>
 
-                            <div
-                                class="bulk-action-bar"
-                                id="bulkActionBar"
-                            >
+                            <div class="bulk-action-bar" id="bulkActionBar">
 
                                 <span class="bulk-action-count">
-                                    <strong id="bulkSelectedCount">0</strong>
-                                    selected
+                                    <strong id="bulkSelectedCount">0</strong> selected
                                 </span>
-
 
                                 <div class="bulk-action-buttons">
 
-                                    <button
-                                        type="button"
-                                        class="button button-secondary"
-                                        id="bulkClearSelection"
-                                    >
+                                    <button type="button" class="button button-secondary" id="bulkClearSelection">
                                         Clear
                                     </button>
 
-
-                                    <button
-                                        type="submit"
-                                        class="button"
-                                        style="background:#991b1b;"
-                                        onclick="return confirmBulkDelete();"
-                                    >
+                                    <button type="submit" class="button" style="background:#991b1b;" onclick="return confirmBulkDelete();">
                                         Delete Selected
                                     </button>
 
@@ -336,75 +365,27 @@ require_once "../includes/head.php";
                         <?php endif; ?>
 
 
-                        <div
-                            style="
-                                overflow-x:auto;
-                            "
-                        >
+                        <div style="overflow-x:auto;">
 
-                            <table
-                                style="
-                                    width:100%;
-                                    border-collapse:collapse;
-                                "
-                            >
+                            <table style="width:100%; border-collapse:collapse;">
 
                                 <thead>
 
-                                    <tr
-                                        style="
-                                            border-bottom:1px solid #e5e7eb;
-                                            text-align:left;
-                                        "
-                                    >
+                                    <tr style="border-bottom:1px solid #e5e7eb; text-align:left;">
 
                                         <?php if ($canManage): ?>
-
-                                            <th
-                                                style="
-                                                    padding:12px;
-                                                    width:36px;
-                                                "
-                                            >
-
-                                                <input
-                                                    type="checkbox"
-                                                    id="selectAll"
-                                                    aria-label="Select all ownership records"
-                                                >
-
+                                            <th style="padding:12px; width:36px;">
+                                                <input type="checkbox" id="selectAll" aria-label="Select all ownership records">
                                             </th>
-
                                         <?php endif; ?>
 
-
-                                        <th style="padding:12px;">
-                                            Vehicle
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            VIN
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            Owner
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            Start Date
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            End Date
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            Transfer Reason
-                                        </th>
-
-                                        <th style="padding:12px;">
-                                            Actions
-                                        </th>
+                                        <th style="padding:12px;">Vehicle</th>
+                                        <th style="padding:12px;">VIN</th>
+                                        <th style="padding:12px;">Owner</th>
+                                        <th style="padding:12px;">Start Date</th>
+                                        <th style="padding:12px;">End Date</th>
+                                        <th style="padding:12px;">Transfer Reason</th>
+                                        <th style="padding:12px;">Actions</th>
 
                                     </tr>
 
@@ -413,214 +394,77 @@ require_once "../includes/head.php";
 
                                 <tbody>
 
-                                    <?php foreach (
-                                        $history
-                                        as $record
-                                    ): ?>
+                                    <?php foreach ($history as $record): ?>
 
-                                        <tr
-                                            style="
-                                                border-bottom:1px solid #f1f5f9;
-                                            "
-                                        >
+                                        <tr style="border-bottom:1px solid #f1f5f9;">
 
                                             <?php if ($canManage): ?>
-
                                                 <td style="padding:12px;">
-
-                                                    <input
-                                                        type="checkbox"
-                                                        name="selected_ids[]"
-                                                        value="<?= (int) $record["OwnershipID"] ?>"
-                                                        class="row-checkbox"
-                                                        aria-label="Select this ownership record"
-                                                    >
-
+                                                    <input type="checkbox" name="selected_ids[]" value="<?= (int) $record["OwnershipID"] ?>" class="row-checkbox" aria-label="Select this ownership record">
                                                 </td>
-
                                             <?php endif; ?>
 
 
                                             <!-- VEHICLE -->
-
                                             <td style="padding:12px;">
-
-                                                <strong>
-
-                                                    <?= htmlspecialchars(
-                                                        $record["PlateNumber"]
-                                                    ) ?>
-
-                                                </strong>
-
+                                                <strong><?= htmlspecialchars($record["PlateNumber"]) ?></strong>
                                                 <br>
-
-                                                <small
-                                                    style="
-                                                        color:#6b7280;
-                                                    "
-                                                >
-
-                                                    <?= htmlspecialchars(
-                                                        $record["Make"]
-                                                    ) ?>
-
-                                                    <?= htmlspecialchars(
-                                                        $record["Model"]
-                                                    ) ?>
-
-                                                    (<?= htmlspecialchars(
-                                                        $record["VehicleYear"]
-                                                    ) ?>)
-
-                                                </small>
-
+                                                <small style="color:#6b7280;"><?= htmlspecialchars($record["Make"]) ?> <?= htmlspecialchars($record["Model"]) ?> (<?= htmlspecialchars($record["VehicleYear"]) ?>)</small>
                                             </td>
 
 
                                             <!-- VIN -->
-
                                             <td style="padding:12px;">
-
-                                                <span
-                                                    style="
-                                                        font-family:monospace;
-                                                    "
-                                                >
-                                                    <?= htmlspecialchars(
-                                                        $record["VIN"]
-                                                    ) ?>
-                                                </span>
-
+                                                <span style="font-family:monospace;"><?= htmlspecialchars($record["VIN"]) ?></span>
                                             </td>
 
 
                                             <!-- OWNER -->
-
                                             <td style="padding:12px;">
-
-                                                <?= htmlspecialchars(
-                                                    $record["FirstName"]
-                                                ) ?>
-
-                                                <?= htmlspecialchars(
-                                                    $record["LastName"]
-                                                ) ?>
-
+                                                <?= htmlspecialchars($record["FirstName"]) ?> <?= htmlspecialchars($record["LastName"]) ?>
                                             </td>
 
 
                                             <!-- START DATE -->
-
                                             <td style="padding:12px;">
-
-                                                <?= htmlspecialchars(
-                                                    $record["StartDate"]
-                                                ) ?>
-
+                                                <?= htmlspecialchars($record["StartDate"]) ?>
                                             </td>
 
 
                                             <!-- END DATE -->
-
                                             <td style="padding:12px;">
-
-                                                <?php if (
-                                                    $record["EndDate"] === null ||
-                                                    $record["EndDate"] === ""
-                                                ): ?>
-
-                                                    <span
-                                                        style="
-                                                            color:#166534;
-                                                            font-weight:600;
-                                                        "
-                                                    >
-                                                        Current Owner
-                                                    </span>
-
+                                                <?php if ($record["EndDate"] === null || $record["EndDate"] === ""): ?>
+                                                    <span style="color:#166534; font-weight:600;">Current Owner</span>
                                                 <?php else: ?>
-
-                                                    <?= htmlspecialchars(
-                                                        $record["EndDate"]
-                                                    ) ?>
-
+                                                    <?= htmlspecialchars($record["EndDate"]) ?>
                                                 <?php endif; ?>
-
                                             </td>
 
 
                                             <!-- TRANSFER REASON -->
-
                                             <td style="padding:12px;">
-
-                                                <?php if (
-                                                    !empty(
-                                                        $record["TransferReason"]
-                                                    )
-                                                ): ?>
-
-                                                    <?= htmlspecialchars(
-                                                        $record["TransferReason"]
-                                                    ) ?>
-
+                                                <?php if (!empty($record["TransferReason"])): ?>
+                                                    <?= htmlspecialchars($record["TransferReason"]) ?>
                                                 <?php else: ?>
-
-                                                    <span
-                                                        style="
-                                                            color:#9ca3af;
-                                                        "
-                                                    >
-                                                        —
-                                                    </span>
-
+                                                    <span style="color:#9ca3af;">—</span>
                                                 <?php endif; ?>
-
                                             </td>
 
 
                                             <!-- ACTIONS -->
+                                            <td style="padding:12px; white-space:nowrap;">
 
-                                            <td
-                                                style="
-                                                    padding:12px;
-                                                    white-space:nowrap;
-                                                "
-                                            >
-
-                                                <a
-                                                    href="view.php?id=<?= (int) $record["OwnershipID"] ?>"
-                                                    class="button button-secondary"
-                                                    style="
-                                                        padding:8px 12px;
-                                                    "
-                                                >
+                                                <a href="view.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-secondary" style="padding:8px 12px;">
                                                     View
                                                 </a>
 
-
                                                 <?php if ($canManage): ?>
 
-                                                    <a
-                                                        href="edit.php?id=<?= (int) $record["OwnershipID"] ?>"
-                                                        class="button"
-                                                        style="
-                                                            padding:8px 12px;
-                                                            margin-left:5px;
-                                                        "
-                                                    >
+                                                    <a href="edit.php?id=<?= (int) $record["OwnershipID"] ?>" class="button" style="padding:8px 12px; margin-left:5px;">
                                                         Edit
                                                     </a>
 
-
-                                                    <a
-                                                        href="delete.php?id=<?= (int) $record["OwnershipID"] ?>"
-                                                        class="button button-danger"
-                                                        style="
-                                                            padding:8px 12px;
-                                                            margin-left:5px;
-                                                        "
-                                                    >
+                                                    <a href="delete.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-danger" style="padding:8px 12px; margin-left:5px;">
                                                         Delete
                                                     </a>
 
@@ -653,9 +497,6 @@ require_once "../includes/head.php";
 
 </div>
 
-
-<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
-     </body></html> that followed. footer.php closes those tags. -->
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>
 
 

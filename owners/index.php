@@ -4,17 +4,48 @@ require_once __DIR__ . "/../includes/auth.php";
 require_once __DIR__ . "/../includes/database.php";
 require_once __DIR__ . "/../includes/functions.php";
 
-$canManageOwners = in_array(
-    $_SESSION["Role"] ?? "",
-    ["Admin", "Police"],
-    true
-);
-
 $basePath = "../";
 $activePage = "owners";
 
 $pageTitle = "Owners";
 $pageSubtitle = "View and manage vehicle owner records";
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$canManageOwners = in_array($currentRole, ['Admin', 'Police'], true);
+
+// If they aren't Admin or Police, they cannot view the master Owners list.
+if (!$canManageOwners) {
+    http_response_code(403);
+    $pageTitle = "Access Denied";
+    require_once "../includes/head.php";
+    ?>
+    <body>
+    <div class="layout">
+        <main class="main-content" style="margin-left:0; width:100%;">
+            <div class="content" style="max-width:700px; margin:80px auto;">
+                <div class="card">
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Access Denied</strong>
+                    </div>
+                    <h2>You do not have permission to view this page.</h2>
+                    <p>The Owner Management directory is restricted to Administrators and Police Officers.</p>
+                    <a href="../dashboard.php" class="button">Return to Dashboard</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
 
 
 /*
@@ -78,8 +109,7 @@ unset($_SESSION["bulk_message"]);
 
 
 /*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
+ * Global <head>
  */
 
 require_once "../includes/head.php";
@@ -235,16 +265,12 @@ require_once "../includes/head.php";
                     </div>
 
 
-                    <?php if ($canManageOwners): ?>
-
-                        <a
-                            href="add.php"
-                            class="button"
-                        >
-                            + Add Owner
-                        </a>
-
-                    <?php endif; ?>
+                    <a
+                        href="add.php"
+                        class="button"
+                    >
+                        + Add Owner
+                    </a>
 
                 </div>
 
@@ -280,44 +306,40 @@ require_once "../includes/head.php";
 
                         <!-- BULK ACTION BAR -->
 
-                        <?php if ($canManageOwners): ?>
+                        <div
+                            class="bulk-action-bar"
+                            id="bulkActionBar"
+                        >
 
-                            <div
-                                class="bulk-action-bar"
-                                id="bulkActionBar"
-                            >
-
-                                <span class="bulk-action-count">
-                                    <strong id="bulkSelectedCount">0</strong>
-                                    selected
-                                </span>
+                            <span class="bulk-action-count">
+                                <strong id="bulkSelectedCount">0</strong>
+                                selected
+                            </span>
 
 
-                                <div class="bulk-action-buttons">
+                            <div class="bulk-action-buttons">
 
-                                    <button
-                                        type="button"
-                                        class="button button-secondary"
-                                        id="bulkClearSelection"
-                                    >
-                                        Clear
-                                    </button>
+                                <button
+                                    type="button"
+                                    class="button button-secondary"
+                                    id="bulkClearSelection"
+                                >
+                                    Clear
+                                </button>
 
 
-                                    <button
-                                        type="submit"
-                                        class="button"
-                                        style="background:#991b1b;"
-                                        onclick="return confirmBulkDelete();"
-                                    >
-                                        Delete Selected
-                                    </button>
-
-                                </div>
+                                <button
+                                    type="submit"
+                                    class="button"
+                                    style="background:#991b1b;"
+                                    onclick="return confirmBulkDelete();"
+                                >
+                                    Delete Selected
+                                </button>
 
                             </div>
 
-                        <?php endif; ?>
+                        </div>
 
 
                         <div style="overflow-x:auto; margin-top:15px;">
@@ -338,24 +360,20 @@ require_once "../includes/head.php";
                                         "
                                     >
 
-                                        <?php if ($canManageOwners): ?>
+                                        <th
+                                            style="
+                                                padding:12px;
+                                                width:36px;
+                                            "
+                                        >
 
-                                            <th
-                                                style="
-                                                    padding:12px;
-                                                    width:36px;
-                                                "
+                                            <input
+                                                type="checkbox"
+                                                id="selectAll"
+                                                aria-label="Select all owners"
                                             >
 
-                                                <input
-                                                    type="checkbox"
-                                                    id="selectAll"
-                                                    aria-label="Select all owners"
-                                                >
-
-                                            </th>
-
-                                        <?php endif; ?>
+                                        </th>
 
 
                                         <th style="padding:12px;">
@@ -393,21 +411,17 @@ require_once "../includes/head.php";
                                             "
                                         >
 
-                                            <?php if ($canManageOwners): ?>
+                                            <td style="padding:12px;">
 
-                                                <td style="padding:12px;">
+                                                <input
+                                                    type="checkbox"
+                                                    name="selected_ids[]"
+                                                    value="<?= (int) $owner["OwnerID"] ?>"
+                                                    class="row-checkbox"
+                                                    aria-label="Select this owner"
+                                                >
 
-                                                    <input
-                                                        type="checkbox"
-                                                        name="selected_ids[]"
-                                                        value="<?= (int) $owner["OwnerID"] ?>"
-                                                        class="row-checkbox"
-                                                        aria-label="Select this owner"
-                                                    >
-
-                                                </td>
-
-                                            <?php endif; ?>
+                                            </td>
 
 
                                             <!-- NAME -->
@@ -485,35 +499,31 @@ require_once "../includes/head.php";
                                                     </a>
 
 
-                                                    <?php if ($canManageOwners): ?>
+                                                    <!-- EDIT -->
 
-                                                        <!-- EDIT -->
-
-                                                        <a
-                                                            href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
-                                                            class="button"
-                                                            style="
-                                                                padding:8px 12px;
-                                                            "
-                                                        >
-                                                            Edit
-                                                        </a>
+                                                    <a
+                                                        href="edit.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                        class="button"
+                                                        style="
+                                                            padding:8px 12px;
+                                                        "
+                                                    >
+                                                        Edit
+                                                    </a>
 
 
-                                                        <!-- DELETE -->
+                                                    <!-- DELETE -->
 
-                                                        <a
-                                                            href="delete.php?id=<?= (int) $owner["OwnerID"] ?>"
-                                                            class="button"
-                                                            style="
-                                                                padding:8px 12px;
-                                                                background:#991b1b;
-                                                            "
-                                                        >
-                                                            Delete
-                                                        </a>
-
-                                                    <?php endif; ?>
+                                                    <a
+                                                        href="delete.php?id=<?= (int) $owner["OwnerID"] ?>"
+                                                        class="button"
+                                                        style="
+                                                            padding:8px 12px;
+                                                            background:#991b1b;
+                                                        "
+                                                    >
+                                                        Delete
+                                                    </a>
 
                                                 </div>
 
@@ -551,20 +561,16 @@ require_once "../includes/head.php";
                         </p>
 
 
-                        <?php if ($canManageOwners): ?>
+                        <p style="margin-top:10px;">
 
-                            <p style="margin-top:10px;">
+                            <a
+                                href="add.php"
+                                class="button"
+                            >
+                                Add Your First Owner
+                            </a>
 
-                                <a
-                                    href="add.php"
-                                    class="button"
-                                >
-                                    Add Your First Owner
-                                </a>
-
-                            </p>
-
-                        <?php endif; ?>
+                        </p>
 
                     </div>
 

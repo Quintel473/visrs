@@ -55,12 +55,17 @@ $stmt = $pdo->prepare("
         v.VehicleType,
         v.EngineNumber,
         v.RegistrationDate,
-        v.Status AS VehicleStatus
+        v.Status AS VehicleStatus,
+        
+        o.UserID AS OwnerUserID
 
     FROM insurance i
 
     INNER JOIN vehicles v
         ON i.VehicleID = v.VehicleID
+        
+    INNER JOIN owners o
+        ON v.OwnerID = o.OwnerID
 
     WHERE i.InsuranceID = ?
 
@@ -83,11 +88,6 @@ $insurance = $stmt->fetch();
 if (!$insurance) {
 
     http_response_code(404);
-
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
 
     $pageTitle = "Insurance Not Found";
 
@@ -175,6 +175,44 @@ if (!$insurance) {
 
 /*
 |--------------------------------------------------------------------------
+| Role-Based Access Control (Block URL Guessing)
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+$isStaff = in_array($currentRole, ['Admin', 'Police', 'Seller']);
+
+// If they are a basic User, they can ONLY view insurance for vehicles they own
+if (!$isStaff && (int)$insurance["OwnerUserID"] !== $currentUserId) {
+    http_response_code(403);
+    $pageTitle = "Access Denied";
+    require_once "../includes/head.php";
+    ?>
+    <body>
+    <div class="layout">
+        <main class="main-content" style="margin-left:0; width:100%;">
+            <div class="content" style="max-width:700px; margin:80px auto;">
+                <div class="card">
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Access Denied</strong>
+                    </div>
+                    <h2>You do not have permission to view this insurance policy.</h2>
+                    <p>You can only view insurance policies for vehicles that are linked to your account.</p>
+                    <a href="index.php" class="button">Return to My Insurance</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | Date Formatting Helper
 |--------------------------------------------------------------------------
 */
@@ -228,11 +266,6 @@ if ($status === "Active") {
     $statusColor = "#92400e";
 }
 
-
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
 
 $pageTitle = "Insurance Details";
 
@@ -878,7 +911,4 @@ require_once "../includes/head.php";
 
 </div>
 
-
-<!-- FIX: moved footer.php OUT of <main> and removed the duplicate
-     </body></html> that followed. footer.php closes those tags. -->
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

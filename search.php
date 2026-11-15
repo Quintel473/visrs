@@ -65,6 +65,48 @@ require_once "includes/head.php";
 
 ?>
 
+<style>
+    /* Search Bar Styling */
+    .search-box {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .search-box input {
+        flex: 1;
+        min-width: 250px;
+        padding: 12px 16px;
+        font-size: 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #111827;
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .search-box input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-box button {
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+
+    [data-theme="dark"] .search-box input {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+</style>
+
 <body>
 
 <div class="layout">

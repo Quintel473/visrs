@@ -41,6 +41,7 @@ if ($ownerID <= 0) {
 $stmt = $pdo->prepare("
     SELECT
         OwnerID,
+        UserID,
         FirstName,
         LastName,
         Address,
@@ -68,76 +69,26 @@ $owner = $stmt->fetch();
 if (!$owner) {
 
     http_response_code(404);
-
-    /*
-     * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
-     * with hardcoded /visrs/css/style.css path).
-     */
-
     $pageTitle = "Owner Not Found";
-
     require_once "../includes/head.php";
-
     ?>
 
     <body>
-
     <div class="layout">
-
-        <main
-            class="main-content"
-            style="margin-left:0;width:100%;"
-        >
-
-            <div
-                class="content"
-                style="max-width:700px;margin:80px auto;"
-            >
-
+        <main class="main-content" style="margin-left:0;width:100%;">
+            <div class="content" style="max-width:700px;margin:80px auto;">
                 <div class="card">
-
-                    <div
-                        style="
-                            background:#fee2e2;
-                            color:#991b1b;
-                            padding:14px;
-                            border-radius:8px;
-                            margin-bottom:20px;
-                        "
-                    >
-
-                        <strong>
-                            Owner Not Found
-                        </strong>
-
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Owner Not Found</strong>
                     </div>
-
-                    <h2>
-                        The requested owner could not be found.
-                    </h2>
-
-                    <p>
-                        The owner may have been removed or the
-                        requested record does not exist.
-                    </p>
-
-                    <a
-                        href="index.php"
-                        class="button"
-                    >
-                        Return to Owners
-                    </a>
-
+                    <h2>The requested owner could not be found.</h2>
+                    <p>The owner may have been removed or the requested record does not exist.</p>
+                    <a href="index.php" class="button">Return to Owners</a>
                 </div>
-
             </div>
-
         </main>
-
     </div>
-
     </body>
-
     </html>
 
     <?php
@@ -155,28 +106,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     requireValidCSRF();
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Verify Submitted Owner ID
-    |--------------------------------------------------------------------------
-    */
-
     $submittedOwnerID = (int) ($_POST["OwnerID"] ?? 0);
 
     if ($submittedOwnerID !== $ownerID) {
-
         http_response_code(400);
-
         $error = "Invalid owner record.";
-
     } else {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Get Submitted Values
-        |--------------------------------------------------------------------------
-        */
 
         $firstName = trim($_POST["FirstName"] ?? "");
         $lastName = trim($_POST["LastName"] ?? "");
@@ -184,56 +119,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $phone = trim($_POST["Phone"] ?? "");
         $email = trim($_POST["Email"] ?? "");
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Validation
-        |--------------------------------------------------------------------------
-        */
-
+        /* Validation */
         if ($firstName === "" || $lastName === "") {
-
             $error = "First name and last name are required.";
-
         } elseif (strlen($firstName) > 100) {
-
             $error = "First name cannot exceed 100 characters.";
-
         } elseif (strlen($lastName) > 100) {
-
             $error = "Last name cannot exceed 100 characters.";
-
         } elseif (strlen($address) > 255) {
-
             $error = "Address cannot exceed 255 characters.";
-
         } elseif (strlen($phone) > 30) {
-
             $error = "Phone number cannot exceed 30 characters.";
-
         } elseif (strlen($email) > 150) {
-
             $error = "Email address cannot exceed 150 characters.";
-
-        } elseif (
-            $email !== "" &&
-            !filter_var($email, FILTER_VALIDATE_EMAIL)
-        ) {
-
+        } elseif ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Please enter a valid email address.";
-
         } else {
 
-            /*
-            |--------------------------------------------------------------------------
-            | Update Owner + Audit Log
-            |--------------------------------------------------------------------------
-            */
-
             try {
-
                 $pdo->beginTransaction();
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -261,6 +165,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $ownerID
                 ]);
 
+                /*
+                |--------------------------------------------------------------------------
+                | Sync Email to Users Table (If linked)
+                |--------------------------------------------------------------------------
+                */
+                if (!empty($owner["UserID"]) && $email !== "") {
+                    $userStmt = $pdo->prepare("
+                        UPDATE users 
+                        SET FirstName = ?, LastName = ?, Email = ? 
+                        WHERE UserID = ?
+                    ");
+                    $userStmt->execute([
+                        $firstName, 
+                        $lastName, 
+                        $email, 
+                        $owner["UserID"]
+                    ]);
+                }
 
                 /*
                 |--------------------------------------------------------------------------
@@ -270,13 +192,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $auditStmt = $pdo->prepare("
                     INSERT INTO audit_logs (
-                        UserID,
-                        Action,
-                        TableAffected,
-                        RecordID,
-                        IPAddress
-                    )
-                    VALUES (?, ?, ?, ?, ?)
+                        UserID, Action, TableAffected, RecordID, IPAddress
+                    ) VALUES (?, ?, ?, ?, ?)
                 ");
 
                 $auditStmt->execute([
@@ -287,312 +204,104 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $_SERVER["REMOTE_ADDR"] ?? null
                 ]);
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | Commit Transaction
-                |--------------------------------------------------------------------------
-                */
-
                 $pdo->commit();
 
+                $success = "Owner information updated successfully.";
 
-                /*
-                |--------------------------------------------------------------------------
-                | Success
-                |--------------------------------------------------------------------------
-                */
-
-                $success =
-                    "Owner information updated successfully.";
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | Reload Updated Owner
-                |--------------------------------------------------------------------------
-                */
-
+                /* Reload Updated Owner */
                 $stmt = $pdo->prepare("
-                    SELECT
-                        OwnerID,
-                        FirstName,
-                        LastName,
-                        Address,
-                        Phone,
-                        Email,
-                        CreatedAt
+                    SELECT OwnerID, UserID, FirstName, LastName, Address, Phone, Email, CreatedAt
                     FROM owners
                     WHERE OwnerID = ?
                     LIMIT 1
                 ");
 
-                $stmt->execute([
-                    $ownerID
-                ]);
-
+                $stmt->execute([$ownerID]);
                 $owner = $stmt->fetch();
 
-
             } catch (Throwable $e) {
-
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-
-                $error =
-                    "Unable to update the owner record. Please try again.";
+                // If the email already exists in the users table, it will hit the unique constraint
+                if ($e->getCode() == 23000) {
+                    $error = "That email address is already in use by another user account.";
+                } else {
+                    $error = "Unable to update the owner record. Please try again.";
+                }
             }
-
         }
-
     }
-
 }
 
-
-/*
- * FIX: Global <head> (was inline <!DOCTYPE> + <head> block
- * with hardcoded /visrs/css/style.css path).
- */
-
 require_once "../includes/head.php";
-
 ?>
 
 <body>
 
 <div class="layout">
-
     <?php include __DIR__ . "/../includes/sidebar.php"; ?>
 
     <main class="main-content">
-
         <?php include __DIR__ . "/../includes/header.php"; ?>
 
         <div class="content">
-
-            <h1 class="page-title">
-                Edit Owner
-            </h1>
-
-            <p class="page-subtitle">
-                Update the owner's contact and registration information.
-            </p>
-
-
-            <!-- SUCCESS MESSAGE -->
+            <h1 class="page-title">Edit Owner</h1>
+            <p class="page-subtitle">Update the owner's contact and registration information.</p>
 
             <?php if ($success !== ""): ?>
-
-                <div
-                    class="auto-dismiss"
-                    style="
-                        background:#dcfce7;
-                        color:#166534;
-                        padding:15px;
-                        border-radius:8px;
-                        margin-bottom:20px;
-                    "
-                >
-
+                <div class="auto-dismiss" style="background:#dcfce7; color:#166534; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <?= htmlspecialchars($success) ?>
-
                 </div>
-
             <?php endif; ?>
-
-
-            <!-- ERROR MESSAGE -->
 
             <?php if ($error !== ""): ?>
-
-                <div
-                    style="
-                        background:#fee2e2;
-                        color:#991b1b;
-                        padding:15px;
-                        border-radius:8px;
-                        margin-bottom:20px;
-                    "
-                >
-
+                <div style="background:#fee2e2; color:#991b1b; padding:15px; border-radius:8px; margin-bottom:20px;">
                     <?= htmlspecialchars($error) ?>
-
                 </div>
-
             <?php endif; ?>
 
-
-            <!-- EDIT FORM -->
-
             <section class="card">
+                <h2>Owner Information</h2>
 
-                <h2>
-                    Owner Information
-                </h2>
-
-                <form
-                    method="POST"
-                    action=""
-                    style="margin-top:20px;"
-                >
-
-                    <!-- OWNER ID -->
-
-                    <input
-                        type="hidden"
-                        name="OwnerID"
-                        value="<?= (int) $owner["OwnerID"] ?>"
-                    >
-
-
-                    <!-- CSRF TOKEN -->
-
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="<?= htmlspecialchars(generateCSRFToken()) ?>"
-                    >
-
-
-                    <!-- FIRST NAME -->
+                <form method="POST" action="" style="margin-top:20px;">
+                    <input type="hidden" name="OwnerID" value="<?= (int) $owner["OwnerID"] ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
 
                     <div class="form-group">
-
-                        <label for="FirstName">
-                            First Name *
-                        </label>
-
-                        <input
-                            type="text"
-                            id="FirstName"
-                            name="FirstName"
-                            value="<?= htmlspecialchars($owner["FirstName"]) ?>"
-                            maxlength="100"
-                            autocomplete="given-name"
-                            required
-                        >
-
+                        <label for="FirstName">First Name *</label>
+                        <input type="text" id="FirstName" name="FirstName" value="<?= htmlspecialchars($owner["FirstName"]) ?>" maxlength="100" autocomplete="given-name" required>
                     </div>
-
-
-                    <!-- LAST NAME -->
 
                     <div class="form-group">
-
-                        <label for="LastName">
-                            Last Name *
-                        </label>
-
-                        <input
-                            type="text"
-                            id="LastName"
-                            name="LastName"
-                            value="<?= htmlspecialchars($owner["LastName"]) ?>"
-                            maxlength="100"
-                            autocomplete="family-name"
-                            required
-                        >
-
+                        <label for="LastName">Last Name *</label>
+                        <input type="text" id="LastName" name="LastName" value="<?= htmlspecialchars($owner["LastName"]) ?>" maxlength="100" autocomplete="family-name" required>
                     </div>
-
-
-                    <!-- ADDRESS -->
 
                     <div class="form-group">
-
-                        <label for="Address">
-                            Address
-                        </label>
-
-                        <input
-                            type="text"
-                            id="Address"
-                            name="Address"
-                            value="<?= htmlspecialchars($owner["Address"] ?? "") ?>"
-                            maxlength="255"
-                            autocomplete="street-address"
-                        >
-
+                        <label for="Address">Address</label>
+                        <input type="text" id="Address" name="Address" value="<?= htmlspecialchars($owner["Address"] ?? "") ?>" maxlength="255" autocomplete="street-address">
                     </div>
-
-
-                    <!-- PHONE -->
 
                     <div class="form-group">
-
-                        <label for="Phone">
-                            Phone Number
-                        </label>
-
-                        <input
-                            type="tel"
-                            id="Phone"
-                            name="Phone"
-                            value="<?= htmlspecialchars($owner["Phone"] ?? "") ?>"
-                            maxlength="30"
-                            autocomplete="tel"
-                        >
-
+                        <label for="Phone">Phone Number</label>
+                        <input type="tel" id="Phone" name="Phone" value="<?= htmlspecialchars($owner["Phone"] ?? "") ?>" maxlength="30" autocomplete="tel">
                     </div>
-
-
-                    <!-- EMAIL -->
 
                     <div class="form-group">
-
-                        <label for="Email">
-                            Email Address
-                        </label>
-
-                        <input
-                            type="email"
-                            id="Email"
-                            name="Email"
-                            value="<?= htmlspecialchars($owner["Email"] ?? "") ?>"
-                            maxlength="150"
-                            autocomplete="email"
-                        >
-
+                        <label for="Email">Email Address</label>
+                        <input type="email" id="Email" name="Email" value="<?= htmlspecialchars($owner["Email"] ?? "") ?>" maxlength="150" autocomplete="email">
                     </div>
 
-
-                    <!-- BUTTONS -->
-
-                    <div
-                        style="
-                            display:flex;
-                            gap:10px;
-                            margin-top:20px;
-                            flex-wrap:wrap;
-                        "
-                    >
-
-                        <a
-                            href="view.php?id=<?= (int) $ownerID ?>"
-                            class="button button-secondary"
-                        >
-                            Cancel
-                        </a>
-
-                        <button
-                            type="submit"
-                            class="button"
-                        >
-                            Save Changes
-                        </button>
-
+                    <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+                        <a href="view.php?id=<?= (int) $ownerID ?>" class="button button-secondary">Cancel</a>
+                        <button type="submit" class="button">Save Changes</button>
                     </div>
 
                 </form>
-
             </section>
-
         </div>
-
     </main>
-
 </div>
 
 <?php include __DIR__ . "/../includes/footer.php"; ?>

@@ -1,5 +1,9 @@
 <?php
 $activePage = $activePage ?? "";
+
+// Get the current user's role to control menu visibility
+$currentRole = $_SESSION["Role"] ?? "User";
+$isStaff = in_array($currentRole, ['Admin', 'Police']);
 ?>
 
 <aside class="sidebar" id="mobile-sidebar">
@@ -65,11 +69,13 @@ $activePage = $activePage ?? "";
             <span class="sidebar-text" data-i18n="vehicles">Vehicles</span>
         </a>
 
-        <!-- OWNERS -->
-        <a href="/visrs/owners/" class="<?= $activePage === 'owners' ? 'active' : '' ?>" title="Owners">
-            <span class="sidebar-icon">👤</span>
-            <span class="sidebar-text" data-i18n="owners">Owners</span>
-        </a>
+        <!-- OWNERS (Only visible to Admin, Police, Seller) -->
+        <?php if ($isStaff): ?>
+            <a href="/visrs/owners/" class="<?= $activePage === 'owners' ? 'active' : '' ?>" title="Owners">
+                <span class="sidebar-icon">👤</span>
+                <span class="sidebar-text" data-i18n="owners">Owners</span>
+            </a>
+        <?php endif; ?>
 
         <!-- OWNERSHIP HISTORY -->
         <a href="/visrs/ownership_history/" class="<?= $activePage === 'ownership_history' ? 'active' : '' ?>" title="Ownership History">
@@ -95,8 +101,8 @@ $activePage = $activePage ?? "";
             <span class="sidebar-text" data-i18n="marketplace">Marketplace</span>
         </a>
 
-        <!-- ADMINISTRATION -->
-        <?php if (isset($_SESSION["Role"]) && $_SESSION["Role"] === "Admin"): ?>
+        <!-- ADMINISTRATION (Only visible to Admin) -->
+        <?php if ($currentRole === "Admin"): ?>
             <a href="/visrs/users/" class="<?= $activePage === 'users' ? 'active' : '' ?>" title="User Management">
                 <span class="sidebar-icon">👥</span>
                 <span class="sidebar-text" data-i18n="user_management">User Management</span>

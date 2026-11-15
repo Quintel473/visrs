@@ -6,22 +6,53 @@ require_once "includes/database.php";
 $basePath = "";
 $activePage = "dashboard";
 
-/*
- * Lazy-cron: generate scheduled notifications (insurance expiry,
- * etc.) the first time a user loads the dashboard each day.
- */
 require_once "includes/functions.php";
 
 generateScheduledNotifications($pdo);
+
+
+/*
+|--------------------------------------------------------------------------
+| Role-Based Access Control Setup
+|--------------------------------------------------------------------------
+*/
+
+$currentRole = $_SESSION["Role"] ?? 'User';
+$currentUserId = $_SESSION["UserID"] ?? 0;
+
+// Admin and Police see EVERYTHING. Sellers see their inventory. Users see their cars.
+$isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
+$canManageOwners = in_array($currentRole, ['Admin', 'Police']);
+$isSeller = ($currentRole === 'Seller');
+
+
+/* 
+ * Build the SQL constraints for Dashboard Stats & Charts.
+ */
+
+if ($isAdminOrPolice) {
+    $vehicleWhere = "1=1";
+    $accidentWhere = "1=1";
+    $insuranceWhere = "1=1";
+} elseif ($isSeller) {
+    $vehicleWhere = "v.SellerID = " . (int)$currentUserId;
+    $accidentWhere = "v.SellerID = " . (int)$currentUserId;
+    $insuranceWhere = "v.SellerID = " . (int)$currentUserId;
+} else {
+    $vehicleWhere = "o.UserID = " . (int)$currentUserId;
+    $accidentWhere = "o.UserID = " . (int)$currentUserId;
+    $insuranceWhere = "o.UserID = " . (int)$currentUserId;
+}
 
 
 /* Dashboard statistics */
 
 $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalVehicles
-    FROM vehicles
+    FROM vehicles v
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $vehicleWhere
 ");
-
 $totalVehicles = $stmt->fetch()["TotalVehicles"];
 
 
@@ -29,23 +60,26 @@ $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalOwners
     FROM owners
 ");
-
 $totalOwners = $stmt->fetch()["TotalOwners"];
 
 
 $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalAccidents
-    FROM accidents
+    FROM accidents a
+    INNER JOIN vehicles v ON a.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $accidentWhere
 ");
-
 $totalAccidents = $stmt->fetch()["TotalAccidents"];
 
 
 $stmt = $pdo->query("
     SELECT COUNT(*) AS TotalInsurance
-    FROM insurance
+    FROM insurance i
+    INNER JOIN vehicles v ON i.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $insuranceWhere
 ");
-
 $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
 
@@ -57,10 +91,12 @@ $totalInsurance = $stmt->fetch()["TotalInsurance"];
 
 $statusStmt = $pdo->query("
     SELECT
-        Status,
+        v.Status,
         COUNT(*) AS Count
-    FROM vehicles
-    GROUP BY Status
+    FROM vehicles v
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $vehicleWhere
+    GROUP BY v.Status
 ");
 
 $vehicleStatusData = [
@@ -79,19 +115,19 @@ while ($row = $statusStmt->fetch()) {
 |--------------------------------------------------------------------------
 | Chart Data — Vehicles by Make
 |--------------------------------------------------------------------------
-|
-| Top 6 makes by count, with everything else grouped as "Other".
 */
 
 $makeStmt = $pdo->query("
     SELECT
-        Make,
+        v.Make,
         COUNT(*) AS Count
-    FROM vehicles
-    WHERE Make IS NOT NULL
-      AND Make <> ''
-    GROUP BY Make
-    ORDER BY Count DESC, Make ASC
+    FROM vehicles v
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $vehicleWhere
+      AND v.Make IS NOT NULL
+      AND v.Make <> ''
+    GROUP BY v.Make
+    ORDER BY Count DESC, v.Make ASC
 ");
 
 $makeRows = $makeStmt->fetchAll();
@@ -123,11 +159,14 @@ if ($otherCount > 0) {
 
 $accidentStmt = $pdo->query("
     SELECT
-        DATE_FORMAT(AccidentDate, '%Y-%m') AS Month,
+        DATE_FORMAT(a.AccidentDate, '%Y-%m') AS Month,
         COUNT(*) AS Count
-    FROM accidents
-    WHERE AccidentDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(AccidentDate, '%Y-%m')
+    FROM accidents a
+    INNER JOIN vehicles v ON a.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $accidentWhere
+      AND a.AccidentDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(a.AccidentDate, '%Y-%m')
     ORDER BY Month ASC
 ");
 
@@ -136,14 +175,11 @@ while ($row = $accidentStmt->fetch()) {
     $accidentMonthsRaw[$row["Month"]] = (int) $row["Count"];
 }
 
-/* Build a full 6-month series even for empty months */
 $accidentMonthLabels = [];
 $accidentMonthCounts = [];
 
 for ($i = 5; $i >= 0; $i--) {
-
     $monthKey = date("Y-m", strtotime("-$i months"));
-
     $accidentMonthLabels[] = date("M Y", strtotime($monthKey . "-01"));
     $accidentMonthCounts[] = $accidentMonthsRaw[$monthKey] ?? 0;
 }
@@ -157,10 +193,13 @@ for ($i = 5; $i >= 0; $i--) {
 
 $damageStmt = $pdo->query("
     SELECT
-        DamageLevel,
+        a.DamageLevel,
         COUNT(*) AS Count
-    FROM accidents
-    GROUP BY DamageLevel
+    FROM accidents a
+    INNER JOIN vehicles v ON a.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
+    WHERE $accidentWhere
+    GROUP BY a.DamageLevel
 ");
 
 $damageData = [
@@ -171,7 +210,6 @@ $damageData = [
 ];
 
 while ($row = $damageStmt->fetch()) {
-
     if (isset($damageData[$row["DamageLevel"]])) {
         $damageData[$row["DamageLevel"]] = (int) $row["Count"];
     }
@@ -186,7 +224,6 @@ while ($row = $damageStmt->fetch()) {
 
 $loadCharts = true;
 
-
 $pageTitle = "Dashboard";
 
 require_once "includes/head.php";
@@ -194,113 +231,98 @@ require_once "includes/head.php";
 ?>
 
 <style>
+    .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
+    .sidebar-nav a { display: flex; align-items: center; min-height: 44px; box-sizing: border-box; text-decoration: none; white-space: nowrap; }
+    
+    /* Dashboard Stats */
+    .stat-number { font-size: 30px; font-weight: 700; margin-top: 8px; }
+    .stat-label { color: #64748b; font-size: 14px; }
 
-    /*
-     * Dashboard-specific navigation styling.
-     * Keeping the sidebar links at a fixed height prevents
-     * the navigation from moving around when additional
-     * menu items are added.
-     */
-
-    .sidebar-nav {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+    /* Quick Actions Grid */
+    .dashboard-actions { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+        gap: 15px; 
+        margin-top: 20px; 
     }
-
-
-    .sidebar-nav a {
-        display: flex;
-        align-items: center;
-        min-height: 44px;
-        box-sizing: border-box;
-        text-decoration: none;
-        white-space: nowrap;
-    }
-
-
-    .dashboard-actions {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 15px;
-        margin-top: 20px;
-    }
-
-
-    .dashboard-action-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 48px;
-        box-sizing: border-box;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-
-
-    .stat-number {
-        font-size: 30px;
-        font-weight: 700;
-        margin-top: 8px;
-    }
-
-
-    .stat-label {
-        color: #64748b;
+    
+    .dashboard-action-button { 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 14px 20px;
+        min-height: 52px; 
+        box-sizing: border-box; 
+        text-decoration: none; 
+        border-radius: 8px; 
+        font-weight: 600; 
         font-size: 14px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #374151;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
 
-
-    @media (max-width: 768px) {
-
-        .dashboard-actions {
-            grid-template-columns: 1fr;
-        }
-
+    .dashboard-action-button:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #111827;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     }
 
+    /* Primary Actions (e.g. Add Vehicle) */
+    .dashboard-action-button.primary-action {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+    .dashboard-action-button.primary-action:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+        color: #ffffff;
+    }
+
+    /* Dark Mode Support */
+    [data-theme="dark"] .dashboard-action-button {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    [data-theme="dark"] .dashboard-action-button:hover {
+        background: #334155;
+        border-color: #475569;
+        color: #ffffff;
+    }
+    [data-theme="dark"] .dashboard-action-button.primary-action {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+    [data-theme="dark"] .dashboard-action-button.primary-action:hover {
+        background: #1d4ed8;
+    }
+
+    @media (max-width: 768px) { .dashboard-actions { grid-template-columns: 1fr; } }
 </style>
-
 
 <body>
 
 <div class="layout">
 
-
-    <!-- ========================= -->
-    <!-- SIDEBAR -->
-    <!-- ========================= -->
-
     <aside class="sidebar">
-
         <?php require_once "includes/sidebar.php"; ?>
-
     </aside>
-
-
-    <!-- ========================= -->
-    <!-- MAIN CONTENT -->
-    <!-- ========================= -->
 
     <div class="main-content">
 
-
-        <!-- TOPBAR -->
-
         <?php
-
         $pageTitle = "Dashboard";
-
         include __DIR__ . "/includes/header.php";
-
         ?>
 
-
-        <!-- PAGE CONTENT -->
-
         <main class="content">
-
 
             <!-- PAGE TITLE -->
 
@@ -334,7 +356,6 @@ require_once "includes/head.php";
 
             <div class="stats-grid">
 
-
                 <!-- VEHICLES -->
 
                 <div class="stat-card">
@@ -343,7 +364,11 @@ require_once "includes/head.php";
                         class="stat-label"
                         data-i18n="total_vehicles"
                     >
-                        Total Vehicles
+                        <?php 
+                        if ($isAdminOrPolice) echo "Total Vehicles";
+                        elseif ($isSeller) echo "My Listings";
+                        else echo "My Vehicles";
+                        ?>
                     </div>
 
                     <div class="stat-number" data-target="<?= (int) $totalVehicles ?>">
@@ -357,26 +382,30 @@ require_once "includes/head.php";
                 </div>
 
 
-                <!-- OWNERS -->
+                <!-- OWNERS (Only show if Admin/Police) -->
 
-                <div class="stat-card">
+                <?php if ($canManageOwners): ?>
 
-                    <div
-                        class="stat-label"
-                        data-i18n="total_owners"
-                    >
-                        Total Owners
+                    <div class="stat-card">
+
+                        <div
+                            class="stat-label"
+                            data-i18n="total_owners"
+                        >
+                            Total Owners
+                        </div>
+
+                        <div class="stat-number" data-target="<?= (int) $totalOwners ?>">
+
+                            <?= htmlspecialchars(
+                                $totalOwners
+                            ) ?>
+
+                        </div>
+
                     </div>
-
-                    <div class="stat-number" data-target="<?= (int) $totalOwners ?>">
-
-                        <?= htmlspecialchars(
-                            $totalOwners
-                        ) ?>
-
-                    </div>
-
-                </div>
+                    
+                <?php endif; ?>
 
 
                 <!-- ACCIDENTS -->
@@ -387,7 +416,11 @@ require_once "includes/head.php";
                         class="stat-label"
                         data-i18n="accident_records"
                     >
-                        Accident Records
+                        <?php 
+                        if ($isAdminOrPolice) echo "Accident Records";
+                        elseif ($isSeller) echo "Listing Accidents";
+                        else echo "My Accidents";
+                        ?>
                     </div>
 
                     <div class="stat-number" data-target="<?= (int) $totalAccidents ?>">
@@ -409,7 +442,11 @@ require_once "includes/head.php";
                         class="stat-label"
                         data-i18n="insurance_records"
                     >
-                        Insurance Records
+                        <?php 
+                        if ($isAdminOrPolice) echo "Insurance Records";
+                        elseif ($isSeller) echo "Listing Insurance";
+                        else echo "My Insurance";
+                        ?>
                     </div>
 
                     <div class="stat-number" data-target="<?= (int) $totalInsurance ?>">
@@ -464,7 +501,7 @@ require_once "includes/head.php";
 
                         <input
                             type="text"
-                            name="q"
+                            name="search"
                             data-i18n-placeholder="search_vehicle_placeholder"
                             placeholder="Enter plate, VIN, owner, make or model..."
                             style="
@@ -505,194 +542,129 @@ require_once "includes/head.php";
 
                 <div class="dashboard-actions">
 
-
-                    <a
-                        href="search.php"
-                        class="button dashboard-action-button"
-                        data-i18n="search_vehicles"
-                    >
-                        Search Vehicles
+                    <a href="search.php" class="dashboard-action-button">
+                        🔍 Search Vehicles
                     </a>
 
 
-                    <a
-                        href="vehicles/add.php"
-                        class="button dashboard-action-button"
-                        data-i18n="add_vehicle"
-                    >
-                        Add Vehicle
-                    </a>
-
-
-                    <a
-                        href="owners/add.php"
-                        class="button dashboard-action-button"
-                        data-i18n="add_owner"
-                    >
-                        Add Owner
-                    </a>
-
-
-                    <a
-                        href="ownership_history/add.php"
-                        class="button dashboard-action-button"
-                        data-i18n="add_ownership_record"
-                    >
-                        Add Ownership Record
-                    </a>
-
-
-                    <a
-                        href="vehicles/"
-                        class="button button-secondary dashboard-action-button"
-                        data-i18n="view_vehicles"
-                    >
-                        View Vehicles
-                    </a>
-
-
-                    <a
-                        href="owners/"
-                        class="button button-secondary dashboard-action-button"
-                        data-i18n="view_owners"
-                    >
-                        View Owners
-                    </a>
-
-
-                    <a
-                        href="ownership_history/"
-                        class="button button-secondary dashboard-action-button"
-                        data-i18n="view_ownership_history"
-                    >
-                        View Ownership History
-                    </a>
-
-
-                    <?php if ($_SESSION["Role"] === "Admin"): ?>
-
-                        <a
-                            href="users/"
-                            class="button button-secondary dashboard-action-button"
-                            data-i18n="manage_users"
-                        >
-                            Manage Users
+                    <!-- Add Vehicle (Staff only) -->
+                    <?php if ($isAdminOrPolice || $isSeller): ?>
+                        <a href="vehicles/add.php" class="dashboard-action-button primary-action">
+                            ➕ Add Vehicle
                         </a>
-
                     <?php endif; ?>
 
 
+                    <!-- Add Owner (Admin/Police only) -->
+                    <?php if ($canManageOwners): ?>
+                        <a href="owners/add.php" class="dashboard-action-button">
+                            👤 Add Owner
+                        </a>
+                    <?php endif; ?>
+
+
+                    <!-- Add Ownership Record (Admin/Police only) -->
+                    <?php if ($canManageOwners): ?>
+                        <a href="ownership_history/add.php" class="dashboard-action-button">
+                            📋 Add Ownership
+                        </a>
+                    <?php endif; ?>
+
+
+                    <!-- View Vehicles (Everyone) -->
+                    <a href="vehicles/" class="dashboard-action-button">
+                        🚗 View Vehicles
+                    </a>
+
+
+                    <!-- View Owners (Admin/Police only) -->
+                    <?php if ($canManageOwners): ?>
+                        <a href="owners/" class="dashboard-action-button">
+                            👥 View Owners
+                        </a>
+                    <?php endif; ?>
+
+
+                    <!-- View Ownership History (Everyone) -->
+                    <a href="ownership_history/" class="dashboard-action-button">
+                        📜 View History
+                    </a>
+
+
+                    <!-- Manage Users (Admin only) -->
+                    <?php if ($currentRole === "Admin"): ?>
+                        <a href="users/" class="dashboard-action-button">
+                            ⚙️ Manage Users
+                        </a>
+                    <?php endif; ?>
+
                 </div>
 
             </section>
 
 
             <!-- ========================= -->
-            <!-- SYSTEM INFORMATION -->
+            <!-- SYSTEM INFORMATION (Admin Only) -->
             <!-- ========================= -->
 
-            <section
-                class="card"
-                style="margin-top: 25px;"
-            >
+            <?php if ($currentRole === "Admin"): ?>
 
-                <h2 data-i18n="system_information">
-                    System Information
-                </h2>
-
-
-                <div
-                    style="
-                        display: grid;
-                        grid-template-columns:
-                            repeat(
-                                auto-fit,
-                                minmax(200px, 1fr)
-                            );
-                        gap: 20px;
-                        margin-top: 20px;
-                    "
+                <section
+                    class="card"
+                    style="margin-top: 25px;"
                 >
 
-                    <div>
+                    <h2 data-i18n="system_information">
+                        System Information
+                    </h2>
 
-                        <strong data-i18n="current_user">
-                            Current User
-                        </strong>
+                    <div
+                        style="
+                            display: grid;
+                            grid-template-columns:
+                                repeat(
+                                    auto-fit,
+                                    minmax(200px, 1fr)
+                                );
+                            gap: 20px;
+                            margin-top: 20px;
+                        "
+                    >
 
-                        <p
-                            class="text-muted"
-                            style="margin-top: 5px;"
-                        >
+                        <div>
+                            <strong data-i18n="current_user">Current User</strong>
+                            <p class="text-muted" style="margin-top: 5px;">
+                                <?= htmlspecialchars($_SESSION["FirstName"]) ?>
+                                <?= htmlspecialchars($_SESSION["LastName"]) ?>
+                            </p>
+                        </div>
 
-                            <?= htmlspecialchars(
-                                $_SESSION["FirstName"]
-                            ) ?>
+                        <div>
+                            <strong data-i18n="role">Role</strong>
+                            <p class="text-muted" style="margin-top: 5px;">
+                                <?= htmlspecialchars($_SESSION["Role"]) ?>
+                            </p>
+                        </div>
 
-                            <?= htmlspecialchars(
-                                $_SESSION["LastName"]
-                            ) ?>
+                        <div>
+                            <strong data-i18n="system">System</strong>
+                            <p class="text-muted" style="margin-top: 5px;">
+                                VISRS
+                            </p>
+                        </div>
 
-                        </p>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong data-i18n="role">
-                            Role
-                        </strong>
-
-                        <p
-                            class="text-muted"
-                            style="margin-top: 5px;"
-                        >
-
-                            <?= htmlspecialchars(
-                                $_SESSION["Role"]
-                            ) ?>
-
-                        </p>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong data-i18n="system">
-                            System
-                        </strong>
-
-                        <p
-                            class="text-muted"
-                            style="margin-top: 5px;"
-                        >
-                            VISRS
-                        </p>
+                        <div>
+                            <strong data-i18n="status">Status</strong>
+                            <p class="text-success" style="margin-top: 5px;" data-i18n="system_operational">
+                                System Operational
+                            </p>
+                        </div>
 
                     </div>
 
+                </section>
 
-                    <div>
-
-                        <strong data-i18n="status">
-                            Status
-                        </strong>
-
-                        <p
-                            class="text-success"
-                            style="margin-top: 5px;"
-                            data-i18n="system_operational"
-                        >
-                            System Operational
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </section>
+            <?php endif; ?>
 
 
             <!-- ========================= -->
@@ -701,93 +673,39 @@ require_once "includes/head.php";
 
             <div class="charts-grid">
 
-
-                <!-- VEHICLES BY STATUS -->
-
                 <div class="chart-card">
-
-                    <h2>
-                        Vehicles by Status
-                    </h2>
-
-                    <p>
-                        Distribution of all registered vehicles by their current status.
-                    </p>
-
+                    <h2><?= $isSeller ? "My Listings by Status" : "Vehicles by Status" ?></h2>
+                    <p>Distribution of registered vehicles by their current status.</p>
                     <div class="chart-canvas-wrapper is-loading">
-
                         <canvas id="vehicleStatusChart"></canvas>
-
                     </div>
-
                 </div>
 
-
-                <!-- VEHICLES BY MAKE -->
-
                 <div class="chart-card">
-
-                    <h2>
-                        Vehicles by Make
-                    </h2>
-
-                    <p>
-                        Distribution of registered vehicles by manufacturer.
-                    </p>
-
+                    <h2><?= $isSeller ? "My Listings by Make" : "Vehicles by Make" ?></h2>
+                    <p>Distribution of registered vehicles by manufacturer.</p>
                     <div class="chart-canvas-wrapper is-loading">
-
                         <canvas id="vehicleMakeChart"></canvas>
-
                     </div>
-
                 </div>
 
-
-                <!-- ACCIDENTS OVER TIME -->
-
                 <div class="chart-card">
-
-                    <h2>
-                        Accidents Over Time
-                    </h2>
-
-                    <p>
-                        Number of recorded accidents per month over the last 6 months.
-                    </p>
-
+                    <h2><?= $isSeller ? "My Listings: Accidents Over Time" : "Accidents Over Time" ?></h2>
+                    <p>Number of recorded accidents per month over the last 6 months.</p>
                     <div class="chart-canvas-wrapper is-loading">
-
                         <canvas id="accidentsChart"></canvas>
-
                     </div>
-
                 </div>
-
-
-                <!-- ACCIDENTS BY DAMAGE LEVEL -->
 
                 <div class="chart-card">
-
-                    <h2>
-                        Accidents by Damage Level
-                    </h2>
-
-                    <p>
-                        Severity distribution across all recorded accidents.
-                    </p>
-
+                    <h2><?= $isSeller ? "My Listings: Accidents by Damage" : "Accidents by Damage Level" ?></h2>
+                    <p>Severity distribution across all recorded accidents.</p>
                     <div class="chart-canvas-wrapper is-loading">
-
                         <canvas id="accidentDamageChart"></canvas>
-
                     </div>
-
                 </div>
-
 
             </div>
-
 
         </main>
 
@@ -798,17 +716,12 @@ require_once "includes/head.php";
 
 <script src="js/app.js"></script>
 
-
-<!-- =========================================================
-     Dashboard Charts (Chart.js)
-     ========================================================= -->
 <script>
 
 (function () {
 
     'use strict';
 
-    /* Data from PHP */
     var vehicleStatusData = <?= json_encode($vehicleStatusData) ?>;
     var vehicleMakeData   = <?= json_encode($vehicleMakeData) ?>;
     var accidentLabels    = <?= json_encode($accidentMonthLabels) ?>;
@@ -816,11 +729,8 @@ require_once "includes/head.php";
     var accidentDamageData = <?= json_encode($damageData) ?>;
 
 
-    /* Color palette that adapts to the current theme */
     function getThemeColors() {
-
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
         return {
             text:      isDark ? '#e2e8f0' : '#374151',
             textMuted: isDark ? '#94a3b8' : '#6b7280',
@@ -837,41 +747,20 @@ require_once "includes/head.php";
 
 
     function buildVehicleStatusChart() {
-
         var ctx = document.getElementById('vehicleStatusChart');
         if (!ctx) return;
-
         var wrapper = ctx.parentNode;
         wrapper.classList.add('is-loading');
-
         var colors = getThemeColors();
-
-        if (vehicleStatusChart) {
-            vehicleStatusChart.destroy();
-        }
+        if (vehicleStatusChart) { vehicleStatusChart.destroy(); }
 
         vehicleStatusChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: [
-                    'Active',
-                    'Inactive',
-                    'Stolen',
-                    'Sold'
-                ],
+                labels: ['Active', 'Inactive', 'Stolen', 'Sold'],
                 datasets: [{
-                    data: [
-                        vehicleStatusData.Active,
-                        vehicleStatusData.Inactive,
-                        vehicleStatusData.Stolen,
-                        vehicleStatusData.Sold
-                    ],
-                    backgroundColor: [
-                        '#16a34a',
-                        '#94a3b8',
-                        '#dc2626',
-                        '#f59e0b'
-                    ],
+                    data: [vehicleStatusData.Active, vehicleStatusData.Inactive, vehicleStatusData.Stolen, vehicleStatusData.Sold],
+                    backgroundColor: ['#16a34a', '#94a3b8', '#dc2626', '#f59e0b'],
                     borderColor: colors.border,
                     borderWidth: 2
                 }]
@@ -879,31 +768,10 @@ require_once "includes/head.php";
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 600,
-                    onComplete: function () {
-                        wrapper.classList.remove('is-loading');
-                    }
-                },
+                animation: { duration: 600, onComplete: function () { wrapper.classList.remove('is-loading'); } },
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: colors.text,
-                            padding: 14,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif',
-                                size: 13
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.label + ': ' + context.parsed;
-                            }
-                        }
-                    }
+                    legend: { position: 'bottom', labels: { color: colors.text, padding: 14, font: { family: 'Arial, Helvetica, sans-serif', size: 13 } } },
+                    tooltip: { callbacks: { label: function (context) { return context.label + ': ' + context.parsed; } } }
                 },
                 cutout: '60%'
             }
@@ -912,87 +780,36 @@ require_once "includes/head.php";
 
 
     function buildVehicleMakeChart() {
-
         var ctx = document.getElementById('vehicleMakeChart');
         if (!ctx) return;
-
         var wrapper = ctx.parentNode;
         wrapper.classList.add('is-loading');
-
         var colors = getThemeColors();
-
         var labels = Object.keys(vehicleMakeData);
         var values = Object.values(vehicleMakeData);
 
-        /* No data — show a friendly placeholder */
         if (labels.length === 0) {
-
-            wrapper.innerHTML =
-                '<div style="' +
-                'display:flex;align-items:center;justify-content:center;' +
-                'height:100%;color:' + colors.textMuted + ';' +
-                'font-size:13px;text-align:center;padding:20px;' +
-                '">No vehicle data to display.</div>';
-
+            wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:' + colors.textMuted + ';font-size:13px;text-align:center;padding:20px;">No vehicle data to display.</div>';
             wrapper.classList.remove('is-loading');
             return;
         }
 
-        if (vehicleMakeChart) {
-            vehicleMakeChart.destroy();
-        }
-
-        /* Palette tuned for up to 7 slices (6 makes + Other) */
-        var palette = [
-            '#2563eb',
-            '#16a34a',
-            '#f59e0b',
-            '#dc2626',
-            '#8b5cf6',
-            '#0891b2',
-            '#94a3b8'
-        ];
+        if (vehicleMakeChart) { vehicleMakeChart.destroy(); }
+        var palette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#8b5cf6', '#0891b2', '#94a3b8'];
 
         vehicleMakeChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: palette.slice(0, labels.length),
-                    borderColor: colors.border,
-                    borderWidth: 2
-                }]
+                datasets: [{ data: values, backgroundColor: palette.slice(0, labels.length), borderColor: colors.border, borderWidth: 2 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 600,
-                    onComplete: function () {
-                        wrapper.classList.remove('is-loading');
-                    }
-                },
+                animation: { duration: 600, onComplete: function () { wrapper.classList.remove('is-loading'); } },
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: colors.text,
-                            padding: 12,
-                            boxWidth: 12,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif',
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.label + ': ' + context.parsed;
-                            }
-                        }
-                    }
+                    legend: { position: 'bottom', labels: { color: colors.text, padding: 12, boxWidth: 12, font: { family: 'Arial, Helvetica, sans-serif', size: 12 } } },
+                    tooltip: { callbacks: { label: function (context) { return context.label + ': ' + context.parsed; } } }
                 },
                 cutout: '60%'
             }
@@ -1001,77 +818,30 @@ require_once "includes/head.php";
 
 
     function buildAccidentsChart() {
-
         var ctx = document.getElementById('accidentsChart');
         if (!ctx) return;
-
         var wrapper = ctx.parentNode;
         wrapper.classList.add('is-loading');
-
         var colors = getThemeColors();
-
-        if (accidentsChart) {
-            accidentsChart.destroy();
-        }
+        if (accidentsChart) { accidentsChart.destroy(); }
 
         accidentsChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: accidentLabels,
-                datasets: [{
-                    label: 'Accidents',
-                    data: accidentCounts,
-                    backgroundColor: '#2563eb',
-                    borderRadius: 6,
-                    maxBarThickness: 46
-                }]
+                datasets: [{ label: 'Accidents', data: accidentCounts, backgroundColor: '#2563eb', borderRadius: 6, maxBarThickness: 46 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 600,
-                    onComplete: function () {
-                        wrapper.classList.remove('is-loading');
-                    }
-                },
+                animation: { duration: 600, onComplete: function () { wrapper.classList.remove('is-loading'); } },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.parsed.y + ' accident(s)';
-                            }
-                        }
-                    }
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (context) { return context.parsed.y + ' accident(s)'; } } }
                 },
                 scales: {
-                    x: {
-                        ticks: {
-                            color: colors.textMuted,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif'
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: colors.textMuted,
-                            precision: 0,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif'
-                            }
-                        },
-                        grid: {
-                            color: colors.grid
-                        }
-                    }
+                    x: { ticks: { color: colors.textMuted, font: { family: 'Arial, Helvetica, sans-serif' } }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: colors.textMuted, precision: 0, font: { family: 'Arial, Helvetica, sans-serif' } }, grid: { color: colors.grid } }
                 }
             }
         });
@@ -1079,87 +849,30 @@ require_once "includes/head.php";
 
 
     function buildAccidentDamageChart() {
-
         var ctx = document.getElementById('accidentDamageChart');
         if (!ctx) return;
-
         var wrapper = ctx.parentNode;
         wrapper.classList.add('is-loading');
-
         var colors = getThemeColors();
-
-        if (accidentDamageChart) {
-            accidentDamageChart.destroy();
-        }
+        if (accidentDamageChart) { accidentDamageChart.destroy(); }
 
         accidentDamageChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Minor', 'Moderate', 'Major', 'Severe'],
-                datasets: [{
-                    label: 'Accidents',
-                    data: [
-                        accidentDamageData.Minor,
-                        accidentDamageData.Moderate,
-                        accidentDamageData.Major,
-                        accidentDamageData.Severe
-                    ],
-                    backgroundColor: [
-                        '#16a34a',   /* Minor    - green  */
-                        '#f59e0b',   /* Moderate - amber  */
-                        '#ea580c',   /* Major    - orange */
-                        '#dc2626'    /* Severe   - red    */
-                    ],
-                    borderRadius: 6,
-                    maxBarThickness: 56
-                }]
+                datasets: [{ label: 'Accidents', data: [accidentDamageData.Minor, accidentDamageData.Moderate, accidentDamageData.Major, accidentDamageData.Severe], backgroundColor: ['#16a34a', '#f59e0b', '#ea580c', '#dc2626'], borderRadius: 6, maxBarThickness: 56 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    duration: 600,
-                    onComplete: function () {
-                        wrapper.classList.remove('is-loading');
-                    }
-                },
+                animation: { duration: 600, onComplete: function () { wrapper.classList.remove('is-loading'); } },
                 plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return context.parsed.y + ' accident(s)';
-                            }
-                        }
-                    }
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (context) { return context.parsed.y + ' accident(s)'; } } }
                 },
                 scales: {
-                    x: {
-                        ticks: {
-                            color: colors.textMuted,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif'
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: colors.textMuted,
-                            precision: 0,
-                            font: {
-                                family: 'Arial, Helvetica, sans-serif'
-                            }
-                        },
-                        grid: {
-                            color: colors.grid
-                        }
-                    }
+                    x: { ticks: { color: colors.textMuted, font: { family: 'Arial, Helvetica, sans-serif' } }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: colors.textMuted, precision: 0, font: { family: 'Arial, Helvetica, sans-serif' } }, grid: { color: colors.grid } }
                 }
             }
         });
@@ -1173,30 +886,21 @@ require_once "includes/head.php";
         buildAccidentDamageChart();
     }
 
-
-    /* Initial build */
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', buildCharts);
     } else {
         buildCharts();
     }
 
-
-    /* Rebuild when theme toggles */
     document.addEventListener('click', function (e) {
-
         var toggle = e.target.closest('#theme-toggle');
         if (!toggle) return;
-
-        /* Small delay so the theme attribute is set first */
         setTimeout(buildCharts, 50);
-
     });
 
 })();
 
 </script>
-
 
 </body>
 
