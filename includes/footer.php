@@ -29,5 +29,23 @@
 ></script>
 
 
+<!-- KILL SWITCH FOR SERVICE WORKER DURING DEVELOPMENT -->
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+            registration.unregister().then(function(boolean) {
+                if(boolean) {
+                    console.log('Service Worker successfully unregistered.');
+                    // Reload the page to fetch fresh content
+                    window.location.reload();
+                }
+            });
+        } 
+    });
+}
+</script>
+
+
 </body>
 </html>

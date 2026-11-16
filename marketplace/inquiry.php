@@ -23,63 +23,28 @@ $interestID = filter_input(
 );
 
 if (!$interestID || $interestID <= 0) {
-
     http_response_code(400);
-
     $pageTitle = "Invalid Inquiry";
-
     require_once "../includes/head.php";
-
     ?>
-
     <body>
-
     <div class="layout">
-
-        <?php
-        require_once __DIR__ . "/../includes/sidebar.php";
-        ?>
-
+        <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
         <main class="main-content">
-
-            <?php
-            require_once __DIR__ . "/../includes/header.php";
-            ?>
-
+            <?php require_once __DIR__ . "/../includes/header.php"; ?>
             <main class="content">
-
                 <div class="card error-card">
-
                     <h1>Invalid Inquiry</h1>
-
-                    <p>
-                        The selected inquiry could not be identified.
-                    </p>
-
-                    <a
-                        href="/visrs/marketplace/inquiries.php"
-                        class="button"
-                    >
-                        Back to Inquiries
-                    </a>
-
+                    <p>The selected inquiry could not be identified.</p>
+                    <a href="/visrs/marketplace/inquiries.php" class="button">Back to Inquiries</a>
                 </div>
-
             </main>
-
         </main>
-
     </div>
-
-    <?php
-    require_once __DIR__ . "/../includes/footer.php";
-    ?>
-
+    <?php require_once __DIR__ . "/../includes/footer.php"; ?>
     </body>
     </html>
-
     <?php
-
     exit;
 }
 
@@ -90,17 +55,9 @@ if (!$interestID || $interestID <= 0) {
 |--------------------------------------------------------------------------
 */
 
-$allowedInquiryStatuses = [
-    "Pending",
-    "Contacted",
-    "Accepted",
-    "Declined",
-    "Closed"
-];
-
+$allowedInquiryStatuses = ["Pending", "Contacted", "Accepted", "Declined", "Closed"];
 $statusSuccess = "";
 $statusError = "";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -109,193 +66,64 @@ $statusError = "";
 */
 
 if (isAdmin()) {
-
     $stmt = $pdo->prepare("
-        SELECT
-
-            vi.InterestID,
-            vi.ListingID,
-            vi.VehicleID,
-            vi.BuyerID,
-            vi.SellerID,
-            vi.Message,
-            vi.Status,
-            vi.CreatedAt,
-            vi.UpdatedAt,
-
-            b.FirstName AS BuyerFirstName,
-            b.LastName AS BuyerLastName,
-            b.Email AS BuyerEmail,
-
-            s.FirstName AS SellerFirstName,
-            s.LastName AS SellerLastName,
-            s.Email AS SellerEmail,
-
-            vl.Price,
-            vl.Status AS ListingStatus,
-
-            v.PlateNumber,
-            v.VIN,
-            v.Make,
-            v.Model,
-            v.VehicleYear,
-            v.Color,
-            v.VehicleType,
-            v.Status AS VehicleStatus
-
+        SELECT vi.InterestID, vi.ListingID, vi.VehicleID, vi.BuyerID, vi.SellerID, vi.Message, vi.Status, vi.CreatedAt, vi.UpdatedAt,
+               b.FirstName AS BuyerFirstName, b.LastName AS BuyerLastName, b.Email AS BuyerEmail,
+               s.FirstName AS SellerFirstName, s.LastName AS SellerLastName, s.Email AS SellerEmail,
+               vl.Price, vl.Status AS ListingStatus,
+               v.PlateNumber, v.VIN, v.Make, v.Model, v.VehicleYear, v.Color, v.VehicleType, v.Status AS VehicleStatus
         FROM vehicle_interests vi
-
-        INNER JOIN users b
-            ON vi.BuyerID = b.UserID
-
-        INNER JOIN users s
-            ON vi.SellerID = s.UserID
-
-        INNER JOIN vehicle_listings vl
-            ON vi.ListingID = vl.ListingID
-
-        INNER JOIN vehicles v
-            ON vi.VehicleID = v.VehicleID
-
+        INNER JOIN users b ON vi.BuyerID = b.UserID
+        INNER JOIN users s ON vi.SellerID = s.UserID
+        INNER JOIN vehicle_listings vl ON vi.ListingID = vl.ListingID
+        INNER JOIN vehicles v ON vi.VehicleID = v.VehicleID
         WHERE vi.InterestID = ?
-
         LIMIT 1
     ");
-
-    $stmt->execute([
-        (int) $interestID
-    ]);
-
+    $stmt->execute([(int) $interestID]);
 } else {
-
     $stmt = $pdo->prepare("
-        SELECT
-
-            vi.InterestID,
-            vi.ListingID,
-            vi.VehicleID,
-            vi.BuyerID,
-            vi.SellerID,
-            vi.Message,
-            vi.Status,
-            vi.CreatedAt,
-            vi.UpdatedAt,
-
-            b.FirstName AS BuyerFirstName,
-            b.LastName AS BuyerLastName,
-            b.Email AS BuyerEmail,
-
-            s.FirstName AS SellerFirstName,
-            s.LastName AS SellerLastName,
-            s.Email AS SellerEmail,
-
-            vl.Price,
-            vl.Status AS ListingStatus,
-
-            v.PlateNumber,
-            v.VIN,
-            v.Make,
-            v.Model,
-            v.VehicleYear,
-            v.Color,
-            v.VehicleType,
-            v.Status AS VehicleStatus
-
+        SELECT vi.InterestID, vi.ListingID, vi.VehicleID, vi.BuyerID, vi.SellerID, vi.Message, vi.Status, vi.CreatedAt, vi.UpdatedAt,
+               b.FirstName AS BuyerFirstName, b.LastName AS BuyerLastName, b.Email AS BuyerEmail,
+               s.FirstName AS SellerFirstName, s.LastName AS SellerLastName, s.Email AS SellerEmail,
+               vl.Price, vl.Status AS ListingStatus,
+               v.PlateNumber, v.VIN, v.Make, v.Model, v.VehicleYear, v.Color, v.VehicleType, v.Status AS VehicleStatus
         FROM vehicle_interests vi
-
-        INNER JOIN users b
-            ON vi.BuyerID = b.UserID
-
-        INNER JOIN users s
-            ON vi.SellerID = s.UserID
-
-        INNER JOIN vehicle_listings vl
-            ON vi.ListingID = vl.ListingID
-
-        INNER JOIN vehicles v
-            ON vi.VehicleID = v.VehicleID
-
-        WHERE vi.InterestID = ?
-
-          AND vi.SellerID = ?
-
+        INNER JOIN users b ON vi.BuyerID = b.UserID
+        INNER JOIN users s ON vi.SellerID = s.UserID
+        INNER JOIN vehicle_listings vl ON vi.ListingID = vl.ListingID
+        INNER JOIN vehicles v ON vi.VehicleID = v.VehicleID
+        WHERE vi.InterestID = ? AND vi.SellerID = ?
         LIMIT 1
     ");
-
-    $stmt->execute([
-        (int) $interestID,
-        (int) currentUserId()
-    ]);
+    $stmt->execute([(int) $interestID, (int) currentUserId()]);
 }
 
 $inquiry = $stmt->fetch();
 
-
-/*
-|--------------------------------------------------------------------------
-| Inquiry Not Found
-|--------------------------------------------------------------------------
-*/
-
 if (!$inquiry) {
-
     http_response_code(404);
-
     $pageTitle = "Inquiry Not Found";
-
     require_once "../includes/head.php";
-
     ?>
-
     <body>
-
     <div class="layout">
-
-        <?php
-        require_once __DIR__ . "/../includes/sidebar.php";
-        ?>
-
+        <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
         <main class="main-content">
-
-            <?php
-            require_once __DIR__ . "/../includes/header.php";
-            ?>
-
+            <?php require_once __DIR__ . "/../includes/header.php"; ?>
             <main class="content">
-
                 <div class="card error-card">
-
                     <h1>Inquiry Not Found</h1>
-
-                    <p>
-                        The inquiry does not exist, or you do not have
-                        permission to view it.
-                    </p>
-
-                    <a
-                        href="/visrs/marketplace/inquiries.php"
-                        class="button"
-                    >
-                        Back to Inquiries
-                    </a>
-
+                    <p>The inquiry does not exist, or you do not have permission to view it.</p>
+                    <a href="/visrs/marketplace/inquiries.php" class="button">Back to Inquiries</a>
                 </div>
-
             </main>
-
         </main>
-
     </div>
-
-    <?php
-    require_once __DIR__ . "/../includes/footer.php";
-    ?>
-
+    <?php require_once __DIR__ . "/../includes/footer.php"; ?>
     </body>
     </html>
-
     <?php
-
     exit;
 }
 
@@ -307,87 +135,33 @@ if (!$inquiry) {
 */
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
     requireValidCSRF();
+    $newStatus = trim($_POST["status"] ?? "");
 
-    $newStatus = trim(
-        $_POST["status"] ?? ""
-    );
-
-    if (!in_array(
-        $newStatus,
-        $allowedInquiryStatuses,
-        true
-    )) {
-
-        $statusError =
-            "Please select a valid inquiry status.";
-
+    if (!in_array($newStatus, $allowedInquiryStatuses, true)) {
+        $statusError = "Please select a valid inquiry status.";
     } else {
-
         $hasPermission = false;
-
         if (isAdmin()) {
-
             $hasPermission = true;
-
-        } elseif (
-            (int) $inquiry["SellerID"] ===
-            (int) currentUserId()
-        ) {
-
+        } elseif ((int) $inquiry["SellerID"] === (int) currentUserId()) {
             $hasPermission = true;
         }
 
         if (!$hasPermission) {
-
             http_response_code(403);
-
-            $statusError =
-                "You do not have permission to update this inquiry.";
-
+            $statusError = "You do not have permission to update this inquiry.";
         } else {
-
-            $oldStatus =
-                $inquiry["Status"];
-
+            $oldStatus = $inquiry["Status"];
             if ($oldStatus === $newStatus) {
-
-                $statusSuccess =
-                    "The inquiry is already marked as "
-                    . $newStatus
-                    . ".";
-
+                $statusSuccess = "The inquiry is already marked as " . $newStatus . ".";
             } else {
-
                 try {
-
                     $pdo->beginTransaction();
+                    $updateStmt = $pdo->prepare("UPDATE vehicle_interests SET Status = ? WHERE InterestID = ?");
+                    $updateStmt->execute([$newStatus, (int) $interestID]);
 
-                    $updateStmt = $pdo->prepare("
-                        UPDATE vehicle_interests
-
-                        SET
-                            Status = ?
-
-                        WHERE InterestID = ?
-                    ");
-
-                    $updateStmt->execute([
-                        $newStatus,
-                        (int) $interestID
-                    ]);
-
-                    logAudit(
-                        $pdo,
-                        "Changed inquiry status from "
-                        . $oldStatus
-                        . " to "
-                        . $newStatus,
-                        "vehicle_interests",
-                        (int) $interestID
-                    );
-
+                    logAudit($pdo, "Changed inquiry status from " . $oldStatus . " to " . $newStatus, "vehicle_interests", (int) $interestID);
                     $pdo->commit();
 
                     notifyUser(
@@ -395,103 +169,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         (int) $inquiry["BuyerID"],
                         "status",
                         "Inquiry status updated",
-                        "Your inquiry for "
-                            . $inquiry["Make"]
-                            . " "
-                            . $inquiry["Model"]
-                            . " is now marked as "
-                            . $newStatus
-                            . ".",
-                        "/visrs/marketplace/inquiry.php?interest_id="
-                            . (int) $interestID
+                        "Your inquiry for " . $inquiry["Make"] . " " . $inquiry["Model"] . " is now marked as " . $newStatus . ".",
+                        "/visrs/marketplace/inquiry.php?interest_id=" . (int) $interestID
                     );
 
-                    $inquiry["Status"] =
-                        $newStatus;
-
-                    $inquiry["UpdatedAt"] =
-                        date("Y-m-d H:i:s");
-
-                    $statusSuccess =
-                        "Inquiry status updated to "
-                        . $newStatus
-                        . ".";
+                    $inquiry["Status"] = $newStatus;
+                    $inquiry["UpdatedAt"] = date("Y-m-d H:i:s");
+                    $statusSuccess = "Inquiry status updated to " . $newStatus . ".";
 
                 } catch (Throwable $e) {
-
-                    if ($pdo->inTransaction()) {
-                        $pdo->rollBack();
-                    }
-
-                    $statusError =
-                        "Unable to update the inquiry status. Please try again.";
+                    if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                    $statusError = "Unable to update the inquiry status. Please try again.";
                 }
             }
         }
     }
 }
 
-
 /*
 |--------------------------------------------------------------------------
-| Page Information
+| Page Information & Status Badge
 |--------------------------------------------------------------------------
 */
 
-$pageTitle =
-    "Inquiry #"
-    . (int) $inquiry["InterestID"];
-
-
-/*
-|--------------------------------------------------------------------------
-| Status Badge Class
-|--------------------------------------------------------------------------
-*/
+$pageTitle = "Inquiry #" . (int) $inquiry["InterestID"];
 
 $statusClass = "status-pending";
-
 switch ($inquiry["Status"]) {
-
-    case "Contacted":
-        $statusClass = "status-contacted";
-        break;
-
-    case "Accepted":
-        $statusClass = "status-accepted";
-        break;
-
-    case "Declined":
-        $statusClass = "status-declined";
-        break;
-
-    case "Closed":
-        $statusClass = "status-closed";
-        break;
-
+    case "Contacted": $statusClass = "status-contacted"; break;
+    case "Accepted": $statusClass = "status-accepted"; break;
+    case "Declined": $statusClass = "status-declined"; break;
+    case "Closed": $statusClass = "status-closed"; break;
     case "Pending":
-    default:
-        $statusClass = "status-pending";
-        break;
+    default: $statusClass = "status-pending"; break;
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| Message
-|--------------------------------------------------------------------------
-*/
-
-$message =
-    trim(
-        $inquiry["Message"] ?? ""
-    );
-
+$message = trim($inquiry["Message"] ?? "");
 
 $pageTitle = "Inquiry #" . (int) $inquiry["InterestID"] . " - VISRS";
 
 require_once "../includes/head.php";
-
 ?>
 
 <style>
@@ -538,164 +255,92 @@ require_once "../includes/head.php";
     @media (max-width:600px) { .detail-grid { grid-template-columns:1fr; } .inquiry-actions { width:100%; } .inquiry-actions .button { flex:1; text-align:center; } .status-form { display:block; } .status-form-group { width:100%; margin-bottom:12px; } .status-form .button { width:100%; } .timeline-item { display:block; } .timeline-value { margin-top:4px; text-align:left; } }
 </style>
 
-
 <body>
-
 <div class="layout">
-
     <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
-
     <main class="main-content">
-
         <?php require_once __DIR__ . "/../includes/header.php"; ?>
-
         <main class="content">
 
             <!-- PAGE HEADER -->
-
             <div class="inquiry-page-header">
-
                 <div>
                     <h1>Inquiry #<?= (int) $inquiry["InterestID"] ?></h1>
                     <p>Review and manage the buyer's inquiry for this marketplace listing.</p>
                 </div>
-
-
                 <div class="inquiry-actions">
-
-                    <a href="/visrs/marketplace/inquiries.php" class="button button-secondary">
-                        Back to Inquiries
-                    </a>
-
-                    <!-- FIXED: Points directly to the official vehicle record -->
-                    <a href="/visrs/vehicles/view.php?id=<?= (int) $inquiry["VehicleID"] ?>" class="button">
-                        View Official Vehicle Record
-                    </a>
-
+                    <a href="/visrs/marketplace/inquiries.php" class="button button-secondary">Back to Inquiries</a>
+                    <a href="/visrs/vehicles/view.php?id=<?= (int) $inquiry["VehicleID"] ?>" class="button">View Official Vehicle Record</a>
                 </div>
-
             </div>
 
-
             <!-- STATUS UPDATE FEEDBACK -->
-
             <?php if ($statusSuccess !== ""): ?>
-                <div class="inquiry-alert inquiry-alert-success">
-                    <?= htmlspecialchars($statusSuccess) ?>
-                </div>
+                <div class="inquiry-alert inquiry-alert-success"><?= htmlspecialchars($statusSuccess) ?></div>
             <?php endif; ?>
-
-
             <?php if ($statusError !== ""): ?>
-                <div class="inquiry-alert inquiry-alert-error">
-                    <?= htmlspecialchars($statusError) ?>
-                </div>
+                <div class="inquiry-alert inquiry-alert-error"><?= htmlspecialchars($statusError) ?></div>
             <?php endif; ?>
-
 
             <div class="inquiry-grid">
-
                 <!-- LEFT COLUMN -->
-
                 <div>
-
-                    <!-- BUYER INFORMATION -->
-
-                    <section class="card inquiry-section">
-
-                        <h2>Buyer Information</h2>
-
-                        <div class="detail-grid">
-
-                            <div class="detail-item">
-                                <span class="detail-label">Buyer Name</span>
-                                <span class="detail-value">
-                                    <?= htmlspecialchars($inquiry["BuyerFirstName"] . " " . $inquiry["BuyerLastName"]) ?>
-                                </span>
-                            </div>
-
-                            <div class="detail-item">
-                                <span class="detail-label">Email</span>
-                                <span class="detail-value">
-                                    <?= htmlspecialchars($inquiry["BuyerEmail"]) ?>
-                                </span>
-                            </div>
-
-                            <div class="detail-item">
-                                <span class="detail-label">Inquiry Status</span>
-                                <span class="detail-value">
-                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
-                                        <?= htmlspecialchars($inquiry["Status"]) ?>
-                                    </span>
-                                </span>
-                            </div>
-
-                            <div class="detail-item">
-                                <span class="detail-label">Submitted</span>
-                                <span class="detail-value">
-                                    <?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?>
-                                </span>
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
                     <!-- STATUS MANAGEMENT -->
-
                     <section class="card inquiry-section">
-
                         <h2>Manage Inquiry Status</h2>
-
                         <div class="status-management">
-
                             <div class="current-status-row">
                                 <div>
                                     <span class="current-status-label">Current Status</span>
-                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
-                                        <?= htmlspecialchars($inquiry["Status"]) ?>
-                                    </span>
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>"><?= htmlspecialchars($inquiry["Status"]) ?></span>
                                 </div>
                             </div>
-
                             <p class="status-help-text">
-                                Update the inquiry as communication with
-                                the buyer progresses. Every status change
-                                is saved to the database and recorded in
-                                the VISRS audit log.
+                                Update the inquiry as communication with the buyer progresses. Every status change is saved to the database and recorded in the VISRS audit log.
                             </p>
-
                             <form method="POST" class="status-form">
-
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
-
                                 <div class="status-form-group">
                                     <label for="inquiry-status">Change Status</label>
                                     <select id="inquiry-status" name="status" required>
                                         <?php foreach ($allowedInquiryStatuses as $statusOption): ?>
-                                            <option value="<?= htmlspecialchars($statusOption) ?>" <?= $inquiry["Status"] === $statusOption ? "selected" : "" ?>>
-                                                <?= htmlspecialchars($statusOption) ?>
-                                            </option>
+                                            <option value="<?= htmlspecialchars($statusOption) ?>" <?= $inquiry["Status"] === $statusOption ? "selected" : "" ?>><?= htmlspecialchars($statusOption) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-
                                 <button type="submit" class="button">Update Status</button>
-
                             </form>
-
                         </div>
-
                     </section>
 
+                    <!-- BUYER INFORMATION -->
+                    <section class="card inquiry-section">
+                        <h2>Buyer Information</h2>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Buyer Name</span>
+                                <span class="detail-value"><?= htmlspecialchars($inquiry["BuyerFirstName"] . " " . $inquiry["BuyerLastName"]) ?></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Email</span>
+                                <span class="detail-value"><?= htmlspecialchars($inquiry["BuyerEmail"]) ?></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Inquiry Status</span>
+                                <span class="detail-value">
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>"><?= htmlspecialchars($inquiry["Status"]) ?></span>
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Submitted</span>
+                                <span class="detail-value"><?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?></span>
+                            </div>
+                        </div>
+                    </section>
 
                     <!-- BUYER MESSAGE -->
-
                     <section class="card inquiry-section">
-
                         <h2>Buyer Message</h2>
-
                         <div class="inquiry-message">
                             <?php if ($message !== ""): ?>
                                 <?= htmlspecialchars($message) ?>
@@ -703,153 +348,77 @@ require_once "../includes/head.php";
                                 No message was provided with this inquiry.
                             <?php endif; ?>
                         </div>
-
                     </section>
-
 
                     <!-- SELLER INFORMATION -->
-
                     <section class="card inquiry-section">
-
                         <h2>Seller Information</h2>
-
                         <div class="detail-grid">
-
                             <div class="detail-item">
                                 <span class="detail-label">Seller Name</span>
-                                <span class="detail-value">
-                                    <?= htmlspecialchars($inquiry["SellerFirstName"] . " " . $inquiry["SellerLastName"]) ?>
-                                </span>
+                                <span class="detail-value"><?= htmlspecialchars($inquiry["SellerFirstName"] . " " . $inquiry["SellerLastName"]) ?></span>
                             </div>
-
                             <div class="detail-item">
                                 <span class="detail-label">Seller Email</span>
-                                <span class="detail-value">
-                                    <?= htmlspecialchars($inquiry["SellerEmail"]) ?>
-                                </span>
+                                <span class="detail-value"><?= htmlspecialchars($inquiry["SellerEmail"]) ?></span>
                             </div>
-
                         </div>
-
                     </section>
-
                 </div>
 
-
                 <!-- RIGHT COLUMN -->
-
                 <div>
-
                     <!-- VEHICLE LISTING -->
-
                     <section class="card inquiry-section">
-
                         <h2>Vehicle Listing</h2>
-
                         <div class="vehicle-summary">
-
-                            <h3 class="vehicle-summary-title">
-                                <?= htmlspecialchars($inquiry["VehicleYear"] . " " . $inquiry["Make"] . " " . $inquiry["Model"]) ?>
-                            </h3>
-
-                            <p class="vehicle-summary-subtitle">
-                                <?= htmlspecialchars($inquiry["Color"] ?: "Color not specified") ?>
-                                <?php if (!empty($inquiry["VehicleType"])): ?>
-                                    · <?= htmlspecialchars($inquiry["VehicleType"]) ?>
-                                <?php endif; ?>
-                            </p>
-
-                            <div class="price-display">
-                                $ <?= number_format((float) $inquiry["Price"], 2) ?>
-                            </div>
-
+                            <h3 class="vehicle-summary-title"><?= htmlspecialchars($inquiry["VehicleYear"] . " " . $inquiry["Make"] . " " . $inquiry["Model"]) ?></h3>
+                            <p class="vehicle-summary-subtitle"><?= htmlspecialchars($inquiry["Color"] ?: "Color not specified") ?><?php if (!empty($inquiry["VehicleType"])): ?> · <?= htmlspecialchars($inquiry["VehicleType"]) ?><?php endif; ?></p>
+                            <div class="price-display">$ <?= number_format((float) $inquiry["Price"], 2) ?></div>
                             <div class="detail-grid">
-
                                 <div class="detail-item">
                                     <span class="detail-label">Plate Number</span>
-                                    <span class="detail-value">
-                                        <?= htmlspecialchars($inquiry["PlateNumber"]) ?>
-                                    </span>
+                                    <span class="detail-value"><?= htmlspecialchars($inquiry["PlateNumber"]) ?></span>
                                 </div>
-
                                 <div class="detail-item">
                                     <span class="detail-label">VIN</span>
-                                    <span class="detail-value">
-                                        <?= htmlspecialchars($inquiry["VIN"]) ?>
-                                    </span>
+                                    <span class="detail-value"><?= htmlspecialchars($inquiry["VIN"]) ?></span>
                                 </div>
-
                                 <div class="detail-item">
                                     <span class="detail-label">Vehicle Status</span>
-                                    <span class="detail-value">
-                                        <?= htmlspecialchars($inquiry["VehicleStatus"]) ?>
-                                    </span>
+                                    <span class="detail-value"><?= htmlspecialchars($inquiry["VehicleStatus"]) ?></span>
                                 </div>
-
                                 <div class="detail-item">
                                     <span class="detail-label">Listing Status</span>
-                                    <span class="detail-value">
-                                        <?= htmlspecialchars($inquiry["ListingStatus"]) ?>
-                                    </span>
+                                    <span class="detail-value"><?= htmlspecialchars($inquiry["ListingStatus"]) ?></span>
                                 </div>
-
                             </div>
-
                         </div>
-
                     </section>
 
-
                     <!-- INQUIRY TIMELINE -->
-
                     <section class="card inquiry-section">
-
                         <h2>Inquiry Timeline</h2>
-
                         <div>
-
                             <div class="timeline-item">
                                 <span class="timeline-label">Inquiry Submitted</span>
-                                <span class="timeline-value">
-                                    <?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?>
-                                </span>
+                                <span class="timeline-value"><?= htmlspecialchars(formatDateTime($inquiry["CreatedAt"])) ?></span>
                             </div>
-
                             <div class="timeline-item">
                                 <span class="timeline-label">Last Updated</span>
-                                <span class="timeline-value">
-                                    <?= htmlspecialchars(formatDateTime($inquiry["UpdatedAt"])) ?>
-                                </span>
+                                <span class="timeline-value"><?= htmlspecialchars(formatDateTime($inquiry["UpdatedAt"])) ?></span>
                             </div>
-
                             <div class="timeline-item">
                                 <span class="timeline-label">Current Status</span>
                                 <span class="timeline-value">
-                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>">
-                                        <?= htmlspecialchars($inquiry["Status"]) ?>
-                                    </span>
+                                    <span class="status-badge <?= htmlspecialchars($statusClass) ?>"><?= htmlspecialchars($inquiry["Status"]) ?></span>
                                 </span>
                             </div>
-
-                            <div class="timeline-item">
-                                <span class="timeline-label">Inquiry ID</span>
-                                <span class="timeline-value">
-                                    #<?= (int) $inquiry["InterestID"] ?>
-                                </span>
-                            </div>
-
                         </div>
-
                     </section>
-
                 </div>
-
             </div>
-
         </main>
-
     </main>
-
 </div>
-
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>

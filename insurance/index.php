@@ -22,6 +22,12 @@ $currentUserId = $_SESSION["UserID"] ?? 0;
 
 $isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
 
+// Determine if the user wants to see ONLY their vehicles (Admin/Police only)
+$viewScope = $_GET["scope"] ?? "all"; 
+if (!$isAdminOrPolice) {
+    $viewScope = "mine"; // Sellers and Users are forced to "mine"
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -104,21 +110,20 @@ $filterStatus = trim($_GET["status"] ?? "");
 $whereParts = [];
 $queryParams = [];
 
-if ($currentRole === 'Seller') {
-    $whereParts[] = "v.SellerID = ?";
+// 1. Apply Role-based filtering
+if ($viewScope === "mine") {
+    $whereParts[] = "(v.SellerID = ? OR o.UserID = ?)";
     $queryParams[] = $currentUserId;
-} elseif (!$isAdminOrPolice) {
-    $whereParts[] = "o.UserID = ?";
     $queryParams[] = $currentUserId;
 }
 
-// Apply the specific vehicle scope filter
+// 2. Apply specific vehicle scope filter
 if ($filterVehicleId > 0) {
     $whereParts[] = "i.VehicleID = ?";
     $queryParams[] = $filterVehicleId;
 }
 
-// Apply search filter
+// 3. Apply search filter
 if ($filterSearch !== "") {
     $whereParts[] = "(v.PlateNumber LIKE ? OR i.PolicyNumber LIKE ? OR i.ProviderName LIKE ?)";
     $searchLike = "%" . $filterSearch . "%";
@@ -127,7 +132,7 @@ if ($filterSearch !== "") {
     $queryParams[] = $searchLike;
 }
 
-// Apply status filter
+// 4. Apply status filter
 if ($filterStatus !== "") {
     $whereParts[] = "i.Status = ?";
     $queryParams[] = $filterStatus;
@@ -208,7 +213,6 @@ $stmt = $pdo->prepare("
     LIMIT ? OFFSET ?
 ");
 
-/* Bind the UserID (if restricted) + Pagination limits */
 $paramIndex = 1;
 foreach ($queryParams as $param) {
     $stmt->bindValue($paramIndex++, $param, PDO::PARAM_STR);
@@ -245,7 +249,8 @@ $hasFilters = ($filterSearch !== "" || $filterStatus !== "");
 $pagination["extraQuery"] = 
     ($filterSearch !== "" ? "&search=" . urlencode($filterSearch) : "") .
     ($filterStatus !== "" ? "&status=" . urlencode($filterStatus) : "") .
-    ($filterVehicleId > 0 ? "&vehicle_id=" . $filterVehicleId : "");
+    ($filterVehicleId > 0 ? "&vehicle_id=" . $filterVehicleId : "") .
+    ($viewScope === "mine" ? "&scope=mine" : "");
 
 require_once "../includes/head.php";
 
@@ -262,6 +267,12 @@ require_once "../includes/head.php";
     .filter-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: #64748b; }
     .filter-summary a { color: #2563eb; font-weight: 600; text-decoration: none; }
     .filter-summary a:hover { text-decoration: underline; }
+    
+    /* New Scope Toggle Styles */
+    .scope-toggle { display: inline-flex; background: #e5e7eb; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+    .scope-toggle a { padding: 8px 20px; font-size: 14px; font-weight: 600; color: #4b5563; text-decoration: none; border-radius: 6px; transition: all 0.2s ease; }
+    .scope-toggle a.active { background: #ffffff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    
     @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
 </style>
 
@@ -310,6 +321,19 @@ require_once "../includes/head.php";
                 <?php endif; ?>
 
             </div>
+
+
+            <!-- SCOPE TOGGLE (Only for Admin/Police) -->
+            <?php if ($isAdminOrPolice): ?>
+                <div class="scope-toggle">
+                    <a href="?scope=all<?= $filterSearch !== "" ? '&search=' . urlencode($filterSearch) : '' ?><?= $filterStatus !== "" ? '&status=' . urlencode($filterStatus) : '' ?><?= $filterVehicleId > 0 ? '&vehicle_id=' . $filterVehicleId : '' ?>" class="<?= $viewScope === 'all' ? 'active' : '' ?>">
+                        All System Records
+                    </a>
+                    <a href="?scope=mine<?= $filterSearch !== "" ? '&search=' . urlencode($filterSearch) : '' ?><?= $filterStatus !== "" ? '&status=' . urlencode($filterStatus) : '' ?><?= $filterVehicleId > 0 ? '&vehicle_id=' . $filterVehicleId : '' ?>" class="<?= $viewScope === 'mine' ? 'active' : '' ?>">
+                        My Vehicles Only
+                    </a>
+                </div>
+            <?php endif; ?>
 
 
             <!-- SUCCESS MESSAGE -->
@@ -368,6 +392,9 @@ require_once "../includes/head.php";
                 <?php if ($filterVehicleId > 0): ?>
                     <input type="hidden" name="vehicle_id" value="<?= (int) $filterVehicleId ?>">
                 <?php endif; ?>
+                <?php if ($viewScope === 'mine'): ?>
+                    <input type="hidden" name="scope" value="mine">
+                <?php endif; ?>
                 
                 <div class="filter-field">
                     <label for="search">Search Insurance</label>
@@ -385,7 +412,7 @@ require_once "../includes/head.php";
                 <div class="filter-actions">
                     <button type="submit" class="button">Apply</button>
                     <?php if ($hasFilters): ?>
-                        <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button button-secondary">Clear</a>
+                        <a href="index.php?<?= $viewScope === 'mine' ? 'scope=mine' : '' ?><?= $filterVehicleId > 0 ? '&vehicle_id=' . $filterVehicleId : '' ?>" class="button button-secondary">Clear</a>
                     <?php endif; ?>
                 </div>
             </form>
@@ -393,7 +420,7 @@ require_once "../includes/head.php";
             <?php if ($hasFilters): ?>
                 <div class="filter-summary">
                     <span><?= $pagination["totalRows"] ?> result(s) match your filters.</span>
-                    <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>">Reset all filters</a>
+                    <a href="index.php?<?= $viewScope === 'mine' ? 'scope=mine' : '' ?><?= $filterVehicleId > 0 ? '&vehicle_id=' . $filterVehicleId : '' ?>">Reset all filters</a>
                 </div>
             <?php endif; ?>
 
@@ -578,7 +605,7 @@ require_once "../includes/head.php";
                         <p style="margin:10px 0 25px;">No vehicle insurance policies match your criteria.</p>
 
                         <?php if ($hasFilters): ?>
-                            <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button">Clear Filters</a>
+                            <a href="index.php?<?= $viewScope === 'mine' ? 'scope=mine' : '' ?><?= $filterVehicleId > 0 ? '&vehicle_id=' . $filterVehicleId : '' ?>" class="button">Clear Filters</a>
                         <?php elseif (canManageInsurance()): ?>
                             <a href="add.php" class="button">+ Add First Insurance Record</a>
                         <?php endif; ?>

@@ -45,11 +45,15 @@ try {
         $intStmt = $pdo->prepare("DELETE FROM vehicle_interests WHERE ListingID = ?");
         $intStmt->execute([$listingID]);
 
-        // 4. Delete the listing itself
+        // 4. Delete associated images from the vehicle_images table
+        $imgStmt = $pdo->prepare("DELETE FROM vehicle_images WHERE VehicleID = ?");
+        $imgStmt->execute([$vehicleID]);
+
+        // 5. Delete the listing itself
         $delStmt = $pdo->prepare("DELETE FROM vehicle_listings WHERE ListingID = ?");
         $delStmt->execute([$listingID]);
 
-        // 5. Log the action
+        // 6. Log the action
         $auditStmt = $pdo->prepare("
             INSERT INTO audit_logs (UserID, Action, TableAffected, RecordID, IPAddress)
             VALUES (?, ?, ?, ?, ?)

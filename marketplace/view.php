@@ -211,7 +211,7 @@ require_once "../includes/head.php";
     .vehicle-primary-image { position:relative; width:100%; height:430px; background:#e2e8f0; }
     .vehicle-primary-image img { display:block; width:100%; height:100%; object-fit:cover; }
     
-    /* NEW: Arrow Navigation */
+    /* Arrow Navigation */
     .gallery-nav {
         position: absolute;
         top: 50%;
@@ -343,7 +343,7 @@ require_once "../includes/head.php";
                             </div>
                         <?php endif; ?>
 
-                        <!-- NEW: Arrow Navigation -->
+                        <!-- Arrow Navigation -->
                         <?php if (count($images) > 1): ?>
                             <button type="button" class="gallery-nav gallery-prev" id="galleryPrev" aria-label="Previous photo">‹</button>
                             <button type="button" class="gallery-nav gallery-next" id="galleryNext" aria-label="Next photo">›</button>
@@ -404,7 +404,7 @@ require_once "../includes/head.php";
                             </div>
                         <?php else: ?>
                             <div class="vehicle-action-buttons">
-                                <a href="/visrs/marketplace/edit.php?listing_id=<?= (int) $listing["ListingID"] ?>" class="vehicle-action-button">
+                                <a href="/visrs/marketplace/edit.php?id=<?= (int) $listing["ListingID"] ?>" class="vehicle-action-button">
                                     Edit Listing
                                 </a>
                             </div>
