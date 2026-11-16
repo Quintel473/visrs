@@ -87,26 +87,53 @@ if ($filterVehicleId > 0) {
 
 /*
 |--------------------------------------------------------------------------
+| Filters
+|--------------------------------------------------------------------------
+*/
+
+$filterSearch = trim($_GET["search"] ?? "");
+$filterStatus = trim($_GET["status"] ?? "");
+
+
+/*
+|--------------------------------------------------------------------------
 | Base Query Constraints
 |--------------------------------------------------------------------------
 */
 
-$whereClause = "";
+$whereParts = [];
 $queryParams = [];
 
 if ($currentRole === 'Seller') {
-    $whereClause = " WHERE v.SellerID = ?";
+    $whereParts[] = "v.SellerID = ?";
     $queryParams[] = $currentUserId;
 } elseif (!$isAdminOrPolice) {
-    $whereClause = " WHERE o.UserID = ?";
+    $whereParts[] = "o.UserID = ?";
     $queryParams[] = $currentUserId;
 }
 
 // Apply the specific vehicle scope filter
 if ($filterVehicleId > 0) {
-    $whereClause .= ($whereClause === "" ? " WHERE " : " AND ") . "i.VehicleID = ?";
+    $whereParts[] = "i.VehicleID = ?";
     $queryParams[] = $filterVehicleId;
 }
+
+// Apply search filter
+if ($filterSearch !== "") {
+    $whereParts[] = "(v.PlateNumber LIKE ? OR i.PolicyNumber LIKE ? OR i.ProviderName LIKE ?)";
+    $searchLike = "%" . $filterSearch . "%";
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+}
+
+// Apply status filter
+if ($filterStatus !== "") {
+    $whereParts[] = "i.Status = ?";
+    $queryParams[] = $filterStatus;
+}
+
+$whereClause = count($whereParts) > 0 ? " WHERE " . implode(" AND ", $whereParts) : "";
 
 
 /*
@@ -184,7 +211,7 @@ $stmt = $pdo->prepare("
 /* Bind the UserID (if restricted) + Pagination limits */
 $paramIndex = 1;
 foreach ($queryParams as $param) {
-    $stmt->bindValue($paramIndex++, $param, PDO::PARAM_INT);
+    $stmt->bindValue($paramIndex++, $param, PDO::PARAM_STR);
 }
 $stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
 $stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
@@ -213,10 +240,30 @@ unset($_SESSION["bulk_message"]);
 $pageTitle = "Insurance";
 $pageSubtitle = "Manage vehicle insurance records and policies.";
 
+$hasFilters = ($filterSearch !== "" || $filterStatus !== "");
+
+$pagination["extraQuery"] = 
+    ($filterSearch !== "" ? "&search=" . urlencode($filterSearch) : "") .
+    ($filterStatus !== "" ? "&status=" . urlencode($filterStatus) : "") .
+    ($filterVehicleId > 0 ? "&vehicle_id=" . $filterVehicleId : "");
 
 require_once "../includes/head.php";
 
 ?>
+
+<style>
+    .filter-bar { display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items: end; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .filter-field { display: flex; flex-direction: column; min-width: 0; }
+    .filter-field label { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #374151; }
+    .filter-field input, .filter-field select { width: 100%; padding: 9px 11px; font-size: 13px; background: #ffffff; color: #111827; border: 1px solid #d1d5db; border-radius: 7px; font-family: inherit; }
+    .filter-field input:focus, .filter-field select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
+    .filter-actions { display: flex; gap: 8px; align-items: center; }
+    .filter-actions .button { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+    .filter-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: #64748b; }
+    .filter-summary a { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .filter-summary a:hover { text-decoration: underline; }
+    @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
+</style>
 
 <body>
 
@@ -312,6 +359,42 @@ require_once "../includes/head.php";
                     <?php endif; ?>
                 </div>
 
+            <?php endif; ?>
+
+
+            <!-- FILTER BAR -->
+
+            <form method="GET" action="" class="filter-bar">
+                <?php if ($filterVehicleId > 0): ?>
+                    <input type="hidden" name="vehicle_id" value="<?= (int) $filterVehicleId ?>">
+                <?php endif; ?>
+                
+                <div class="filter-field">
+                    <label for="search">Search Insurance</label>
+                    <input type="text" id="search" name="search" placeholder="Policy number, provider, plate..." value="<?= htmlspecialchars($filterSearch) ?>">
+                </div>
+                <div class="filter-field">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="Active" <?= $filterStatus === "Active" ? "selected" : "" ?>>Active</option>
+                        <option value="Expired" <?= $filterStatus === "Expired" ? "selected" : "" ?>>Expired</option>
+                        <option value="Cancelled" <?= $filterStatus === "Cancelled" ? "selected" : "" ?>>Cancelled</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="button">Apply</button>
+                    <?php if ($hasFilters): ?>
+                        <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button button-secondary">Clear</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+
+            <?php if ($hasFilters): ?>
+                <div class="filter-summary">
+                    <span><?= $pagination["totalRows"] ?> result(s) match your filters.</span>
+                    <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>">Reset all filters</a>
+                </div>
             <?php endif; ?>
 
 
@@ -492,9 +575,11 @@ require_once "../includes/head.php";
 
                         <h2>No Insurance Records</h2>
 
-                        <p style="margin:10px 0 25px;">No vehicle insurance policies have been added to the system yet.</p>
+                        <p style="margin:10px 0 25px;">No vehicle insurance policies match your criteria.</p>
 
-                        <?php if (canManageInsurance()): ?>
+                        <?php if ($hasFilters): ?>
+                            <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button">Clear Filters</a>
+                        <?php elseif (canManageInsurance()): ?>
                             <a href="add.php" class="button">+ Add First Insurance Record</a>
                         <?php endif; ?>
 

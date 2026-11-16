@@ -50,6 +50,36 @@ if (!$canManageOwners) {
 
 /*
 |--------------------------------------------------------------------------
+| Filters
+|--------------------------------------------------------------------------
+*/
+
+$filterSearch = trim($_GET["search"] ?? "");
+$filterParish = trim($_GET["parish"] ?? "");
+
+$whereParts = [];
+$queryParams = [];
+
+if ($filterSearch !== "") {
+    $whereParts[] = "(FirstName LIKE ? OR LastName LIKE ? OR Email LIKE ? OR Phone LIKE ? OR CONCAT(FirstName, ' ', LastName) LIKE ?)";
+    $searchLike = "%" . $filterSearch . "%";
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+}
+
+if ($filterParish !== "") {
+    $whereParts[] = "Address LIKE ?";
+    $queryParams[] = "%" . $filterParish . "%";
+}
+
+$whereSql = count($whereParts) > 0 ? " WHERE " . implode(" AND ", $whereParts) : "";
+
+
+/*
+|--------------------------------------------------------------------------
 | Retrieve Owners
 |--------------------------------------------------------------------------
 */
@@ -58,7 +88,8 @@ if (!$canManageOwners) {
 $perPage = 25;
 
 /* Count total rows */
-$countStmt = $pdo->query("SELECT COUNT(*) FROM owners");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM owners {$whereSql}");
+$countStmt->execute($queryParams);
 $totalOwners = (int) $countStmt->fetchColumn();
 
 /* Compute pagination metadata */
@@ -75,12 +106,17 @@ $stmt = $pdo->prepare("
         Email,
         CreatedAt
     FROM owners
+    {$whereSql}
     ORDER BY OwnerID DESC
     LIMIT ? OFFSET ?
 ");
 
-$stmt->bindValue(1, $pagination["perPage"], PDO::PARAM_INT);
-$stmt->bindValue(2, $pagination["offset"],  PDO::PARAM_INT);
+$paramIndex = 1;
+foreach ($queryParams as $param) {
+    $stmt->bindValue($paramIndex++, $param);
+}
+$stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
+$stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
 $stmt->execute();
 
 $owners = $stmt->fetchAll();
@@ -115,6 +151,20 @@ unset($_SESSION["bulk_message"]);
 require_once "../includes/head.php";
 
 ?>
+
+<style>
+    .filter-bar { display: grid; grid-template-columns: 2fr 1.5fr auto; gap: 12px; align-items: end; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .filter-field { display: flex; flex-direction: column; min-width: 0; }
+    .filter-field label { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #374151; }
+    .filter-field input, .filter-field select { width: 100%; padding: 9px 11px; font-size: 13px; background: #ffffff; color: #111827; border: 1px solid #d1d5db; border-radius: 7px; font-family: inherit; }
+    .filter-field input:focus, .filter-field select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
+    .filter-actions { display: flex; gap: 8px; align-items: center; }
+    .filter-actions .button { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+    .filter-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: #64748b; }
+    .filter-summary a { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .filter-summary a:hover { text-decoration: underline; }
+    @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
+</style>
 
 <body>
 
@@ -234,6 +284,42 @@ require_once "../includes/head.php";
 
                 </div>
 
+            <?php endif; ?>
+
+
+            <!-- FILTER BAR -->
+
+            <form method="GET" action="" class="filter-bar">
+                <div class="filter-field">
+                    <label for="search">Search Owner</label>
+                    <input type="text" id="search" name="search" placeholder="Name, email, phone..." value="<?= htmlspecialchars($filterSearch) ?>">
+                </div>
+                <div class="filter-field">
+                    <label for="parish">Location (Parish)</label>
+                    <select id="parish" name="parish">
+                        <option value="">All Parishes</option>
+                        <option value="St. George" <?= $filterParish === "St. George" ? "selected" : "" ?>>St. George</option>
+                        <option value="St. Andrew" <?= $filterParish === "St. Andrew" ? "selected" : "" ?>>St. Andrew</option>
+                        <option value="St. David" <?= $filterParish === "St. David" ? "selected" : "" ?>>St. David</option>
+                        <option value="St. John" <?= $filterParish === "St. John" ? "selected" : "" ?>>St. John</option>
+                        <option value="St. Mark" <?= $filterParish === "St. Mark" ? "selected" : "" ?>>St. Mark</option>
+                        <option value="St. Patrick" <?= $filterParish === "St. Patrick" ? "selected" : "" ?>>St. Patrick</option>
+                        <option value="Carriacou" <?= $filterParish === "Carriacou" ? "selected" : "" ?>>Carriacou</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="button">Apply</button>
+                    <?php if ($filterSearch !== "" || $filterParish !== ""): ?>
+                        <a href="index.php" class="button button-secondary">Clear</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+
+            <?php if ($filterSearch !== "" || $filterParish !== ""): ?>
+                <div class="filter-summary">
+                    <span><?= $pagination["totalRows"] ?> result(s) match your filters.</span>
+                    <a href="index.php">Reset all filters</a>
+                </div>
             <?php endif; ?>
 
 
@@ -541,7 +627,12 @@ require_once "../includes/head.php";
 
                     </form>
 
-                    <?php renderPagination($pagination); ?>
+                    <?php 
+                    $pagination["extraQuery"] = 
+                        ($filterSearch !== "" ? "&search=" . urlencode($filterSearch) : "") .
+                        ($filterParish !== "" ? "&parish=" . urlencode($filterParish) : "");
+                    renderPagination($pagination); 
+                    ?>
 
 
                 <?php else: ?>
@@ -557,20 +648,19 @@ require_once "../includes/head.php";
                     >
 
                         <p>
-                            No owner records have been added yet.
+                            No owner records found matching your criteria.
                         </p>
 
 
-                        <p style="margin-top:10px;">
-
-                            <a
-                                href="add.php"
-                                class="button"
-                            >
-                                Add Your First Owner
-                            </a>
-
-                        </p>
+                        <?php if ($filterSearch !== "" || $filterParish !== ""): ?>
+                            <p style="margin-top:10px;">
+                                <a href="index.php" class="button">Clear Filters</a>
+                            </p>
+                        <?php else: ?>
+                            <p style="margin-top:10px;">
+                                <a href="add.php" class="button">Add Your First Owner</a>
+                            </p>
+                        <?php endif; ?>
 
                     </div>
 

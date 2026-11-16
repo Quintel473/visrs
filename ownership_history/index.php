@@ -7,13 +7,6 @@ require_once __DIR__ . "/../includes/functions.php";
 $basePath = "../";
 $activePage = "ownership_history";
 
-
-/*
-|--------------------------------------------------------------------------
-| Role-Based Access Control Setup
-|--------------------------------------------------------------------------
-*/
-
 $currentRole = $_SESSION["Role"] ?? 'User';
 $currentUserId = $_SESSION["UserID"] ?? 0;
 
@@ -31,53 +24,16 @@ $filterVehicleId = isset($_GET["vehicle_id"]) ? (int) $_GET["vehicle_id"] : 0;
 $scopedVehicle = null;
 
 if ($filterVehicleId > 0) {
-    $svStmt = $pdo->prepare("
-        SELECT v.VehicleID, v.PlateNumber, v.Make, v.Model, v.VehicleYear, o.UserID AS OwnerUserID, v.SellerID
-        FROM vehicles v
-        INNER JOIN owners o ON v.OwnerID = o.OwnerID
-        WHERE v.VehicleID = ?
-        LIMIT 1
-    ");
+    $svStmt = $pdo->prepare("SELECT v.VehicleID, v.PlateNumber, v.Make, v.Model, v.VehicleYear, o.UserID AS OwnerUserID, v.SellerID FROM vehicles v INNER JOIN owners o ON v.OwnerID = o.OwnerID WHERE v.VehicleID = ? LIMIT 1");
     $svStmt->execute([$filterVehicleId]);
     $scopedVehicle = $svStmt->fetch() ?: null;
-
-    if (!$scopedVehicle) {
-        $filterVehicleId = 0; // Invalid ID, fallback to all
-    } else {
-        // Security check
+    if (!$scopedVehicle) { $filterVehicleId = 0; } 
+    else {
         if (!$isAdminOrPolice) {
             $hasAccess = false;
-            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) {
-                $hasAccess = true;
-            } elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) {
-                $hasAccess = true;
-            }
-
-            if (!$hasAccess) {
-                http_response_code(403);
-                $pageTitle = "Access Denied";
-                require_once "../includes/head.php";
-                ?>
-                <body>
-                <div class="layout">
-                    <main class="main-content" style="margin-left:0; width:100%;">
-                        <div class="content" style="max-width:700px; margin:80px auto;">
-                            <div class="card">
-                                <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
-                                    <strong>Access Denied</strong>
-                                </div>
-                                <h2>You do not have permission to view this vehicle's history.</h2>
-                                <p>You can only view ownership history for vehicles that are linked to your account.</p>
-                                <a href="index.php" class="button">Return to Ownership History</a>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-                </body>
-                </html>
-                <?php
-                exit;
-            }
+            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) { $hasAccess = true; }
+            elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) { $hasAccess = true; }
+            if (!$hasAccess) { http_response_code(403); die("Access Denied."); }
         }
     }
 }
@@ -85,142 +41,137 @@ if ($filterVehicleId > 0) {
 
 /*
 |--------------------------------------------------------------------------
-| Base Query Constraints
+| Fetch Unique Transfer Reasons for the Dropdown
 |--------------------------------------------------------------------------
 */
 
-$whereClause = "";
-$queryParams = [];
-
-if ($currentRole === 'Seller') {
-    $whereClause = " WHERE v.SellerID = ?";
-    $queryParams[] = $currentUserId;
-} elseif (!$isAdminOrPolice) {
-    $whereClause = " WHERE o.UserID = ?";
-    $queryParams[] = $currentUserId;
-}
-
-// Apply the specific vehicle scope filter
-if ($filterVehicleId > 0) {
-    $whereClause .= ($whereClause === "" ? " WHERE " : " AND ") . "oh.VehicleID = ?";
-    $queryParams[] = $filterVehicleId;
-}
+$reasonStmt = $pdo->query("SELECT DISTINCT TransferReason FROM ownership_history WHERE TransferReason IS NOT NULL AND TransferReason != '' ORDER BY TransferReason ASC");
+$uniqueReasons = $reasonStmt->fetchAll(PDO::FETCH_COLUMN);
 
 
 /*
 |--------------------------------------------------------------------------
-| Pagination Setup
+| Filters
+|--------------------------------------------------------------------------
+*/
+
+$filterSearch = trim($_GET["search"] ?? "");
+$filterReason = trim($_GET["reason"] ?? "");
+
+$whereParts = [];
+$queryParams = [];
+
+if ($currentRole === 'Seller') {
+    $whereParts[] = "v.SellerID = ?";
+    $queryParams[] = $currentUserId;
+} elseif (!$isAdminOrPolice) {
+    $whereParts[] = "o.UserID = ?";
+    $queryParams[] = $currentUserId;
+}
+
+if ($filterVehicleId > 0) {
+    $whereParts[] = "oh.VehicleID = ?";
+    $queryParams[] = $filterVehicleId;
+}
+
+// Global Search (Looks at plate, VIN, owner name, AND transfer reason keywords)
+if ($filterSearch !== "") {
+    $whereParts[] = "(
+        v.PlateNumber LIKE ? 
+        OR v.VIN LIKE ? 
+        OR o.FirstName LIKE ? 
+        OR o.LastName LIKE ? 
+        OR CONCAT(o.FirstName, ' ', o.LastName) LIKE ?
+        OR oh.TransferReason LIKE ?
+    )";
+    $searchLike = "%" . $filterSearch . "%";
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+    $queryParams[] = $searchLike;
+}
+
+// Specific Reason Dropdown Filter
+if ($filterReason !== "") {
+    $whereParts[] = "oh.TransferReason = ?";
+    $queryParams[] = $filterReason;
+}
+
+$whereClause = count($whereParts) > 0 ? " WHERE " . implode(" AND ", $whereParts) : "";
+
+
+/*
+|--------------------------------------------------------------------------
+| Pagination & Fetch
 |--------------------------------------------------------------------------
 */
 
 $perPage = 25;
 
-$countStmt = $pdo->prepare("
-    SELECT COUNT(*) 
-    FROM ownership_history oh
-    INNER JOIN vehicles v ON oh.VehicleID = v.VehicleID
-    INNER JOIN owners o ON v.OwnerID = o.OwnerID
-    {$whereClause}
-");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM ownership_history oh INNER JOIN vehicles v ON oh.VehicleID = v.VehicleID INNER JOIN owners o ON v.OwnerID = o.OwnerID {$whereClause}");
 $countStmt->execute($queryParams);
 $totalRecords = (int) $countStmt->fetchColumn();
 
 $pagination = paginationMeta($totalRecords, $perPage);
 
-
-/*
-|--------------------------------------------------------------------------
-| Load Ownership History
-|--------------------------------------------------------------------------
-*/
-
 $stmt = $pdo->prepare("
-    SELECT
-        oh.OwnershipID,
-        oh.VehicleID,
-        oh.OwnerID,
-        oh.StartDate,
-        oh.EndDate,
-        oh.TransferReason,
-
-        v.PlateNumber,
-        v.VIN,
-        v.Make,
-        v.Model,
-        v.VehicleYear,
-
-        o.FirstName,
-        o.LastName
-
+    SELECT oh.OwnershipID, oh.VehicleID, oh.OwnerID, oh.StartDate, oh.EndDate, oh.TransferReason,
+           v.PlateNumber, v.VIN, v.Make, v.Model, v.VehicleYear,
+           o.FirstName, o.LastName
     FROM ownership_history oh
-
-    INNER JOIN vehicles v
-        ON oh.VehicleID = v.VehicleID
-
-    INNER JOIN owners o
-        ON v.OwnerID = o.OwnerID
-
+    INNER JOIN vehicles v ON oh.VehicleID = v.VehicleID
+    INNER JOIN owners o ON v.OwnerID = o.OwnerID
     {$whereClause}
-
-    ORDER BY
-        oh.StartDate DESC,
-        oh.OwnershipID DESC
-
+    ORDER BY oh.StartDate DESC, oh.OwnershipID DESC
     LIMIT ? OFFSET ?
 ");
 
-/* Bind the UserID (if restricted) + Pagination limits */
 $paramIndex = 1;
-foreach ($queryParams as $param) {
-    $stmt->bindValue($paramIndex++, $param, PDO::PARAM_INT);
-}
+foreach ($queryParams as $param) { $stmt->bindValue($paramIndex++, $param, PDO::PARAM_STR); }
 $stmt->bindValue($paramIndex++, $pagination["perPage"], PDO::PARAM_INT);
-$stmt->bindValue($paramIndex++, $pagination["offset"],  PDO::PARAM_INT);
-
+$stmt->bindValue($paramIndex++, $pagination["offset"], PDO::PARAM_INT);
 $stmt->execute();
 
 $history = $stmt->fetchAll();
 
-
-/*
-|--------------------------------------------------------------------------
-| Bulk Action Flash Message
-|--------------------------------------------------------------------------
-*/
-
 $bulkMessage = $_SESSION["bulk_message"] ?? null;
 unset($_SESSION["bulk_message"]);
 
-
 $pageTitle = "Ownership History";
 
-require_once "../includes/head.php";
+$hasFilters = ($filterSearch !== "" || $filterReason !== "");
+$pagination["extraQuery"] = 
+    ($filterSearch !== "" ? "&search=" . urlencode($filterSearch) : "") . 
+    ($filterReason !== "" ? "&reason=" . urlencode($filterReason) : "") . 
+    ($filterVehicleId > 0 ? "&vehicle_id=" . $filterVehicleId : "");
 
+require_once "../includes/head.php";
 ?>
 
+<style>
+    .filter-bar { display: grid; grid-template-columns: 2fr 1.5fr auto; gap: 12px; align-items: end; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .filter-field { display: flex; flex-direction: column; min-width: 0; }
+    .filter-field label { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #374151; }
+    .filter-field input, .filter-field select { width: 100%; padding: 9px 11px; font-size: 13px; background: #ffffff; color: #111827; border: 1px solid #d1d5db; border-radius: 7px; font-family: inherit; }
+    .filter-field input:focus, .filter-field select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
+    .filter-actions { display: flex; gap: 8px; align-items: center; }
+    .filter-actions .button { padding: 9px 14px; font-size: 13px; white-space: nowrap; }
+    .filter-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: #64748b; }
+    .filter-summary a { color: #2563eb; font-weight: 600; text-decoration: none; }
+    @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
+</style>
+
 <body>
-
 <div class="layout">
-
     <?php require_once __DIR__ . "/../includes/sidebar.php"; ?>
-
     <main class="main-content">
-
-        <?php
-
-        $pageTitle = "Ownership History";
-        $pageSubtitle = "View the ownership records associated with vehicles in VISRS.";
-
-        include __DIR__ . "/../includes/header.php";
-
-        ?>
-
+        <?php include __DIR__ . "/../includes/header.php"; ?>
         <div class="content">
-
+            
             <!-- VEHICLE SCOPE BANNER -->
-
             <?php if ($scopedVehicle): ?>
-
                 <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
                     <div>
                         <span style="font-size:11px; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.06em;">Scoped to vehicle</span><br>
@@ -232,153 +183,82 @@ require_once "../includes/head.php";
                         <a href="index.php" class="button button-secondary">Show All My History</a>
                     </div>
                 </div>
-
             <?php endif; ?>
-
 
             <div class="page-title">
-
                 <div>
-
-                    <h1>
-                        Ownership History
-                    </h1>
-
-                    <p class="page-subtitle">
-                        View the ownership records associated with vehicles in VISRS.
-                    </p>
-
+                    <h1>Ownership History</h1>
+                    <p class="page-subtitle">View the ownership records associated with vehicles in VISRS.</p>
                 </div>
-
-
                 <?php if ($canManage): ?>
-
-                    <div>
-
-                        <a href="add.php" class="button">
-                            Add Ownership Record
-                        </a>
-
-                    </div>
-
+                    <div><a href="add.php" class="button">Add Ownership Record</a></div>
                 <?php endif; ?>
-
             </div>
 
-
-            <!-- SUCCESS MESSAGE -->
-
-            <?php if (isset($_GET["deleted"]) && $_GET["deleted"] === "1"): ?>
-
-                <div class="auto-dismiss" style="background:#dcfce7; color:#166534; padding:14px; border-radius:8px; margin-bottom:20px;">
-                    Ownership record deleted successfully.
+            <!-- FILTER BAR -->
+            <form method="GET" action="" class="filter-bar">
+                <?php if ($filterVehicleId > 0): ?><input type="hidden" name="vehicle_id" value="<?= (int) $filterVehicleId ?>"><?php endif; ?>
+                
+                <div class="filter-field">
+                    <label for="search">Keyword Search</label>
+                    <input type="text" id="search" name="search" placeholder="Search plate, VIN, owner, or keywords (e.g. 'family')..." value="<?= htmlspecialchars($filterSearch) ?>">
                 </div>
-
-            <?php endif; ?>
-
-
-            <!-- BULK ACTION MESSAGE -->
-
-            <?php if ($bulkMessage): ?>
-
-                <?php
-                $bulkBg = "#fef3c7";
-                $bulkColor = "#92400e";
-
-                if ($bulkMessage["type"] === "success") {
-                    $bulkBg = "#dcfce7";
-                    $bulkColor = "#166534";
-                } elseif ($bulkMessage["type"] === "error") {
-                    $bulkBg = "#fee2e2";
-                    $bulkColor = "#991b1b";
-                }
-                ?>
-
-                <div class="auto-dismiss" style="background:<?= $bulkBg ?>; color:<?= $bulkColor ?>; padding:14px; border-radius:8px; margin-bottom:20px;">
-                    <?= htmlspecialchars($bulkMessage["text"]) ?>
-
-                    <?php if (!empty($bulkMessage["skipped"])): ?>
-                        <ul style="margin:8px 0 0 20px; padding:0;">
-                            <?php foreach ($bulkMessage["skipped"] as $item): ?>
-                                <li><?= htmlspecialchars($item) ?></li>
-                            <?php endforeach; ?>
-                        </ul>
+                
+                <div class="filter-field">
+                    <label for="reason">Transfer Reason</label>
+                    <select id="reason" name="reason">
+                        <option value="">All Reasons</option>
+                        <?php foreach ($uniqueReasons as $reason): ?>
+                            <option value="<?= htmlspecialchars($reason) ?>" <?= $filterReason === $reason ? "selected" : "" ?>>
+                                <?= htmlspecialchars($reason) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="submit" class="button">Apply</button>
+                    <?php if ($hasFilters): ?>
+                        <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button button-secondary">Clear</a>
                     <?php endif; ?>
                 </div>
+            </form>
 
+            <?php if ($hasFilters): ?>
+                <div class="filter-summary">
+                    <span><?= $pagination["totalRows"] ?> result(s) match your filters.</span>
+                    <a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>">Reset all filters</a>
+                </div>
             <?php endif; ?>
 
-
-            <!-- OWNERSHIP HISTORY TABLE -->
-
             <section class="card">
-
                 <?php if (count($history) === 0): ?>
-
                     <div style="padding:30px; text-align:center;">
-
                         <h2>No Ownership History</h2>
-
-                        <p style="margin-top:10px; color:#6b7280;">
-                            No ownership history records have been added to the system yet.
-                        </p>
-
-                        <?php if ($canManage): ?>
-                            <div style="margin-top:20px;">
-                                <a href="add.php" class="button">Add First Record</a>
-                            </div>
+                        <p style="margin-top:10px; color:#6b7280;">No ownership history records match your criteria.</p>
+                        <?php if ($hasFilters): ?>
+                            <div style="margin-top:20px;"><a href="index.php<?= $filterVehicleId > 0 ? '?vehicle_id=' . $filterVehicleId : '' ?>" class="button">Clear Filters</a></div>
+                        <?php elseif ($canManage): ?>
+                            <div style="margin-top:20px;"><a href="add.php" class="button">Add First Record</a></div>
                         <?php endif; ?>
-
                     </div>
-
                 <?php else: ?>
-
-
                     <form method="POST" action="bulk_delete.php" id="bulkForm">
-
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generateCSRFToken()) ?>">
-
-                        <!-- BULK ACTION BAR -->
-
                         <?php if ($canManage): ?>
-
                             <div class="bulk-action-bar" id="bulkActionBar">
-
-                                <span class="bulk-action-count">
-                                    <strong id="bulkSelectedCount">0</strong> selected
-                                </span>
-
+                                <span class="bulk-action-count"><strong id="bulkSelectedCount">0</strong> selected</span>
                                 <div class="bulk-action-buttons">
-
-                                    <button type="button" class="button button-secondary" id="bulkClearSelection">
-                                        Clear
-                                    </button>
-
-                                    <button type="submit" class="button" style="background:#991b1b;" onclick="return confirmBulkDelete();">
-                                        Delete Selected
-                                    </button>
-
+                                    <button type="button" class="button button-secondary" id="bulkClearSelection">Clear</button>
+                                    <button type="submit" class="button" style="background:#991b1b;" onclick="return confirmBulkDelete();">Delete Selected</button>
                                 </div>
-
                             </div>
-
                         <?php endif; ?>
-
-
                         <div style="overflow-x:auto;">
-
                             <table style="width:100%; border-collapse:collapse;">
-
                                 <thead>
-
                                     <tr style="border-bottom:1px solid #e5e7eb; text-align:left;">
-
-                                        <?php if ($canManage): ?>
-                                            <th style="padding:12px; width:36px;">
-                                                <input type="checkbox" id="selectAll" aria-label="Select all ownership records">
-                                            </th>
-                                        <?php endif; ?>
-
+                                        <?php if ($canManage): ?><th style="padding:12px; width:36px;"><input type="checkbox" id="selectAll"></th><?php endif; ?>
                                         <th style="padding:12px;">Vehicle</th>
                                         <th style="padding:12px;">VIN</th>
                                         <th style="padding:12px;">Owner</th>
@@ -386,136 +266,35 @@ require_once "../includes/head.php";
                                         <th style="padding:12px;">End Date</th>
                                         <th style="padding:12px;">Transfer Reason</th>
                                         <th style="padding:12px;">Actions</th>
-
                                     </tr>
-
                                 </thead>
-
-
                                 <tbody>
-
                                     <?php foreach ($history as $record): ?>
-
                                         <tr style="border-bottom:1px solid #f1f5f9;">
-
-                                            <?php if ($canManage): ?>
-                                                <td style="padding:12px;">
-                                                    <input type="checkbox" name="selected_ids[]" value="<?= (int) $record["OwnershipID"] ?>" class="row-checkbox" aria-label="Select this ownership record">
-                                                </td>
-                                            <?php endif; ?>
-
-
-                                            <!-- VEHICLE -->
-                                            <td style="padding:12px;">
-                                                <strong><?= htmlspecialchars($record["PlateNumber"]) ?></strong>
-                                                <br>
-                                                <small style="color:#6b7280;"><?= htmlspecialchars($record["Make"]) ?> <?= htmlspecialchars($record["Model"]) ?> (<?= htmlspecialchars($record["VehicleYear"]) ?>)</small>
-                                            </td>
-
-
-                                            <!-- VIN -->
-                                            <td style="padding:12px;">
-                                                <span style="font-family:monospace;"><?= htmlspecialchars($record["VIN"]) ?></span>
-                                            </td>
-
-
-                                            <!-- OWNER -->
-                                            <td style="padding:12px;">
-                                                <?= htmlspecialchars($record["FirstName"]) ?> <?= htmlspecialchars($record["LastName"]) ?>
-                                            </td>
-
-
-                                            <!-- START DATE -->
-                                            <td style="padding:12px;">
-                                                <?= htmlspecialchars($record["StartDate"]) ?>
-                                            </td>
-
-
-                                            <!-- END DATE -->
-                                            <td style="padding:12px;">
-                                                <?php if ($record["EndDate"] === null || $record["EndDate"] === ""): ?>
-                                                    <span style="color:#166534; font-weight:600;">Current Owner</span>
-                                                <?php else: ?>
-                                                    <?= htmlspecialchars($record["EndDate"]) ?>
-                                                <?php endif; ?>
-                                            </td>
-
-
-                                            <!-- TRANSFER REASON -->
-                                            <td style="padding:12px;">
-                                                <?php if (!empty($record["TransferReason"])): ?>
-                                                    <?= htmlspecialchars($record["TransferReason"]) ?>
-                                                <?php else: ?>
-                                                    <span style="color:#9ca3af;">—</span>
-                                                <?php endif; ?>
-                                            </td>
-
-
-                                            <!-- ACTIONS -->
+                                            <?php if ($canManage): ?><td style="padding:12px;"><input type="checkbox" name="selected_ids[]" value="<?= (int) $record["OwnershipID"] ?>" class="row-checkbox"></td><?php endif; ?>
+                                            <td style="padding:12px;"><strong><?= htmlspecialchars($record["PlateNumber"]) ?></strong><br><small><?= htmlspecialchars($record["Make"] . " " . $record["Model"]) ?></small></td>
+                                            <td style="padding:12px; font-family:monospace;"><?= htmlspecialchars($record["VIN"]) ?></td>
+                                            <td style="padding:12px;"><?= htmlspecialchars($record["FirstName"] . " " . $record["LastName"]) ?></td>
+                                            <td style="padding:12px;"><?= htmlspecialchars($record["StartDate"]) ?></td>
+                                            <td style="padding:12px;"><?= $record["EndDate"] ? htmlspecialchars($record["EndDate"]) : "<span style='color:#166534; font-weight:600;'>Current Owner</span>" ?></td>
+                                            <td style="padding:12px;"><?= htmlspecialchars($record["TransferReason"] ?? "—") ?></td>
                                             <td style="padding:12px; white-space:nowrap;">
-
-                                                <a href="view.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-secondary" style="padding:8px 12px;">
-                                                    View
-                                                </a>
-
+                                                <a href="view.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-secondary" style="padding:8px 12px;">View</a>
                                                 <?php if ($canManage): ?>
-
-                                                    <a href="edit.php?id=<?= (int) $record["OwnershipID"] ?>" class="button" style="padding:8px 12px; margin-left:5px;">
-                                                        Edit
-                                                    </a>
-
-                                                    <a href="delete.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-danger" style="padding:8px 12px; margin-left:5px;">
-                                                        Delete
-                                                    </a>
-
+                                                    <a href="edit.php?id=<?= (int) $record["OwnershipID"] ?>" class="button" style="padding:8px 12px; margin-left:5px;">Edit</a>
+                                                    <a href="delete.php?id=<?= (int) $record["OwnershipID"] ?>" class="button button-danger" style="padding:8px 12px; margin-left:5px;">Delete</a>
                                                 <?php endif; ?>
-
                                             </td>
-
                                         </tr>
-
                                     <?php endforeach; ?>
-
                                 </tbody>
-
                             </table>
-
                         </div>
-
                     </form>
-
                     <?php renderPagination($pagination); ?>
-
-
                 <?php endif; ?>
-
             </section>
-
         </div>
-
     </main>
-
 </div>
-
 <?php require_once __DIR__ . "/../includes/footer.php"; ?>
-
-
-<script>
-
-function confirmBulkDelete() {
-
-    var count = document.querySelectorAll(".row-checkbox:checked").length;
-
-    if (count === 0) {
-        alert("Please select at least one ownership record to delete.");
-        return false;
-    }
-
-    return confirm(
-        "Delete " + count + " selected ownership record(s)?\n\n" +
-        "Current-owner records cannot be bulk-deleted and will be skipped.\n\n" +
-        "This action cannot be undone."
-    );
-}
-
-</script>
