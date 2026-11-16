@@ -211,6 +211,13 @@ require_once "../includes/head.php";
         border-color: #334155;
     }
 
+    /* SVG alignment in group headers */
+    .table-group-header svg {
+        vertical-align: text-bottom;
+        margin-right: 8px;
+        margin-bottom: 2px;
+    }
+
 </style>
 
 
@@ -491,20 +498,24 @@ require_once "../includes/head.php";
                                         // 1. Determine Group Header
                                         $groupRole = $user["Role"];
                                         $groupLabel = "";
-                                        $groupIcon = "";
+                                        $groupIconSVG = "";
 
                                         if ($groupRole === "Admin") {
                                             $groupLabel = "Administrators";
-                                            $groupIcon = "🛡️";
+                                            // Shield Icon
+                                            $groupIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
                                         } elseif ($groupRole === "Police") {
                                             $groupLabel = "Police Officers";
-                                            $groupIcon = "👮";
+                                            // Badge Icon
+                                            $groupIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>';
                                         } elseif ($groupRole === "Seller") {
                                             $groupLabel = "Sellers";
-                                            $groupIcon = "🤝";
+                                            // Handshake / Store Icon
+                                            $groupIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>';
                                         } else {
                                             $groupLabel = "Vehicle Owners (Basic Users)";
-                                            $groupIcon = "👤";
+                                            // User Icon
+                                            $groupIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
                                         }
 
                                         // Output the group header if it changed
@@ -513,7 +524,7 @@ require_once "../includes/head.php";
                                             ?>
                                             <tr class="table-group-header">
                                                 <td colspan="7">
-                                                    <?= $groupIcon ?> <?= htmlspecialchars($currentGroup) ?>
+                                                    <?= $groupIconSVG ?> <?= htmlspecialchars($currentGroup) ?>
                                                 </td>
                                             </tr>
                                             <?php
