@@ -8,7 +8,6 @@
  *   - global stylesheet link
  *   - print stylesheet for PDF export
  *   - dynamic favicon
- *   - service worker registration (offline fallback)
  *   - Chart.js (only when $loadCharts is true)
  *
  * Set BEFORE including this file:
@@ -55,15 +54,50 @@ $basePath  = $basePath  ?? "";
 
     <!--
         Favicon — Dynamic SVG "V"
-        Generates a dark rounded square with a white "V"
-        entirely via code. No image files required.
     -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23111827'/><text x='50' y='52' font-family='Arial,sans-serif' font-size='65' font-weight='bold' fill='%23ffffff' text-anchor='middle' dominant-baseline='middle'>V</text></svg>">
     
-    <!--
-        Updated theme-color to match the new dark favicon background.
-    -->
     <meta name="theme-color" content="#111827">
+
+    <!-- CRITICAL LAYOUT CSS (Prevents sidebar flash) -->
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 100;
+            background-color: #1e293b; /* Fallback dark color */
+        }
+        .main-content {
+            flex-grow: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .content {
+            padding: 24px;
+            flex-grow: 1;
+        }
+        /* Hide layout until CSS loads to prevent text jumping */
+        .layout {
+            visibility: hidden;
+            animation: showLayout 0s 0.1s forwards;
+        }
+        @keyframes showLayout {
+            to { visibility: visible; }
+        }
+    </style>
 
     <link
         rel="stylesheet"
@@ -72,8 +106,6 @@ $basePath  = $basePath  ?? "";
 
     <!--
         Print stylesheet.
-        Loaded with media="print" so it only applies when
-        the user prints or saves a page as PDF.
     -->
     <link
         rel="stylesheet"
@@ -84,33 +116,12 @@ $basePath  = $basePath  ?? "";
     <?php if (!empty($loadCharts)): ?>
 
         <!--
-            Chart.js — loaded only when the page sets
-            $loadCharts = true. Currently used by dashboard.php.
+            Chart.js
         -->
         <script
             src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
         ></script>
 
     <?php endif; ?>
-
-    <!--
-        Service Worker registration.
-        Enables offline fallback via /visrs/sw.js.
-        Placed here so every page gets it automatically
-        (head.php is included everywhere).
-    -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/visrs/sw.js', {
-                    scope: '/visrs/'
-                }).then(function (reg) {
-                    console.log('VISRS Service Worker registered. Scope:', reg.scope);
-                }).catch(function (err) {
-                    console.warn('VISRS Service Worker failed:', err);
-                });
-            });
-        }
-    </script>
 
 </head>
