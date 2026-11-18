@@ -347,6 +347,23 @@ require_once "../includes/head.php";
 
 ?>
 
+<style>
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+    
+    /* Fix the hardcoded "Warning" and "Owner cannot be deleted" banners */
+    [data-theme="dark"] div[style*="background:#fef3c7"] {
+        background: #78350f !important;
+        color: #fcd34d !important;
+    }
+    
+    [data-theme="dark"] div[style*="background:#fee2e2"] {
+        background: #7f1d1d !important;
+        color: #fecaca !important;
+    }
+</style>
+
 <body>
 
 <div class="layout">

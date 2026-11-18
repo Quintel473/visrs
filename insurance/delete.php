@@ -263,6 +263,21 @@ require_once "../includes/head.php";
         margin-top: 25px;
     }
 
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+
+    [data-theme="dark"] .delete-warning {
+        background: #78350f;
+        color: #fcd34d;
+        border-color: #b45309;
+    }
+    
+    [data-theme="dark"] div[style*="background:#fee2e2"] {
+        background: #7f1d1d !important;
+        color: #fecaca !important;
+    }
+
 </style>
 
 <body>
