@@ -5477,3 +5477,120 @@ body.legal-body::after {
         display: none;
     }
 }
+
+/* =========================================================
+   FIX: Targeted Dark Mode for Marketplace & Cards
+   ========================================================= */
+
+/* 1. Fix the main layout and topbar */
+[data-theme="dark"] .main-content,
+[data-theme="dark"] .content {
+    background-color: #0f172a !important;
+}
+
+[data-theme="dark"] .topbar {
+    background-color: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+
+/* 2. Fix the Search/Filter panel */
+[data-theme="dark"] .search-container,
+[data-theme="dark"] .filter-panel,
+[data-theme="dark"] form[method="GET"] {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* 3. Fix the specific Vehicle Cards */
+[data-theme="dark"] .vehicle-card,
+[data-theme="dark"] [class*="vehicle-card"],
+[data-theme="dark"] .card {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+/* 4. Fix the text inside the cards */
+[data-theme="dark"] .vehicle-card h2,
+[data-theme="dark"] .vehicle-card h3,
+[data-theme="dark"] .vehicle-card h4,
+[data-theme="dark"] .vehicle-card .price {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .vehicle-card p {
+    color: #cbd5e1 !important;
+}
+
+/* 5. Fix inputs and search bars inside dark mode */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] input::placeholder {
+    color: #64748b !important;
+}
+
+/* 6. Fix the "Available" badge */
+[data-theme="dark"] .status-badge,
+[data-theme="dark"] .badge-success {
+    background-color: #064e3b !important;
+    color: #6ee7b7 !important;
+}
+
+/* 7. Fix the end of your file that was cut off */
+.login-role-note-text {
+    margin: 0;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+[data-theme="dark"] .login-role-note-text {
+    color: #cbd5e1;
+}
+
+/* =========================================================
+   FIX: Brighten text for readability in dark mode
+   ========================================================= */
+
+/* 1. Brighten standard text, headings, and table cells */
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] label,
+[data-theme="dark"] td,
+[data-theme="dark"] th,
+[data-theme="dark"] strong,
+[data-theme="dark"] b,
+[data-theme="dark"] .page-title {
+    color: #f8fafc !important; /* Very bright, near-white */
+}
+
+/* 2. Brighten secondary/muted text (subtitles, small notes) */
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .page-subtitle,
+[data-theme="dark"] .stat-card h3,
+[data-theme="dark"] .detail-label,
+[data-theme="dark"] small {
+    color: #cbd5e1 !important; /* Brighter than before, but still secondary */
+}
+
+/* 3. Keep links readable without changing their base color */
+[data-theme="dark"] a {
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] a:hover {
+    color: #ffffff !important;
+}
+

@@ -280,16 +280,18 @@ require_once "includes/head.php";
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     }
 
-    /* Primary Actions (e.g. Add Vehicle) */
+    /* Primary Actions (e.g. Add Vehicle) - Now matches default buttons */
     .dashboard-action-button.primary-action {
-        background: #2563eb;
-        border-color: #2563eb;
-        color: #ffffff;
+        background: #ffffff;
+        border-color: #e5e7eb;
+        color: #374151;
     }
     .dashboard-action-button.primary-action:hover {
-        background: #1d4ed8;
-        border-color: #1d4ed8;
-        color: #ffffff;
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #111827;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     }
 
     /* Dark Mode Support */
@@ -304,12 +306,14 @@ require_once "includes/head.php";
         color: #ffffff;
     }
     [data-theme="dark"] .dashboard-action-button.primary-action {
-        background: #2563eb;
-        border-color: #2563eb;
-        color: #ffffff;
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
     }
     [data-theme="dark"] .dashboard-action-button.primary-action:hover {
-        background: #1d4ed8;
+        background: #334155;
+        border-color: #475569;
+        color: #ffffff;
     }
 
     @media (max-width: 768px) { .dashboard-actions { grid-template-columns: 1fr; } }
