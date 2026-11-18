@@ -260,6 +260,66 @@ require_once "../includes/head.php";
     .maintenance-info-note { margin-top:18px; padding:14px 16px; border:1px solid #e5e7eb; border-radius:8px; background:#f9fafb; color:#4b5563; font-size:12px; line-height:1.6; }
     .maintenance-info-note strong { color:#111827; }
     @media (max-width:700px) { .maintenance-grid { grid-template-columns:1fr; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES FOR VEHICLE DETAILS
+       ========================================================= */
+    
+    [data-theme="dark"] .maintenance-card {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .maintenance-card h3,
+    [data-theme="dark"] .maintenance-card-help {
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .maintenance-card-value {
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .maintenance-status {
+        background: #0f172a;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .maintenance-status-title {
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .maintenance-status-value {
+        color: #e2e8f0;
+    }
+
+    [data-theme="dark"] .maintenance-status-due {
+        background: #450a0a;
+        border-color: #7f1d1d;
+    }
+    [data-theme="dark"] .maintenance-status-due .maintenance-status-value {
+        color: #fecaca;
+    }
+
+    [data-theme="dark"] .maintenance-status-warning {
+        background: #78350f;
+        border-color: #b45309;
+    }
+    [data-theme="dark"] .maintenance-status-warning .maintenance-status-value {
+        color: #fcd34d;
+    }
+
+    [data-theme="dark"] .maintenance-status-ok {
+        background: #064e3b;
+        border-color: #047857;
+    }
+    [data-theme="dark"] .maintenance-status-ok .maintenance-status-value {
+        color: #6ee7b7;
+    }
+
+    [data-theme="dark"] .maintenance-info-note {
+        background: #0f172a;
+        border-color: #334155;
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .maintenance-info-note strong {
+        color: #f8fafc;
+    }
 </style>
 
 <body>
@@ -429,7 +489,7 @@ require_once "../includes/head.php";
                 <p style="color:#6b7280; margin-bottom:20px; font-size:13px;">Jump directly to records associated with this vehicle.</p>
 
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 25px;">
-                    <a href="../ownership_history/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>" class="button button-secondary">Ownership History (<?= $ownershipCount ?>)</a>
+                    <a href="../ownership_history/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>&scope=all" class="button button-secondary">Ownership History (<?= $ownershipCount ?>)</a>
                     <a href="../insurance/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>" class="button button-secondary">Insurance Records (<?= $insuranceCount ?>)</a>
                     <a href="../accidents/?vehicle_id=<?= (int) $vehicle["VehicleID"] ?>" class="button button-secondary">Accident Records (<?= $accidentCount ?>)</a>
                     

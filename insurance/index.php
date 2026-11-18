@@ -274,6 +274,59 @@ require_once "../includes/head.php";
     .scope-toggle a.active { background: #ffffff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     
     @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+
+    [data-theme="dark"] .filter-bar {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .filter-field label {
+        color: #cbd5e1;
+    }
+    [data-theme="dark"] .filter-field input,
+    [data-theme="dark"] .filter-field select {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .filter-field input:focus,
+    [data-theme="dark"] .filter-field select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96,165,250,0.20);
+    }
+
+    [data-theme="dark"] .scope-toggle {
+        background: #1e293b;
+    }
+    [data-theme="dark"] .scope-toggle a {
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .scope-toggle a.active {
+        background: #334155;
+        color: #f8fafc;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    /* Fix scoped vehicle banner */
+    [data-theme="dark"] div[style*="background:#eff6ff"] {
+        background: #1e3a8a !important;
+        border-color: #1e40af !important;
+    }
+    [data-theme="dark"] div[style*="background:#eff6ff"] span[style*="color:#111827"] {
+        color: #f8fafc !important;
+    }
+    [data-theme="dark"] div[style*="background:#eff6ff"] span[style*="color:#475569"] {
+        color: #cbd5e1 !important;
+    }
+
+    /* Fix table borders and headers */
+    [data-theme="dark"] table th,
+    [data-theme="dark"] table td {
+        border-bottom-color: #334155 !important;
+    }
 </style>
 
 <body>

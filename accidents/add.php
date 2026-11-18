@@ -574,6 +574,64 @@ require_once "../includes/head.php";
 
     }
 
+    /* =========================================
+       DARK MODE OVERRIDES
+       ========================================= */
+
+    [data-theme="dark"] .visrs-select,
+    [data-theme="dark"] .visrs-textarea {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .visrs-select:hover,
+    [data-theme="dark"] .visrs-textarea:hover {
+        border-color: #475569;
+    }
+
+    [data-theme="dark"] .visrs-select:focus,
+    [data-theme="dark"] .visrs-textarea:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.20);
+    }
+
+    [data-theme="dark"] .select-arrow {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .form-help,
+    [data-theme="dark"] .textarea-footer {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .damage-option-content {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .damage-option-content strong {
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .damage-option-content small {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .damage-option:hover .damage-option-content {
+        border-color: #475569;
+    }
+
+    [data-theme="dark"] .damage-option input:checked + .damage-option-content {
+        border-color: #60a5fa;
+        background: #1e3a8a;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    [data-theme="dark"] .damage-option input:checked + .damage-option-content strong {
+        color: #bfdbfe;
+    }
+
 </style>
 
 <body>
@@ -841,7 +899,6 @@ require_once "../includes/head.php";
                             </label>
 
 
-                            <!-- FIX: removed stray "}" from the ternary below -->
                             <label class="damage-option">
 
                                 <input
@@ -874,7 +931,6 @@ require_once "../includes/head.php";
                             </label>
 
 
-                            <!-- FIX: removed stray "}" from the ternary below -->
                             <label class="damage-option">
 
                                 <input
@@ -907,7 +963,6 @@ require_once "../includes/head.php";
                             </label>
 
 
-                            <!-- FIX: removed stray "}" from the ternary below -->
                             <label class="damage-option">
 
                                 <input

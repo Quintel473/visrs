@@ -244,20 +244,49 @@ require_once "../includes/head.php";
     .vehicle-scope-banner .scope-meta { font-size: 13px; color: #475569; }
     .vehicle-scope-banner .scope-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     
+    /* Table base styles */
+    .accident-table { width: 100%; border-collapse: collapse; }
+    .accident-table th { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+    .accident-table td { padding: 12px; border-bottom: 1px solid #eee; }
+    .accident-table th:first-child, .accident-table td:first-child { width: 36px; }
+
+    @media (max-width: 900px) { .filter-bar { grid-template-columns: 1fr 1fr; } .filter-actions { grid-column: 1 / -1; } }
+    @media (max-width: 600px) { .filter-bar { grid-template-columns: 1fr; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+       
     [data-theme="dark"] .vehicle-scope-banner { background: #172554; border-color: #1e40af; }
     [data-theme="dark"] .vehicle-scope-banner .scope-vehicle { color: #e2e8f0; }
     [data-theme="dark"] .vehicle-scope-banner .scope-meta { color: #cbd5e1; }
     [data-theme="dark"] .vehicle-scope-banner .scope-eyebrow { color: #93c5fd; }
+    
     [data-theme="dark"] .filter-bar { background: #0f172a; border-color: #334155; }
     [data-theme="dark"] .filter-field label { color: #cbd5e1; }
     [data-theme="dark"] .filter-field input, [data-theme="dark"] .filter-field select { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+    [data-theme="dark"] .filter-field input:focus, [data-theme="dark"] .filter-field select:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.20); }
     [data-theme="dark"] .filter-summary { color: #94a3b8; }
     [data-theme="dark"] .filter-summary a { color: #60a5fa; }
-    [data-theme="dark"] .scope-toggle { background: #1e293b; }
-    [data-theme="dark"] .scope-toggle a.active { background: #334155; color: #ffffff; }
     
-    @media (max-width: 900px) { .filter-bar { grid-template-columns: 1fr 1fr; } .filter-actions { grid-column: 1 / -1; } }
-    @media (max-width: 600px) { .filter-bar { grid-template-columns: 1fr; } }
+    /* Border added to the dark mode scope toggle */
+    [data-theme="dark"] .scope-toggle { 
+        background: #1e293b; 
+        border: 1px solid #334155; 
+    }
+    
+    [data-theme="dark"] .scope-toggle a { color: #94a3b8; }
+    [data-theme="dark"] .scope-toggle a.active { background: #334155; color: #ffffff; }
+
+    /* Fix table borders */
+    [data-theme="dark"] .accident-table th { border-bottom-color: #475569; }
+    [data-theme="dark"] .accident-table td { border-bottom-color: #334155; }
+
+    /* Fix the empty state hardcoded background */
+    [data-theme="dark"] div[style*="background:#f8fafc"] {
+        background: #1e293b !important;
+        color: #e2e8f0 !important;
+    }
 </style>
 
 <body>
@@ -388,28 +417,28 @@ require_once "../includes/head.php";
                         <?php endif; ?>
 
                         <div style="overflow-x:auto;">
-                            <table style="width:100%; border-collapse:collapse;">
+                            <table class="accident-table">
                                 <thead>
                                     <tr>
-                                        <?php if ($canManage): ?><th style="text-align:left; padding:12px; width:36px;"><input type="checkbox" id="selectAll"></th><?php endif; ?>
-                                        <th style="text-align:left; padding:12px;">Date</th>
-                                        <th style="text-align:left; padding:12px;">Vehicle</th>
-                                        <th style="text-align:left; padding:12px;">Location</th>
-                                        <th style="text-align:left; padding:12px;">Damage Level</th>
-                                        <th style="text-align:left; padding:12px;">Report Number</th>
-                                        <th style="text-align:left; padding:12px;">Actions</th>
+                                        <?php if ($canManage): ?><th><input type="checkbox" id="selectAll"></th><?php endif; ?>
+                                        <th>Date</th>
+                                        <th>Vehicle</th>
+                                        <th>Location</th>
+                                        <th>Damage Level</th>
+                                        <th>Report Number</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($accidents as $accident): ?>
                                         <tr>
-                                            <?php if ($canManage): ?><td style="padding:12px;"><input type="checkbox" name="selected_ids[]" value="<?= (int) $accident["AccidentID"] ?>" class="row-checkbox"></td><?php endif; ?>
-                                            <td style="padding:12px;"><?= htmlspecialchars(date("M j, Y", strtotime($accident["AccidentDate"]))) ?></td>
-                                            <td style="padding:12px;"><strong><?= htmlspecialchars($accident["PlateNumber"]) ?></strong><br><small><?= htmlspecialchars($accident["Make"] . " " . $accident["Model"]) ?> (<?= htmlspecialchars($accident["VehicleYear"]) ?>)</small></td>
-                                            <td style="padding:12px;"><?= $accident["Location"] ? htmlspecialchars($accident["Location"]) : "Not specified" ?></td>
-                                            <td style="padding:12px;"><?= htmlspecialchars($accident["DamageLevel"]) ?></td>
-                                            <td style="padding:12px;"><?= $accident["ReportNumber"] ? htmlspecialchars($accident["ReportNumber"]) : "Not specified" ?></td>
-                                            <td style="padding:12px; white-space:nowrap;">
+                                            <?php if ($canManage): ?><td><input type="checkbox" name="selected_ids[]" value="<?= (int) $accident["AccidentID"] ?>" class="row-checkbox"></td><?php endif; ?>
+                                            <td><?= htmlspecialchars(date("M j, Y", strtotime($accident["AccidentDate"]))) ?></td>
+                                            <td><strong><?= htmlspecialchars($accident["PlateNumber"]) ?></strong><br><small><?= htmlspecialchars($accident["Make"] . " " . $accident["Model"]) ?> (<?= htmlspecialchars($accident["VehicleYear"]) ?>)</small></td>
+                                            <td><?= $accident["Location"] ? htmlspecialchars($accident["Location"]) : "Not specified" ?></td>
+                                            <td><?= htmlspecialchars($accident["DamageLevel"]) ?></td>
+                                            <td><?= $accident["ReportNumber"] ? htmlspecialchars($accident["ReportNumber"]) : "Not specified" ?></td>
+                                            <td style="white-space:nowrap;">
                                                 <a href="view.php?id=<?= (int) $accident["AccidentID"] ?>" class="button button-secondary">View</a>
                                                 <?php if ($canManage): ?>
                                                     <a href="edit.php?id=<?= (int) $accident["AccidentID"] ?>" class="button">Edit</a>

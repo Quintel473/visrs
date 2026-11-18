@@ -291,6 +291,116 @@ require_once "../includes/head.php";
     .back-marketplace:hover { color:#111827; }
     @media (max-width:900px) { .vehicle-detail-grid { grid-template-columns:1fr; } .vehicle-primary-image { height:350px; } }
     @media (max-width:600px) { .vehicle-maintenance-grid { grid-template-columns:1fr; } .vehicle-primary-image { height:270px; } .listing-main-info { padding:18px; } .listing-main-info h1 { font-size:24px; } .vehicle-price { font-size:26px; } .vehicle-spec-grid { grid-template-columns:1fr; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES FOR VEHICLE DETAILS
+       ========================================================= */
+       
+    [data-theme="dark"] .vehicle-detail-card {
+        background: #1e293b;
+        border-color: #334155;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
+    }
+    
+    [data-theme="dark"] .vehicle-gallery,
+    [data-theme="dark"] .vehicle-primary-image {
+        background: #0f172a;
+    }
+
+    [data-theme="dark"] .vehicle-thumbnails {
+        background: #1e293b;
+    }
+    [data-theme="dark"] .vehicle-thumbnail.active {
+        border-color: #60a5fa;
+    }
+
+    [data-theme="dark"] .listing-main-info h1,
+    [data-theme="dark"] .vehicle-price,
+    [data-theme="dark"] .vehicle-spec-value,
+    [data-theme="dark"] .maintenance-value,
+    [data-theme="dark"] .seller-name,
+    [data-theme="dark"] .vehicle-section-header h2 {
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .vehicle-subtitle,
+    [data-theme="dark"] .vehicle-spec-label,
+    [data-theme="dark"] .vehicle-section-count,
+    [data-theme="dark"] .seller-role,
+    [data-theme="dark"] .vehicle-page-header p {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .vehicle-description {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .vehicle-action-button {
+        background: #334155;
+        color: #ffffff;
+    }
+    [data-theme="dark"] .vehicle-action-button:hover {
+        background: #475569;
+    }
+    [data-theme="dark"] .vehicle-action-button.secondary {
+        background: transparent;
+        color: #e2e8f0;
+        border-color: #475569;
+    }
+    [data-theme="dark"] .vehicle-action-button.secondary:hover {
+        background: #334155;
+    }
+
+    /* Grids and Tables */
+    [data-theme="dark"] .vehicle-spec-grid,
+    [data-theme="dark"] .vehicle-maintenance-grid,
+    [data-theme="dark"] .vehicle-spec {
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .maintenance-note {
+        background: #0f172a;
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .vehicle-record-table th {
+        background: #0f172a;
+        color: #cbd5e1;
+        border-bottom-color: #334155;
+    }
+    [data-theme="dark"] .vehicle-record-table td {
+        color: #e2e8f0;
+        border-bottom-color: #334155;
+    }
+
+    [data-theme="dark"] .record-status {
+        background: #334155;
+        color: #cbd5e1;
+    }
+    [data-theme="dark"] .record-status.active {
+        background: #064e3b;
+        color: #6ee7b7;
+    }
+    [data-theme="dark"] .record-status.expired {
+        background: #7f1d1d;
+        color: #fecaca;
+    }
+
+    [data-theme="dark"] .damage-level.minor { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .damage-level.moderate { background: #78350f; color: #fcd34d; }
+    [data-theme="dark"] .damage-level.major { background: #7c2d12; color: #fdba74; }
+    [data-theme="dark"] .damage-level.severe { background: #7f1d1d; color: #fecaca; }
+
+    [data-theme="dark"] .vehicle-empty-record {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .back-marketplace {
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .back-marketplace:hover {
+        color: #f8fafc;
+    }
 </style>
 
 

@@ -228,6 +228,26 @@ require_once "../includes/head.php";
 
     }
 
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+
+    /* Role Badges */
+    [data-theme="dark"] .user-role-default { background: #334155; color: #cbd5e1; }
+    [data-theme="dark"] .user-role-admin { background: #1e3a8a; color: #bfdbfe; }
+    [data-theme="dark"] .user-role-police { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .user-role-seller { background: #78350f; color: #fcd34d; }
+
+    /* Detail Rows */
+    [data-theme="dark"] .user-detail-row { border-bottom-color: #334155; }
+    [data-theme="dark"] .user-detail-label { color: #94a3b8; }
+    [data-theme="dark"] .user-detail-value { color: #f8fafc; }
+
+    /* Fix the hardcoded background block */
+    [data-theme="dark"] div[style*="background:#f8fafc"] {
+        background: #1e293b !important;
+    }
+
 </style>
 
 <body>

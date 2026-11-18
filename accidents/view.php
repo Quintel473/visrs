@@ -502,6 +502,55 @@ require_once "../includes/head.php";
 
     }
 
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+
+    [data-theme="dark"] .detail-box,
+    [data-theme="dark"] .photo-card {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .detail-value,
+    [data-theme="dark"] .photo-name {
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .detail-label,
+    [data-theme="dark"] .photo-meta {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .description-box,
+    [data-theme="dark"] .vehicle-summary,
+    [data-theme="dark"] .photo-upload-form,
+    [data-theme="dark"] .photo-empty {
+        background: #0f172a;
+        border-color: #334155;
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .photo-upload-form label {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .photo-upload-row input[type="file"] {
+        background: #1e293b;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+
+    [data-theme="dark"] .photo-thumb {
+        background: #0f172a;
+    }
+
+    /* Fix damage badges */
+    [data-theme="dark"] .damage-minor { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .damage-moderate { background: #78350f; color: #fcd34d; }
+    [data-theme="dark"] .damage-major { background: #7c2d12; color: #fdba74; }
+    [data-theme="dark"] .damage-severe { background: #7f1d1d; color: #fecaca; }
+
 </style>
 
 <body>

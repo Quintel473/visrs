@@ -259,6 +259,89 @@ require_once "../includes/head.php";
     .marketplace-empty p { margin:0 auto 20px; max-width:500px; color:#64748b; line-height:1.6; }
     @media (max-width:900px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width:600px) { .filter-grid { grid-template-columns:1fr; } .marketplace-grid { grid-template-columns:1fr; } .marketplace-header { align-items:flex-start; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES FOR MARKETPLACE
+       ========================================================= */
+       
+    /* Filters Bar */
+    [data-theme="dark"] .marketplace-filters {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .filter-group label {
+        color: #cbd5e1;
+    }
+    [data-theme="dark"] .filter-group input,
+    [data-theme="dark"] .filter-group select {
+        background: #0f172a;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+    [data-theme="dark"] .filter-group input:focus,
+    [data-theme="dark"] .filter-group select:focus {
+        border-color: #60a5fa;
+        outline: none;
+    }
+    
+    /* Cards */
+    [data-theme="dark"] .vehicle-listing-card {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .vehicle-listing-card:hover {
+        border-color: #60a5fa;
+    }
+    [data-theme="dark"] .listing-image-container {
+        background: #0f172a;
+    }
+    
+    /* Text Elements Inside Cards */
+    [data-theme="dark"] .listing-title {
+        color: #f8fafc;
+    }
+    [data-theme="dark"] .listing-year {
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .listing-price {
+        color: #f8fafc;
+    }
+    [data-theme="dark"] .listing-description {
+        color: #cbd5e1;
+    }
+    
+    /* Tags / Badges */
+    [data-theme="dark"] .listing-detail {
+        background: #334155;
+        color: #e2e8f0;
+    }
+    
+    /* Seller Info */
+    [data-theme="dark"] .listing-seller {
+        border-top-color: #334155;
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .listing-seller strong {
+        color: #e2e8f0;
+    }
+    
+    /* Button inside card */
+    [data-theme="dark"] .listing-button {
+        background: #334155;
+        color: #ffffff;
+    }
+    [data-theme="dark"] .listing-button:hover {
+        background: #475569;
+    }
+    
+    /* Empty State */
+    [data-theme="dark"] .marketplace-empty {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    [data-theme="dark"] .marketplace-empty h2 {
+        color: #f8fafc;
+    }
 </style>
 
 

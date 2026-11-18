@@ -326,6 +326,90 @@ require_once "../includes/head.php";
     .vehicle-button:disabled { opacity: 0.55; cursor: not-allowed; }
     @media (max-width: 800px) { .vehicle-page-heading { flex-direction: column; } .vehicle-form-grid { grid-template-columns: 1fr; } }
     @media (max-width: 600px) { .vehicle-form-card-body { padding: 18px; } .vehicle-form-card-header { padding: 18px; } .vehicle-form-actions { flex-direction: column-reverse; } .vehicle-button { width: 100%; } }
+
+    /* =========================================================
+       DARK MODE OVERRIDES
+       ========================================================= */
+
+    [data-theme="dark"] .vehicle-page-heading h1,
+    [data-theme="dark"] .vehicle-form-card-header h2,
+    [data-theme="dark"] .vehicle-form-section-title,
+    [data-theme="dark"] .maintenance-info-note strong {
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .vehicle-page-heading p,
+    [data-theme="dark"] .vehicle-form-card-header p,
+    [data-theme="dark"] .vehicle-form-help,
+    [data-theme="dark"] .maintenance-info-note {
+        color: #94a3b8;
+    }
+
+    [data-theme="dark"] .vehicle-form-card {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .vehicle-form-card-header,
+    [data-theme="dark"] .vehicle-form-section-title,
+    [data-theme="dark"] .vehicle-form-actions {
+        border-bottom-color: #334155;
+        border-top-color: #334155;
+    }
+
+    [data-theme="dark"] .vehicle-form-group label {
+        color: #cbd5e1;
+    }
+
+    [data-theme="dark"] .vehicle-form-group input,
+    [data-theme="dark"] .vehicle-form-group select {
+        background: #0f172a;
+        border-color: #334155;
+        color: #e2e8f0;
+    }
+
+    [data-theme="dark"] .vehicle-form-group input:focus,
+    [data-theme="dark"] .vehicle-form-group select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.20);
+    }
+
+    [data-theme="dark"] .maintenance-info-note {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    [data-theme="dark"] .seller-assignment-notice {
+        background: #1e3a8a;
+        border-color: #1e40af;
+        color: #bfdbfe;
+    }
+
+    [data-theme="dark"] .no-owner-message {
+        background: #7f1d1d;
+        border-color: #991b1b;
+        color: #fecaca;
+    }
+
+    [data-theme="dark"] .vehicle-button-primary {
+        background: #334155;
+        border-color: #475569;
+        color: #f8fafc;
+    }
+    [data-theme="dark"] .vehicle-button-primary:hover {
+        background: #475569;
+        border-color: #64748b;
+    }
+
+    [data-theme="dark"] .vehicle-button-secondary {
+        background: transparent;
+        border-color: #475569;
+        color: #cbd5e1;
+    }
+    [data-theme="dark"] .vehicle-button-secondary:hover {
+        background: #334155;
+        border-color: #64748b;
+    }
 </style>
 
 <body>
