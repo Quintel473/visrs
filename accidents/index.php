@@ -10,42 +10,44 @@ $activePage = "accidents";
 $pageTitle = "Accident Records";
 $pageSubtitle = "Manage and review vehicle accident records.";
 
-
-/*
-|--------------------------------------------------------------------------
-| Role-Based Access Control Setup
-|--------------------------------------------------------------------------
-*/
-
 $currentRole = $_SESSION["Role"] ?? 'User';
 $currentUserId = $_SESSION["UserID"] ?? 0;
 
 $isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
 $canManage = in_array($currentRole, ['Admin', 'Police'], true);
 
-// Determine if the user wants to see ONLY their vehicles (Admin/Police only)
-$viewScope = $_GET["scope"] ?? "all"; 
-if (!$isAdminOrPolice) {
-    $viewScope = "mine"; // Sellers and Users are forced to "mine"
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Filter state.
-|--------------------------------------------------------------------------
-*/
-
-$filterFrom         = trim($_GET["from"]         ?? "");
-$filterTo           = trim($_GET["to"]           ?? "");
-$filterDamage       = trim($_GET["damage"]       ?? "");
-$filterVehicle      = trim($_GET["vehicle"]      ?? "");
-
+// -------------------------------------------------------------------------
+// Check for a specific vehicle scope
+// -------------------------------------------------------------------------
 $filterVehicleId = isset($_GET["vehicle_id"]) ? (int) $_GET["vehicle_id"] : 0;
-if ($filterVehicleId < 0) { $filterVehicleId = 0; }
-
-/* Load the scoped vehicle's basic info for the page header. */
 $scopedVehicle = null;
+
+// SECURITY CHECK: If they are a regular user AND no vehicle_id is provided, block them.
+if (!$isAdminOrPolice && $currentRole === 'User' && $filterVehicleId === 0) {
+    http_response_code(403);
+    $pageTitle = "Access Denied";
+    require_once "../includes/head.php";
+    ?>
+    <body>
+    <div class="layout">
+        <main class="main-content" style="margin-left:0; width:100%;">
+            <div class="content" style="max-width:700px; margin:80px auto;">
+                <div class="card">
+                    <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
+                        <strong>Access Denied</strong>
+                    </div>
+                    <h2>You do not have permission to view the global accident directory.</h2>
+                    <p>You can only view accident records from a specific vehicle's profile.</p>
+                    <a href="/visrs/dashboard.php" class="button">Return to Dashboard</a>
+                </div>
+            </div>
+        </main>
+    </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
 
 if ($filterVehicleId > 0) {
     $svStmt = $pdo->prepare("
@@ -60,57 +62,25 @@ if ($filterVehicleId > 0) {
 
     if (!$scopedVehicle) {
         $filterVehicleId = 0;
-    } else {
-        // SECURITY CHECK: If they aren't Admin/Police, verify access based on role.
-        if (!$isAdminOrPolice) {
-            $hasAccess = false;
-            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) {
-                $hasAccess = true;
-            } elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) {
-                $hasAccess = true;
-            }
-
-            if (!$hasAccess) {
-                http_response_code(403);
-                $pageTitle = "Access Denied";
-                require_once "../includes/head.php";
-                ?>
-                <body>
-                <div class="layout">
-                    <main class="main-content" style="margin-left:0; width:100%;">
-                        <div class="content" style="max-width:700px; margin:80px auto;">
-                            <div class="card">
-                                <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
-                                    <strong>Access Denied</strong>
-                                </div>
-                                <h2>You do not have permission to view this vehicle's accidents.</h2>
-                                <p>You can only view accident records for vehicles that are linked to your account.</p>
-                                <a href="index.php" class="button">Return to Accident Records</a>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-                </body>
-                </html>
-                <?php
-                exit;
-            }
+        // If they passed an invalid ID, and they are a regular user, kick them out
+        if (!$isAdminOrPolice && $currentRole === 'User') {
+            header("Location: /visrs/dashboard.php");
+            exit;
         }
     }
 }
 
+$viewScope = $_GET["scope"] ?? "all"; 
+
+$filterFrom         = trim($_GET["from"]         ?? "");
+$filterTo           = trim($_GET["to"]           ?? "");
+$filterDamage       = trim($_GET["damage"]       ?? "");
+$filterVehicle      = trim($_GET["vehicle"]      ?? "");
 
 $validDamageLevels = ["Minor", "Moderate", "Major", "Severe"];
 if (!in_array($filterDamage, $validDamageLevels, true)) { $filterDamage = ""; }
 if ($filterFrom !== "" && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterFrom)) { $filterFrom = ""; }
 if ($filterTo !== "" && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterTo)) { $filterTo = ""; }
-
-
-/*
-|--------------------------------------------------------------------------
-| Build WHERE clause.
-|--------------------------------------------------------------------------
-*/
 
 $whereParts  = [];
 $whereParams = [];
@@ -144,21 +114,14 @@ if ($filterVehicle !== "") {
     $whereParams[] = $vehicleLike;
 }
 
-// Apply the view scope (My Vehicles vs All System)
-if ($viewScope === "mine" && $filterVehicleId === 0) {
+// Only apply the "mine" filter if they are Admin/Police and specifically requested it
+if ($viewScope === "mine" && $isAdminOrPolice && $filterVehicleId === 0) {
     $whereParts[] = "(v.SellerID = ? OR o.UserID = ?)";
     $whereParams[] = $currentUserId;
     $whereParams[] = $currentUserId;
 }
 
 $whereSql = $whereParts ? "WHERE " . implode(" AND ", $whereParts) : "";
-
-
-/*
-|--------------------------------------------------------------------------
-| Pagination setup.
-|--------------------------------------------------------------------------
-*/
 
 $perPage = 25;
 
@@ -174,13 +137,6 @@ $countStmt->execute($whereParams);
 $totalAccidents = (int) $countStmt->fetchColumn();
 
 $pagination = paginationMeta($totalAccidents, $perPage);
-
-
-/*
-|--------------------------------------------------------------------------
-| Load accident records for current page.
-|--------------------------------------------------------------------------
-*/
 
 $stmt = $pdo->prepare("
     SELECT a.AccidentID, a.VehicleID, a.AccidentDate, a.Location, a.Description, a.DamageLevel, a.ReportNumber,
@@ -201,8 +157,6 @@ $stmt->execute();
 
 $accidents = $stmt->fetchAll();
 
-
-/* Any filters active? Used to show a "Clear filters" link. */
 $hasFilters = ($filterFrom !== "" || $filterTo !== "" || $filterDamage !== "" || $filterVehicle !== "");
 
 $bulkMessage = $_SESSION["bulk_message"] ?? null;
@@ -218,7 +172,6 @@ $filterQuery = ($filterFrom !== "" ? "&from=" . urlencode($filterFrom) : "") .
 $exportQuery = $filterQuery !== "" ? "?" . ltrim($filterQuery, "&") : "";
 
 require_once "../includes/head.php";
-
 ?>
 
 <style>
@@ -232,75 +185,47 @@ require_once "../includes/head.php";
     .filter-summary { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: #64748b; }
     .filter-summary a { color: #2563eb; font-weight: 600; text-decoration: none; }
     .filter-summary a:hover { text-decoration: underline; }
-    
     .scope-toggle { display: inline-flex; background: #e5e7eb; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
     .scope-toggle a { padding: 8px 20px; font-size: 14px; font-weight: 600; color: #4b5563; text-decoration: none; border-radius: 6px; transition: all 0.2s ease; }
     .scope-toggle a.active { background: #ffffff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    
     .vehicle-scope-banner { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; }
     .vehicle-scope-banner .scope-info { display: flex; flex-direction: column; gap: 4px; }
     .vehicle-scope-banner .scope-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #1d4ed8; }
     .vehicle-scope-banner .scope-vehicle { font-size: 18px; font-weight: 700; color: #111827; }
     .vehicle-scope-banner .scope-meta { font-size: 13px; color: #475569; }
     .vehicle-scope-banner .scope-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    
-    /* Table base styles */
     .accident-table { width: 100%; border-collapse: collapse; }
     .accident-table th { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
     .accident-table td { padding: 12px; border-bottom: 1px solid #eee; }
     .accident-table th:first-child, .accident-table td:first-child { width: 36px; }
-
     @media (max-width: 900px) { .filter-bar { grid-template-columns: 1fr 1fr; } .filter-actions { grid-column: 1 / -1; } }
     @media (max-width: 600px) { .filter-bar { grid-template-columns: 1fr; } }
 
-    /* =========================================================
-       DARK MODE OVERRIDES
-       ========================================================= */
-       
+    /* DARK MODE */
     [data-theme="dark"] .vehicle-scope-banner { background: #172554; border-color: #1e40af; }
     [data-theme="dark"] .vehicle-scope-banner .scope-vehicle { color: #e2e8f0; }
     [data-theme="dark"] .vehicle-scope-banner .scope-meta { color: #cbd5e1; }
     [data-theme="dark"] .vehicle-scope-banner .scope-eyebrow { color: #93c5fd; }
-    
     [data-theme="dark"] .filter-bar { background: #0f172a; border-color: #334155; }
     [data-theme="dark"] .filter-field label { color: #cbd5e1; }
     [data-theme="dark"] .filter-field input, [data-theme="dark"] .filter-field select { background: #1e293b; color: #e2e8f0; border-color: #334155; }
     [data-theme="dark"] .filter-field input:focus, [data-theme="dark"] .filter-field select:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,0.20); }
     [data-theme="dark"] .filter-summary { color: #94a3b8; }
     [data-theme="dark"] .filter-summary a { color: #60a5fa; }
-    
-    /* Border added to the dark mode scope toggle */
-    [data-theme="dark"] .scope-toggle { 
-        background: #1e293b; 
-        border: 1px solid #334155; 
-    }
-    
+    [data-theme="dark"] .scope-toggle { background: #1e293b; border: 1px solid #334155; }
     [data-theme="dark"] .scope-toggle a { color: #94a3b8; }
     [data-theme="dark"] .scope-toggle a.active { background: #334155; color: #ffffff; }
-
-    /* Fix table borders */
     [data-theme="dark"] .accident-table th { border-bottom-color: #475569; }
     [data-theme="dark"] .accident-table td { border-bottom-color: #334155; }
-
-    /* Fix the empty state hardcoded background */
-    [data-theme="dark"] div[style*="background:#f8fafc"] {
-        background: #1e293b !important;
-        color: #e2e8f0 !important;
-    }
+    [data-theme="dark"] div[style*="background:#f8fafc"] { background: #1e293b !important; color: #e2e8f0 !important; }
 </style>
 
 <body>
-
 <div class="layout">
-
     <?php require_once "../includes/sidebar.php"; ?>
-
     <main class="main-content">
-
         <?php include __DIR__ . "/../includes/header.php"; ?>
-
         <div class="content">
-
             <div class="card">
 
                 <?php if (isset($_GET["deleted"]) && $_GET["deleted"] === "1"): ?>
@@ -322,7 +247,9 @@ require_once "../includes/head.php";
                         </div>
                         <div class="scope-actions">
                             <a href="../vehicles/view.php?id=<?= (int) $scopedVehicle["VehicleID"] ?>" class="button button-secondary">← Back to Vehicle</a>
-                            <a href="index.php" class="button button-secondary">Show All My Accidents</a>
+                            <?php if ($isAdminOrPolice): ?>
+                                <a href="index.php" class="button button-secondary">Show All My Accidents</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -339,7 +266,7 @@ require_once "../includes/head.php";
                     </div>
                 </div>
 
-                <!-- SCOPE TOGGLE (Only for Admin/Police) -->
+                <!-- SCOPE TOGGLE (Only for Admin/Police and not scoped to a vehicle) -->
                 <?php if ($isAdminOrPolice && !$scopedVehicle): ?>
                     <div class="scope-toggle">
                         <a href="?scope=all<?= $filterVehicle !== "" ? '&vehicle=' . urlencode($filterVehicle) : '' ?><?= $filterDamage !== "" ? '&damage=' . urlencode($filterDamage) : '' ?>" class="<?= $viewScope === 'all' ? 'active' : '' ?>">All System Records</a>
@@ -457,9 +384,7 @@ require_once "../includes/head.php";
         </div>
     </main>
 </div>
-
 <?php require_once "../includes/footer.php"; ?>
-
 <script>
 function confirmBulkDelete() {
     var count = document.querySelectorAll(".row-checkbox:checked").length;

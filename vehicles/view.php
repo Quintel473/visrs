@@ -106,8 +106,10 @@ if (!$vehicle) {
 
 /*
 |--------------------------------------------------------------------------
-| Role-Based Access Control (Block URL Guessing)
+| Role-Based Access Control
 |--------------------------------------------------------------------------
+| Admin, Police, and regular Users can view any vehicle.
+| Sellers can only view vehicles they are selling or own.
 */
 
 $currentRole = $_SESSION["Role"] ?? 'User';
@@ -145,31 +147,8 @@ if (!$isAdminOrPolice) {
             <?php
             exit;
         }
-    } elseif ((int)$vehicle["OwnerUserID"] !== $currentUserId) {
-        http_response_code(403);
-        $pageTitle = "Access Denied";
-        require_once "../includes/head.php";
-        ?>
-        <body>
-        <div class="layout">
-            <main class="main-content" style="margin-left:0; width:100%;">
-                <div class="content" style="max-width:700px; margin:80px auto;">
-                    <div class="card">
-                        <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
-                            <strong>Access Denied</strong>
-                        </div>
-                        <h2>You do not have permission to view this vehicle.</h2>
-                        <p>You can only view vehicles that are linked to your account.</p>
-                        <a href="index.php" class="button">Return to My Vehicles</a>
-                    </div>
-                </div>
-            </main>
-        </div>
-        </body>
-        </html>
-        <?php
-        exit;
     }
+    // NOTE: Regular 'User' role falls through here and is ALLOWED to view the vehicle.
 }
 
 

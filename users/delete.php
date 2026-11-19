@@ -85,25 +85,6 @@ if (!$user) {
 
 
 /*
- * Check whether the user has audit records.
- *
- * Audit records must remain intact.
- */
-
-$auditCheck = $pdo->prepare("
-    SELECT COUNT(*)
-    FROM audit_logs
-    WHERE UserID = ?
-");
-
-$auditCheck->execute([
-    $userID
-]);
-
-$auditCount = (int) $auditCheck->fetchColumn();
-
-
-/*
  * Process deletion only after the user
  * confirms on the VISRS confirmation page.
  */
@@ -174,38 +155,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!$currentUser) {
 
         header("Location: index.php?error=not_found");
-        exit;
-
-    }
-
-
-    /*
-     * Re-check audit records immediately before deletion.
-     */
-
-    $auditCheck = $pdo->prepare("
-        SELECT COUNT(*)
-        FROM audit_logs
-        WHERE UserID = ?
-    ");
-
-    $auditCheck->execute([
-        $userID
-    ]);
-
-    $auditCount = (int) $auditCheck->fetchColumn();
-
-
-    /*
-     * Do not delete a user that has audit history.
-     */
-
-    if ($auditCount > 0) {
-
-        header(
-            "Location: index.php?error=has_audit_logs"
-        );
-
         exit;
 
     }
@@ -322,7 +271,7 @@ require_once "../includes/head.php";
         color: #fecaca !important;
     }
 
-    /* Fix the orange "User Cannot Be Deleted" / "This action cannot be undone" banner */
+    /* Fix the orange "This action cannot be undone" banner */
     [data-theme="dark"] div[style*="background:#fff7ed"] {
         background: #78350f !important;
         color: #fcd34d !important;
@@ -455,33 +404,16 @@ require_once "../includes/head.php";
                     "
                 >
 
-                    <?php if ($auditCount > 0): ?>
+                    <strong>
+                        This action cannot be undone.
+                    </strong>
 
-                        <strong>
-                            User Cannot Be Deleted
-                        </strong>
-
-                        <p style="margin:6px 0 0 0;">
-                            This account has
-                            <?= $auditCount ?>
-                            existing audit
-                            <?= $auditCount === 1 ? "record" : "records" ?>.
-                            The account cannot be deleted because the
-                            VISRS audit trail must remain intact.
-                        </p>
-
-                    <?php else: ?>
-
-                        <strong>
-                            This action cannot be undone.
-                        </strong>
-
-                        <p style="margin:6px 0 0 0;">
-                            Deleting this account will permanently remove
-                            the user from the VISRS system.
-                        </p>
-
-                    <?php endif; ?>
+                    <p style="margin:6px 0 0 0;">
+                        Deleting this account will permanently remove
+                        the user from the VISRS system. Their past audit
+                        logs will remain intact but will show as
+                        "Unknown User".
+                    </p>
 
                 </div>
 
@@ -519,33 +451,15 @@ require_once "../includes/head.php";
                     >
 
 
-                    <?php if ($auditCount === 0): ?>
-
-                        <button
-                            type="submit"
-                            class="button"
-                            style="
-                                background:#991b1b;
-                            "
-                        >
-                            Yes, Delete User
-                        </button>
-
-                    <?php else: ?>
-
-                        <button
-                            type="button"
-                            class="button"
-                            style="
-                                background:#9ca3af;
-                                cursor:not-allowed;
-                            "
-                            disabled
-                        >
-                            User Cannot Be Deleted
-                        </button>
-
-                    <?php endif; ?>
+                    <button
+                        type="submit"
+                        class="button"
+                        style="
+                            background:#991b1b;
+                        "
+                    >
+                        Yes, Delete User
+                    </button>
 
 
                     <a

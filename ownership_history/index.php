@@ -14,9 +14,6 @@ $canManage = in_array($currentRole, ['Admin', 'Police'], true);
 $isAdminOrPolice = in_array($currentRole, ['Admin', 'Police']);
 
 $viewScope = $_GET["scope"] ?? "all";
-if (!$isAdminOrPolice) {
-    $viewScope = "mine";
-}
 
 // -------------------------------------------------------------------------
 // Check for a specific vehicle scope
@@ -37,50 +34,19 @@ if ($filterVehicleId > 0) {
 
     if (!$scopedVehicle) {
         $filterVehicleId = 0;
-    } else {
-        // Security check for non-admins
-        if (!$isAdminOrPolice) {
-            $hasAccess = false;
-            if ($currentRole === 'Seller' && (int)$scopedVehicle["SellerID"] === $currentUserId) {
-                $hasAccess = true;
-            } elseif ((int)$scopedVehicle["OwnerUserID"] === $currentUserId) {
-                $hasAccess = true;
-            }
-
-            if (!$hasAccess) {
-                http_response_code(403);
-                $pageTitle = "Access Denied";
-                require_once "../includes/head.php";
-                ?>
-                <body>
-                <div class="layout">
-                    <main class="main-content" style="margin-left:0; width:100%;">
-                        <div class="content" style="max-width:700px; margin:80px auto;">
-                            <div class="card">
-                                <div style="background:#fee2e2; color:#991b1b; padding:14px; border-radius:8px; margin-bottom:20px;">
-                                    <strong>Access Denied</strong>
-                                </div>
-                                <h2>You do not have permission to view this vehicle's history.</h2>
-                                <p>You can only view ownership history for vehicles that are linked to your account.</p>
-                                <a href="index.php" class="button">Return to Ownership History</a>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-                </body>
-                </html>
-                <?php
-                exit;
-            }
-        }
     }
+}
+
+// If not Admin/Police AND no specific vehicle is requested, force "mine"
+if (!$isAdminOrPolice && $filterVehicleId === 0) {
+    $viewScope = "mine";
 }
 
 $whereParts = [];
 $queryParams = [];
 
-// 1. Apply Role-based filtering
-if ($viewScope === "mine") {
+// 1. Apply Role-based filtering (only if not scoped to a specific vehicle)
+if ($viewScope === "mine" && $filterVehicleId === 0) {
     $whereParts[] = "(v.SellerID = ? OR o.UserID = ?)";
     $queryParams[] = $currentUserId;
     $queryParams[] = $currentUserId;
@@ -148,6 +114,7 @@ require_once "../includes/head.php";
 ?>
 
 <style>
+    /* (Your existing CSS and Dark Mode overrides from previous message) */
     .filter-bar { display: grid; grid-template-columns: 2fr 1.5fr auto; gap: 12px; align-items: end; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
     .filter-field { display: flex; flex-direction: column; min-width: 0; }
     .filter-field label { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #374151; }
@@ -158,55 +125,29 @@ require_once "../includes/head.php";
     .scope-toggle { display: inline-flex; background: #e5e7eb; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
     .scope-toggle a { padding: 8px 20px; font-size: 14px; font-weight: 600; color: #4b5563; text-decoration: none; border-radius: 6px; transition: all 0.2s ease; }
     .scope-toggle a.active { background: #ffffff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-
     .vehicle-scope-banner { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; }
     .vehicle-scope-banner .scope-info { display: flex; flex-direction: column; gap: 4px; }
     .vehicle-scope-banner .scope-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #1d4ed8; }
     .vehicle-scope-banner .scope-vehicle { font-size: 18px; font-weight: 700; color: #111827; }
     .vehicle-scope-banner .scope-meta { font-size: 13px; color: #475569; }
     .vehicle-scope-banner .scope-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
     @media (max-width: 800px) { .filter-bar { grid-template-columns: 1fr; } }
 
-    /* =========================================================
-       DARK MODE OVERRIDES FOR OWNERSHIP HISTORY
-       ========================================================= */
-       
-    [data-theme="dark"] .filter-bar {
-        background: #1e293b;
-        border-color: #334155;
-    }
-    [data-theme="dark"] .filter-field label {
-        color: #cbd5e1;
-    }
-    [data-theme="dark"] .filter-field input,
-    [data-theme="dark"] .filter-field select {
-        background: #0f172a;
-        color: #e2e8f0;
-        border-color: #334155;
-    }
-
-    [data-theme="dark"] .scope-toggle {
-        background: #1e293b;
-    }
-    [data-theme="dark"] .scope-toggle a {
-        color: #94a3b8;
-    }
-    [data-theme="dark"] .scope-toggle a.active {
-        background: #334155;
-        color: #f8fafc;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    }
-
+    /* DARK MODE */
+    [data-theme="dark"] .filter-bar { background: #1e293b; border-color: #334155; }
+    [data-theme="dark"] .filter-field label { color: #cbd5e1; }
+    [data-theme="dark"] .filter-field input, [data-theme="dark"] .filter-field select { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+    [data-theme="dark"] .scope-toggle { background: #1e293b; }
+    [data-theme="dark"] .scope-toggle a { color: #94a3b8; }
+    [data-theme="dark"] .scope-toggle a.active { background: #334155; color: #f8fafc; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
     [data-theme="dark"] .vehicle-scope-banner { background: #172554; border-color: #1e40af; }
     [data-theme="dark"] .vehicle-scope-banner .scope-vehicle { color: #e2e8f0; }
     [data-theme="dark"] .vehicle-scope-banner .scope-meta { color: #cbd5e1; }
     [data-theme="dark"] .vehicle-scope-banner .scope-eyebrow { color: #93c5fd; }
-
-    /* Fix table borders */
     [data-theme="dark"] table th { border-bottom-color: #475569 !important; }
     [data-theme="dark"] table td { border-bottom-color: #334155 !important; }
     [data-theme="dark"] tr[style*="border-bottom:1px solid #f1f5f9"] { border-bottom-color: #334155 !important; }
+    [data-theme="dark"] td span[style*="color:#166534"] { color: #4ade80 !important; }
 </style>
 
 <body>
@@ -216,7 +157,6 @@ require_once "../includes/head.php";
         <?php include __DIR__ . "/../includes/header.php"; ?>
         <div class="content">
 
-            <!-- VEHICLE SCOPE BANNER -->
             <?php if ($scopedVehicle): ?>
                 <div class="vehicle-scope-banner">
                     <div class="scope-info">
@@ -226,7 +166,7 @@ require_once "../includes/head.php";
                     </div>
                     <div class="scope-actions">
                         <a href="../vehicles/view.php?id=<?= (int) $scopedVehicle["VehicleID"] ?>" class="button button-secondary">← Back to Vehicle</a>
-                        <a href="index.php" class="button button-secondary">Show All My History</a>
+                        <a href="index.php" class="button button-secondary">Show All History</a>
                     </div>
                 </div>
             <?php endif; ?>
